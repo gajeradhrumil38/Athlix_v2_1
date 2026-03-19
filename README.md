@@ -1,11 +1,33 @@
-<div align="center">
+# Athlix - Personal Gym Activity Tracker
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+Athlix is a mobile-first, tablet-friendly personal gym activity tracker built with React, Tailwind CSS, and Supabase.
 
-  <h1>Built with AI Studio</h2>
+## Setup Instructions
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+### 1. Supabase Setup
+1. Create a new project on [Supabase](https://supabase.com/).
+2. Go to the **SQL Editor** in your Supabase dashboard.
+3. Copy the contents of `supabase/schema.sql` and run it to create the necessary tables, policies, and triggers.
+4. Go to **Authentication > Providers** and ensure Email provider is enabled.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+### 2. Environment Variables
+1. In your AI Studio environment, open the **Secrets** panel (or `.env` file if running locally).
+2. Add the following environment variables:
+   - `VITE_SUPABASE_URL`: Your Supabase Project URL
+   - `VITE_SUPABASE_ANON_KEY`: Your Supabase Project API Key (anon/public)
 
-</div>
+### 3. Running the App
+The app should automatically build and run in the AI Studio environment. If running locally:
+```bash
+npm install
+npm run dev
+```
+
+## Features
+- **Auth**: Email/password login and signup via Supabase.
+- **Home Dashboard**: Quick stats, weekly activity ring, and recent workouts.
+- **Workout Logger**: Log daily sessions with exercises, sets, reps, and weights.
+- **Templates System**: Create and load reusable workout templates.
+- **Calendar View**: Monthly calendar highlighting workout days.
+- **Timeline / History**: Chronological feed of past workouts.
+- **Settings**: Profile edit, unit preference, theme toggle, and Whoop integration placeholder.
