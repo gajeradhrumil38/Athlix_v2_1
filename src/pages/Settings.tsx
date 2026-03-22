@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import toast from 'react-hot-toast';
-import { User, Moon, Scale, Activity, LogOut, LayoutDashboard, ChevronRight } from 'lucide-react';
+import { User, Moon, Scale, Activity, LogOut, LayoutDashboard, ChevronRight, FileText, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const Settings: React.FC = () => {
@@ -178,6 +178,43 @@ export const Settings: React.FC = () => {
               Coming Soon
             </button>
           </div>
+        </div>
+
+        {/* Legal Section */}
+        <div className="p-6 space-y-4">
+          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Legal</h3>
+
+          <a
+            href="/privacy.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between group"
+          >
+            <div className="flex items-center space-x-3">
+              <Shield className="w-5 h-5 text-gray-400 group-hover:text-[#00D4FF] transition-colors" />
+              <div>
+                <p className="text-white font-medium group-hover:text-[#00D4FF] transition-colors">Privacy Policy</p>
+                <p className="text-xs text-gray-500">How we handle your data</p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-[#00D4FF] transition-colors" />
+          </a>
+
+          <a
+            href="/terms.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between group"
+          >
+            <div className="flex items-center space-x-3">
+              <FileText className="w-5 h-5 text-gray-400 group-hover:text-[#00D4FF] transition-colors" />
+              <div>
+                <p className="text-white font-medium group-hover:text-[#00D4FF] transition-colors">Terms of Service</p>
+                <p className="text-xs text-gray-500">Rules and conditions of use</p>
+              </div>
+            </div>
+            <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-[#00D4FF] transition-colors" />
+          </a>
         </div>
 
         {/* Danger Zone */}

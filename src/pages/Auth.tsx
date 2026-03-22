@@ -125,6 +125,20 @@ export const Auth: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {isSignUp && (
+            <p className="mt-4 text-center text-xs text-gray-500">
+              By creating an account, you agree to our{' '}
+              <a href="/terms.html" target="_blank" rel="noopener noreferrer" className="text-[#00D4FF] hover:underline">
+                Terms of Service
+              </a>{' '}
+              and{' '}
+              <a href="/privacy.html" target="_blank" rel="noopener noreferrer" className="text-[#00D4FF] hover:underline">
+                Privacy Policy
+              </a>
+              .
+            </p>
+          )}
         </div>
       </div>
     </div>
