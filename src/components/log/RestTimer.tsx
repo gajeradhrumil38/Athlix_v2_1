@@ -1,98 +1,71 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { X, Play, Pause } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Clock, SkipForward } from 'lucide-react';
 
 interface RestTimerProps {
-  isActive: boolean;
+  duration: number;
+  exerciseName: string;
   onComplete: () => void;
-  onClose: () => void;
+  onSkip: () => void;
 }
 
-export const RestTimer: React.FC<RestTimerProps> = ({ isActive, onComplete, onClose }) => {
-  const [timeLeft, setTimeLeft] = useState(90);
-  const [totalTime, setTotalTime] = useState(90);
-  const [isRunning, setIsRunning] = useState(false);
+export const RestTimer: React.FC<RestTimerProps> = ({ duration, exerciseName, onComplete, onSkip }) => {
+  const [timeLeft, setTimeLeft] = useState(duration);
+  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
-    if (isActive && !isRunning) {
-      setTimeLeft(90);
-      setTotalTime(90);
-      setIsRunning(true);
-    }
-  }, [isActive]);
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isRunning && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft(prev => prev - 1);
-      }, 1000);
-    } else if (isRunning && timeLeft === 0) {
-      setIsRunning(false);
-      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    if (isPaused) return;
+    if (timeLeft <= 0) {
       onComplete();
+      return;
     }
+    const interval = setInterval(() => {
+      setTimeLeft(prev => prev - 1);
+    }, 1000);
     return () => clearInterval(interval);
-  }, [isRunning, timeLeft, onComplete]);
+  }, [isPaused, timeLeft, onComplete]);
 
-  if (!isActive) return null;
-
-  const progress = timeLeft / totalTime;
-  const radius = 16;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - progress * circumference;
-
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
+  const formatTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
     return `${m}:${s.toString().padStart(2, '0')}`;
   };
 
-  const setTimer = (seconds: number) => {
-    setTimeLeft(seconds);
-    setTotalTime(seconds);
-    setIsRunning(true);
-  };
+  const presets = [60, 90, 120, 180];
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      className="fixed bottom-[80px] left-1/2 -translate-x-1/2 w-[90%] max-w-[400px] bg-[#1A1A1A] border border-[#EF9F27]/30 rounded-2xl p-3 shadow-[0_8px_32px_rgba(0,0,0,0.8)] z-50 flex items-center gap-3"
+      initial={{ y: 100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      exit={{ y: 100, opacity: 0 }}
+      transition={{ type: 'spring', damping: 20, stiffness: 200 }}
+      className="flex-shrink-0 mx-2.5 my-1.5 bg-[#141C28] border border-[#EF9F27]/35 rounded-xl p-2 flex items-center gap-2 shadow-lg"
     >
-      <div className="relative w-10 h-10 flex-shrink-0 flex items-center justify-center">
-        <svg viewBox="0 0 40 40" className="w-full h-full transform -rotate-90">
-          <circle cx="20" cy="20" r={radius} fill="none" stroke="#333" strokeWidth="4" />
-          <circle 
-            cx="20" cy="20" r={radius} fill="none" stroke="#EF9F27" strokeWidth="4" strokeLinecap="round"
-            strokeDasharray={circumference} strokeDashoffset={strokeDashoffset}
-            className="transition-all duration-1000 ease-linear"
-          />
-        </svg>
-        <span className="absolute text-[10px] font-bold text-[#EF9F27]">{formatTime(timeLeft)}</span>
+      <div className="flex flex-col items-center min-w-[40px]">
+        <span className="text-[7px] font-bold text-[#3A5060] uppercase tracking-widest leading-none mb-0.5">REST</span>
+        <span className="text-[16px] font-black text-[#EF9F27] tabular-nums leading-none">
+          {formatTime(timeLeft)}
+        </span>
       </div>
 
-      <div className="flex-1 flex gap-1.5">
-        {[60, 90, 120].map(sec => (
-          <button 
-            key={sec} 
-            onClick={() => setTimer(sec)}
-            className="flex-1 py-1.5 rounded-lg bg-[#2A2A2A] text-[10px] font-bold text-white hover:bg-[#333] transition-colors"
+      <div className="flex-1 flex gap-1 items-center justify-center">
+        {presets.map(p => (
+          <button
+            key={p}
+            onClick={() => setTimeLeft(p)}
+            className={`px-2 py-1 rounded-md text-[9px] font-bold transition-all ${timeLeft === p ? 'bg-[#EF9F27]/15 text-[#EF9F27] border border-[#EF9F27]/40' : 'bg-[#1A2538] text-[#8892A4] border border-[#1E2F42]'}`}
           >
-            {sec === 60 ? '1m' : sec === 90 ? '1.5m' : '2m'}
+            {p/60}m
           </button>
         ))}
       </div>
 
-      <div className="flex gap-1">
-        <button onClick={() => setIsRunning(!isRunning)} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#2A2A2A] text-white">
-          {isRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-0.5" />}
-        </button>
-        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-[#2A2A2A] text-[var(--text-muted)] hover:text-white">
-          <X className="w-4 h-4" />
-        </button>
-      </div>
+      <button 
+        onClick={onSkip}
+        className="p-2 text-[#3A5060] hover:text-[#EF9F27] transition-colors"
+      >
+        <SkipForward className="w-4 h-4" />
+      </button>
     </motion.div>
   );
 };

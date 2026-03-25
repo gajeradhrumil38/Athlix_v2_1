@@ -1,0 +1,173 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, ChevronLeft, ChevronRight, Check, Minus, Plus } from 'lucide-react';
+
+interface WeightRepsModalProps {
+  exerciseName: string;
+  setNumber: number;
+  field: 'weight' | 'reps';
+  initialValue: number;
+  onConfirm: (value: number) => void;
+  onClose: () => void;
+}
+
+export const WeightRepsModal: React.FC<WeightRepsModalProps> = ({
+  exerciseName,
+  setNumber,
+  field,
+  initialValue,
+  onConfirm,
+  onClose,
+}) => {
+  const [value, setValue] = useState(initialValue);
+
+  const isWeight = field === 'weight';
+  const unit = isWeight ? 'kg' : '';
+  
+  const stepSmall = isWeight ? 2.5 : 1;
+  const stepBig = isWeight ? 5 : 5;
+
+  const weightChips = [20, 40, 60, 80, 100, 120, 140];
+  const repChips = [5, 6, 8, 10, 12, 15, 20];
+  const chips = isWeight ? weightChips : repChips;
+
+  const handleAdjust = (amount: number) => {
+    setValue(prev => Math.max(0, prev + amount));
+    if (navigator.vibrate) {
+      try { navigator.vibrate(8); } catch (e) {}
+    }
+  };
+
+  // Plate Calculator logic
+  const getPlates = (totalWeight: number) => {
+    const barWeight = 20;
+    let remaining = (totalWeight - barWeight) / 2;
+    if (remaining <= 0) return null;
+
+    const standardPlates = [25, 20, 15, 10, 5, 2.5, 1.25];
+    const breakdown: number[] = [];
+
+    standardPlates.forEach(plate => {
+      while (remaining >= plate) {
+        breakdown.push(plate);
+        remaining -= plate;
+      }
+    });
+
+    return breakdown;
+  };
+
+  const plates = isWeight ? getPlates(value) : null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[200] bg-[#0D1117] flex flex-col"
+    >
+      {/* Header */}
+      <header className="h-[52px] flex-shrink-0 flex items-center justify-between px-3 border-b border-[#1E2F42]">
+        <button onClick={onClose} className="p-2 text-[#8892A4]">
+          <ChevronLeft className="w-6 h-6" />
+        </button>
+        <div className="text-center">
+          <div className="text-[13px] font-bold text-[#E2E8F0]">Set {setNumber}</div>
+          <div className="text-[10px] text-[#8892A4] uppercase tracking-wider">{exerciseName}</div>
+        </div>
+        <button 
+          onClick={() => onConfirm(value)}
+          className="px-4 py-1.5 bg-[#00D4FF] text-black rounded-lg text-[12px] font-bold"
+        >
+          Done
+        </button>
+      </header>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-12">
+        {/* Big Value Display */}
+        <div className="text-center">
+          <div className="text-[72px] font-black text-[#E2E8F0] leading-none tabular-nums">
+            {value}<span className="text-[24px] font-bold text-[#3A5060] ml-1">{unit}</span>
+          </div>
+          <div className="text-[12px] font-bold text-[#3A5060] uppercase tracking-[2px] mt-2">
+            Target {field}
+          </div>
+        </div>
+
+        {/* Stepper Row */}
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => handleAdjust(-stepBig)}
+            className="w-[52px] h-[52px] rounded-full bg-[#1A2538] border border-[#1E2F42] flex items-center justify-center text-[#E2E8F0] active:scale-90 transition-transform"
+          >
+            <span className="text-[18px] font-bold">--</span>
+          </button>
+          <button 
+            onClick={() => handleAdjust(-stepSmall)}
+            className="w-[52px] h-[52px] rounded-full bg-[#1A2538] border border-[#1E2F42] flex items-center justify-center text-[#E2E8F0] active:scale-90 transition-transform"
+          >
+            <Minus className="w-6 h-6" />
+          </button>
+          
+          <div className="w-20" /> {/* Spacer for visual balance with the big value above */}
+
+          <button 
+            onClick={() => handleAdjust(stepSmall)}
+            className="w-[52px] h-[52px] rounded-full bg-[#1A2538] border border-[#1E2F42] flex items-center justify-center text-[#E2E8F0] active:scale-90 transition-transform"
+          >
+            <Plus className="w-6 h-6" />
+          </button>
+          <button 
+            onClick={() => handleAdjust(stepBig)}
+            className="w-[52px] h-[52px] rounded-full bg-[#1A2538] border border-[#1E2F42] flex items-center justify-center text-[#E2E8F0] active:scale-90 transition-transform"
+          >
+            <span className="text-[18px] font-bold">++</span>
+          </button>
+        </div>
+
+        {/* Quick-set Chips */}
+        <div className="flex flex-wrap justify-center gap-2 max-w-[320px]">
+          {chips.map(chip => (
+            <button
+              key={chip}
+              onClick={() => setValue(chip)}
+              className={`px-4 py-2 rounded-xl text-[11px] font-bold transition-all ${value === chip ? 'bg-[#00D4FF] text-black' : 'bg-[#1A2538] text-[#8892A4] border border-[#1E2F42]'}`}
+            >
+              {chip}{unit}
+            </button>
+          ))}
+        </div>
+
+        {/* Plate Calculator */}
+        {isWeight && (
+          <div className="w-full max-w-[320px] p-4 bg-[#141C28] rounded-2xl border border-[#1E2F42] text-center">
+            <div className="text-[9px] font-bold text-[#3A5060] uppercase tracking-wider mb-3">Plate Breakdown (Per Side)</div>
+            {plates ? (
+              <div className="flex flex-wrap justify-center gap-2">
+                <div className="text-[10px] text-[#8892A4] w-full mb-1">20kg Bar +</div>
+                {plates.map((p, i) => (
+                  <div key={i} className="px-2 py-1 bg-[#1A2538] border border-[#00D4FF]/20 rounded-md text-[10px] font-bold text-[#00D4FF]">
+                    {p}kg
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-[10px] text-[#3A5060]">Empty Bar (20kg)</div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Confirm Button */}
+      <div className="p-6">
+        <button 
+          onClick={() => onConfirm(value)}
+          className="w-full py-4 bg-[#00D4FF] text-black rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 active:scale-95 transition-transform"
+        >
+          Confirm {value}{unit} <Check className="w-5 h-5" />
+        </button>
+      </div>
+    </motion.div>
+  );
+};

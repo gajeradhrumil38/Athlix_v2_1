@@ -1,120 +1,149 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Plus, Check } from 'lucide-react';
-import { ExerciseImage } from '../shared/ExerciseImage';
-
-export interface SetRow {
-  id: string;
-  weight: number | null;
-  reps: number | null;
-  done: boolean;
-}
-
-export interface ExerciseEntry {
-  id: string;
-  name: string;
-  muscleGroup: string;
-  exercise_db_id?: string;
-  sets: SetRow[];
-}
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MoreVertical, Plus, Trophy } from 'lucide-react';
+import { ExerciseEntry, Set } from '../../pages/Log';
+import { SetRow } from './SetRow';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface ExerciseBlockProps {
   exercise: ExerciseEntry;
-  onUpdateSet: (exId: string, setId: string, field: 'weight' | 'reps', value: number | null) => void;
-  onAddSet: (exId: string) => void;
-  onSetDone: (exId: string, setId: string) => void;
-  index: number;
+  onUpdate: (updated: ExerciseEntry) => void;
+  onRemove: () => void;
+  onStartRest: (duration: number, exerciseName: string) => void;
 }
 
-export const ExerciseBlock: React.FC<ExerciseBlockProps> = ({ exercise, onUpdateSet, onAddSet, onSetDone, index }) => {
+export const ExerciseBlock: React.FC<ExerciseBlockProps> = ({ exercise, onUpdate, onRemove, onStartRest }) => {
+  const { user } = useAuth();
+  const [lastSession, setLastSession] = useState<any>(null);
+  const [showMenu, setShowMenu] = useState(false);
+  const [isPR, setIsPR] = useState(false);
+
+  useEffect(() => {
+    const fetchLastSession = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('exercises')
+        .select('*, workouts(date)')
+        .eq('name', exercise.name)
+        .order('id', { ascending: false }) // In a real app, we'd order by workout date
+        .limit(1)
+        .single();
+      
+      if (data) setLastSession(data);
+    };
+    fetchLastSession();
+  }, [user, exercise.name]);
+
+  const handleAddSet = () => {
+    const sets = exercise.sets || [];
+    const lastSet = sets[sets.length - 1];
+    const newSet: Set = {
+      id: Math.random().toString(36).substr(2, 9),
+      weight: lastSet ? lastSet.weight : (lastSession?.weight || null),
+      reps: lastSet ? lastSet.reps : (lastSession?.reps || null),
+      done: false
+    };
+    onUpdate({ ...exercise, sets: [...sets, newSet] });
+    if (navigator.vibrate) navigator.vibrate(10);
+  };
+
+  const handleUpdateSet = (setId: string, updatedSet: Set) => {
+    onUpdate({
+      ...exercise,
+      sets: (exercise.sets || []).map(s => s.id === setId ? updatedSet : s)
+    });
+
+    if (updatedSet.done) {
+      // Check for PR
+      if (updatedSet.weight && (!lastSession || updatedSet.weight > lastSession.weight)) {
+        setIsPR(true);
+        setTimeout(() => setIsPR(false), 3000);
+      }
+      
+      // Start rest timer
+      const restPrefs = JSON.parse(localStorage.getItem('athlix_rest_prefs') || '{}');
+      const duration = restPrefs[exercise.name] || 90;
+      onStartRest(duration, exercise.name);
+    }
+  };
+
+  const totalVolume = (exercise.sets || [])
+    .filter(s => s.done)
+    .reduce((acc, s) => acc + (Number(s.weight || 0) * Number(s.reps || 0)), 0);
+
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-      className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl overflow-hidden mb-4"
-    >
-      <div className="p-3 border-b border-[var(--border)] flex justify-between items-center bg-[var(--bg-elevated)]/50">
-        <div className="flex items-center gap-3">
-          {exercise.exercise_db_id && (
-            <ExerciseImage 
-              exerciseId={exercise.exercise_db_id} 
-              exerciseName={exercise.name} 
-              muscleGroup={exercise.muscleGroup} 
-              size="sm" 
-            />
-          )}
-          <div>
-            <h3 className="text-[14px] font-bold text-[var(--text-primary)]">{exercise.name}</h3>
-            <p className="text-[10px] text-[var(--text-muted)] mt-0.5">Previous: 60kg · 3x10</p>
+    <div className="bg-[#141C28] border border-[#1E2F42] rounded-[14px] overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[#1E2F42]">
+        <div className="flex items-center gap-2">
+          <h3 className="text-[13px] font-bold text-[#E2E8F0]">{exercise.name}</h3>
+          <div className="flex items-center gap-1">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#00D4FF]" />
+            <span className="text-[9px] text-[#8892A4] uppercase tracking-wider">{exercise.muscleGroup}</span>
           </div>
-        </div>
-        <div className="text-[10px] px-2 py-1 rounded-md bg-[var(--bg-surface)] border border-[var(--border)] text-[var(--text-secondary)]">
-          {exercise.muscleGroup}
-        </div>
-      </div>
-
-      <div className="p-2">
-        <div className="grid grid-cols-[30px_1fr_1fr_1fr_40px] gap-2 px-2 py-1.5 mb-1">
-          <div className="text-[9px] font-semibold text-[var(--text-muted)] tracking-wider text-center">SET</div>
-          <div className="text-[9px] font-semibold text-[var(--text-muted)] tracking-wider text-center">KG</div>
-          <div className="text-[9px] font-semibold text-[var(--text-muted)] tracking-wider text-center">REPS</div>
-          <div className="text-[9px] font-semibold text-[var(--text-muted)] tracking-wider text-center">VOL</div>
-          <div className="text-[9px] font-semibold text-[var(--text-muted)] tracking-wider text-center">DONE</div>
-        </div>
-
-        {exercise.sets.map((set, i) => {
-          const vol = (set.weight || 0) * (set.reps || 0);
-          return (
-            <div 
-              key={set.id} 
-              className={`grid grid-cols-[30px_1fr_1fr_1fr_40px] gap-2 px-2 py-1.5 items-center rounded-lg mb-1 transition-colors ${
-                set.done ? 'bg-[var(--accent-dim)] border border-[var(--accent)]/30' : 'bg-transparent border border-transparent'
-              }`}
-            >
-              <div className="text-[12px] font-bold text-[var(--text-muted)] text-center">{i + 1}</div>
-              
-              <input 
-                type="number" 
-                value={set.weight || ''} 
-                onChange={(e) => onUpdateSet(exercise.id, set.id, 'weight', e.target.value ? Number(e.target.value) : null)}
-                className="w-full h-8 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-md text-center text-[13px] font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
-                placeholder="-"
-                disabled={set.done}
-              />
-              
-              <input 
-                type="number" 
-                value={set.reps || ''} 
-                onChange={(e) => onUpdateSet(exercise.id, set.id, 'reps', e.target.value ? Number(e.target.value) : null)}
-                className="w-full h-8 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-md text-center text-[13px] font-bold text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]"
-                placeholder="-"
-                disabled={set.done}
-              />
-              
-              <div className="text-[12px] font-medium text-[var(--text-secondary)] text-center">
-                {vol > 0 ? vol : '-'}
-              </div>
-              
-              <button 
-                onClick={() => onSetDone(exercise.id, set.id)}
-                className={`w-8 h-8 mx-auto rounded-md flex items-center justify-center transition-colors ${
-                  set.done ? 'bg-[var(--accent)] text-black' : 'bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-muted)] hover:text-white'
-                }`}
+          <AnimatePresence>
+            {isPR && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.5 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.5 }}
+                className="flex items-center gap-1 px-2 py-0.5 bg-[#EF9F27]/20 rounded-full"
               >
-                <Check className="w-4 h-4" />
-              </button>
-            </div>
-          );
-        })}
-
-        <button 
-          onClick={() => onAddSet(exercise.id)}
-          className="w-full mt-2 py-2 flex items-center justify-center gap-1 text-[11px] font-bold text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] rounded-lg transition-colors"
-        >
-          <Plus className="w-3 h-3" /> Add Set
+                <Trophy className="w-3 h-3 text-[#EF9F27]" />
+                <span className="text-[9px] font-bold text-[#EF9F27]">NEW PR!</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+        <button onClick={() => setShowMenu(!showMenu)} className="p-1 text-[#3A5060]">
+          <MoreVertical className="w-4 h-4" />
         </button>
       </div>
-    </motion.div>
+
+      {/* Last Session Row */}
+      <div className="px-4 py-2 bg-[#1A2538]/50 flex items-center justify-between">
+        {lastSession ? (
+          <span className="text-[10px] text-[#8892A4]">
+            Last: {new Date(lastSession.workouts?.date).toLocaleDateString()} · {lastSession.reps} reps @ {lastSession.weight}kg
+          </span>
+        ) : (
+          <span className="text-[10px] text-[#00D4FF]">First time — set your benchmark 🎯</span>
+        )}
+      </div>
+
+        {/* Sets */}
+        <div className="p-4 space-y-2">
+          <div className="flex items-center text-[9px] font-bold text-[#3A5060] uppercase tracking-[1.5px] px-2 mb-1">
+            <span className="w-8">Set</span>
+            <span className="flex-1 text-center">Weight (kg)</span>
+            <span className="flex-1 text-center">Reps</span>
+            <span className="w-10"></span>
+          </div>
+          {(exercise.sets || []).map((set, i) => (
+            <SetRow 
+              key={set.id}
+              index={i + 1}
+              set={set}
+              onUpdate={(updated) => handleUpdateSet(set.id, updated)}
+            />
+          ))}
+        </div>
+
+      {/* Add Set Button */}
+      <button 
+        onClick={handleAddSet}
+        className="w-full py-3 border-t border-[#1E2F42] text-[10px] font-bold text-[#00D4FF]/60 hover:text-[#00D4FF] transition-colors flex items-center justify-center gap-2"
+      >
+        <Plus className="w-3 h-3" /> Add Set
+      </button>
+
+      {/* Footer */}
+      <div className="px-4 py-2 bg-[#0D1117]/30 flex items-center justify-between border-t border-[#1E2F42]">
+        <span className="text-[9px] text-[#3A5060] uppercase tracking-wider font-bold">
+          Total: {(exercise.sets || []).filter(s => s.done).length} sets · {totalVolume.toLocaleString()}kg
+        </span>
+      </div>
+    </div>
   );
 };
