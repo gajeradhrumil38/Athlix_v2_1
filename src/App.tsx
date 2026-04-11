@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { HeartRateProvider } from './contexts/HeartRateContext';
 import { RestTimerProvider } from './contexts/RestTimerContext';
@@ -35,15 +35,23 @@ const RedirectToStatic = ({ path }: { path: string }) => {
 };
 
 export default function App() {
+  const isGitHubPagesHost =
+    typeof window !== 'undefined' && window.location.hostname.endsWith('github.io');
+  const Router = isGitHubPagesHost ? HashRouter : BrowserRouter;
+  const staticBase =
+    (import.meta.env.BASE_URL && import.meta.env.BASE_URL !== './'
+      ? import.meta.env.BASE_URL
+      : '/') || '/';
+
   return (
     <AuthProvider>
       <HeartRateProvider>
         <RestTimerProvider>
-          <BrowserRouter>
+          <Router>
             <Routes>
               <Route path="/auth" element={<Auth />} />
-              <Route path="/privacy" element={<RedirectToStatic path="/privacy.html" />} />
-              <Route path="/terms" element={<RedirectToStatic path="/terms.html" />} />
+              <Route path="/privacy" element={<RedirectToStatic path={`${staticBase}privacy.html`} />} />
+              <Route path="/terms" element={<RedirectToStatic path={`${staticBase}terms.html`} />} />
               <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
                 <Route index element={<Home />} />
                 <Route path="calendar" element={<Calendar />} />
@@ -55,7 +63,7 @@ export default function App() {
                 <Route path="settings/layout" element={<DashboardLayoutEditor />} />
               </Route>
             </Routes>
-          </BrowserRouter>
+          </Router>
         </RestTimerProvider>
       </HeartRateProvider>
     </AuthProvider>
