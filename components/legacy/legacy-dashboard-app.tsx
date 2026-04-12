@@ -2,11 +2,12 @@
 
 export function LegacyDashboardApp() {
   return (
-    <main className="min-h-screen bg-black">
+    <main className="bg-black" style={{ minHeight: '100dvh' }}>
       <iframe
         title="Athlix Application"
         src="/legacy-app/index.html"
-        className="h-screen w-full border-0"
+        className="w-full border-0"
+        style={{ height: '100dvh' }}
       />
     </main>
   );
