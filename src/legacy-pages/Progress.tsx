@@ -281,12 +281,25 @@ export const Progress: React.FC = () => {
     if (currentBpm < 175) return { label: 'Hard', color: '#FF9F1C' };
     return { label: 'Peak', color: '#FF5A5F' };
   }, [currentBpm]);
+  const isIOSBrowser = useMemo(() => {
+    if (typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    const touchMac = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+    return /iPhone|iPad|iPod/i.test(ua) || touchMac;
+  }, []);
+  const unsupportedBluetoothHint = useMemo(() => {
+    if (supportsWebBluetooth) return null;
+    if (typeof window !== 'undefined' && !window.isSecureContext) {
+      return 'Live pairing requires HTTPS. Open Athlix(TM) on a secure URL.';
+    }
+    if (isIOSBrowser) {
+      return 'iOS browsers currently limit Web Bluetooth pairing. Use Android Chrome or desktop Chrome/Edge for live connection.';
+    }
+    return 'This browser does not support Web Bluetooth. Use a compatible Chrome/Edge browser.';
+  }, [isIOSBrowser, supportsWebBluetooth]);
   const bluetoothSupportHint = useMemo(() => {
     if (typeof navigator === 'undefined') return null;
     const ua = navigator.userAgent || '';
-    if (/iPhone|iPad|iPod/i.test(ua)) {
-      return 'iOS browsers currently limit Web Bluetooth pairing. For live pairing, use Android Chrome or desktop Chrome/Edge.';
-    }
     if (/Android/i.test(ua)) {
       return 'On Android, keep your wearable in heart-rate broadcast mode before tapping Connect device.';
     }
@@ -1379,12 +1392,17 @@ export const Progress: React.FC = () => {
                 </div>
                 {!hrConnected ? (
                   <button
-                    onClick={connectHeartRate}
-                    disabled={hrConnecting}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#00D4FF] px-4 py-2.5 text-sm font-bold text-black disabled:opacity-50"
+                    onClick={supportsWebBluetooth ? connectHeartRate : undefined}
+                    disabled={hrConnecting || !supportsWebBluetooth}
+                    title={!supportsWebBluetooth && unsupportedBluetoothHint ? unsupportedBluetoothHint : undefined}
+                    className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-colors disabled:cursor-not-allowed ${
+                      supportsWebBluetooth
+                        ? 'bg-[#00D4FF] text-black disabled:opacity-50'
+                        : 'border border-white/15 bg-white/5 text-[#98A6B8] opacity-85'
+                    }`}
                   >
                     <PlugZap className="w-4 h-4" />
-                    {hrConnecting ? 'Connecting...' : 'Connect device'}
+                    {!supportsWebBluetooth ? (isIOSBrowser ? 'Unavailable on iOS' : 'Unsupported browser') : hrConnecting ? 'Connecting...' : 'Connect device'}
                   </button>
                 ) : (
                   <button
@@ -1705,7 +1723,13 @@ export const Progress: React.FC = () => {
                       </ResponsiveContainer>
                     ) : (
                       <div className="h-full flex flex-col items-center justify-center text-center text-sm text-gray-400 gap-2">
-                        <div>{hrConnected ? 'Waiting for incoming heart-rate packets...' : 'Connect device to start live heart-rate stream.'}</div>
+                        <div>
+                          {hrConnected
+                            ? 'Waiting for incoming heart-rate packets...'
+                            : supportsWebBluetooth
+                              ? 'Connect device to start live heart-rate stream.'
+                              : 'Live pairing is unavailable in this browser.'}
+                        </div>
                         {waveformHasGapSegments && (
                           <div className="text-[11px] text-[#7F8EA3]">Dashed bridge means there was no data in that section.</div>
                         )}
@@ -1845,13 +1869,13 @@ export const Progress: React.FC = () => {
               <div className="text-white font-semibold mb-2">Athlix(TM) device setup</div>
               <p>1. On your wearable, enable Heart Rate Broadcast mode.</p>
               <p>2. Keep the wearable nearby, charged, and ready to pair.</p>
-              <p>3. Open this Live HR view and tap Connect device.</p>
+              <p>3. {supportsWebBluetooth ? 'Open this Live HR view and tap Connect device.' : 'Use Android Chrome or desktop Chrome/Edge for live pairing.'}</p>
             </div>
 
-            {!supportsWebBluetooth && (
+            {!supportsWebBluetooth && unsupportedBluetoothHint && (
               <div className="rounded-xl border border-yellow-400/30 bg-yellow-400/10 p-3 text-sm text-yellow-100 inline-flex items-start gap-2">
                 <Info className="w-4 h-4 mt-0.5" />
-                Web Bluetooth requires a secure origin (HTTPS) and a compatible browser (Chrome/Edge).
+                {unsupportedBluetoothHint}
               </div>
             )}
 

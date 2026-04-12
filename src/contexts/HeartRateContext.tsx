@@ -87,6 +87,13 @@ const parseHeartRateMeasurement = (dataView: DataView) => {
   return Math.round(bpm);
 };
 
+const isIOSBrowser = () => {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  const touchMac = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  return /iPhone|iPad|iPod/i.test(ua) || touchMac;
+};
+
 const getUnsupportedBluetoothMessage = () => {
   if (typeof window === 'undefined' || typeof navigator === 'undefined') {
     return 'Web Bluetooth is unavailable on this platform.';
@@ -96,9 +103,7 @@ const getUnsupportedBluetoothMessage = () => {
     return 'Bluetooth pairing requires HTTPS. Open Athlix(TM) on a secure URL.';
   }
 
-  const ua = navigator.userAgent || '';
-  const isIOS = /iPhone|iPad|iPod/i.test(ua);
-  if (isIOS) {
+  if (isIOSBrowser()) {
     return 'iOS browsers currently limit direct Bluetooth pairing. Use Athlix(TM) on Android Chrome or desktop Chrome/Edge.';
   }
 
@@ -126,7 +131,8 @@ export const HeartRateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       typeof window !== 'undefined' &&
       typeof navigator !== 'undefined' &&
       'bluetooth' in navigator &&
-      window.isSecureContext,
+      window.isSecureContext &&
+      !isIOSBrowser(),
     [],
   );
 
