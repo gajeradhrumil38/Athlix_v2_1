@@ -88,6 +88,11 @@ export default function LoginPage() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const callbackError = params.get('error');
+    const mode = params.get('mode');
+
+    if (mode === 'signup') {
+      setAuthMode('signup');
+    }
     if (callbackError) {
       setErrorBanner('Unable to sign in. Please try again.');
     }
