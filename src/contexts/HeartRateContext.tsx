@@ -28,6 +28,9 @@ interface HeartRateContextType {
 type BluetoothRequestOptions = {
   filters: Array<{ services: string[] }>;
   optionalServices?: string[];
+} | {
+  acceptAllDevices: true;
+  optionalServices: string[];
 };
 
 type WebBluetoothClient = {
@@ -82,6 +85,24 @@ const parseHeartRateMeasurement = (dataView: DataView) => {
   const bpm = is16Bit ? dataView.getUint16(1, true) : dataView.getUint8(1);
   if (!Number.isFinite(bpm) || bpm <= 0) return null;
   return Math.round(bpm);
+};
+
+const getUnsupportedBluetoothMessage = () => {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return 'Web Bluetooth is unavailable on this platform.';
+  }
+
+  if (!window.isSecureContext) {
+    return 'Bluetooth pairing requires HTTPS. Open Athlix(TM) on a secure URL.';
+  }
+
+  const ua = navigator.userAgent || '';
+  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+  if (isIOS) {
+    return 'iOS browsers currently limit direct Bluetooth pairing. Use Athlix(TM) on Android Chrome or desktop Chrome/Edge.';
+  }
+
+  return 'Web Bluetooth is not available in this browser. Use a compatible Chrome/Edge browser.';
 };
 
 export const HeartRateProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -218,7 +239,7 @@ export const HeartRateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
 
     if (!supportsWebBluetooth) {
-      setHrError('Web Bluetooth is not available here. Use HTTPS in Chrome/Edge.');
+      setHrError(getUnsupportedBluetoothMessage());
       return;
     }
 
@@ -233,10 +254,25 @@ export const HeartRateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         throw new Error('Web Bluetooth is unavailable in this browser.');
       }
 
-      const device = await bluetoothClient.requestDevice({
-        filters: [{ services: ['heart_rate'] }],
-        optionalServices: ['battery_service'],
-      });
+      let device: WebBluetoothDevice;
+
+      try {
+        device = await bluetoothClient.requestDevice({
+          filters: [{ services: ['heart_rate'] }],
+          optionalServices: ['battery_service'],
+        });
+      } catch (requestError: any) {
+        if (requestError?.name !== 'NotFoundError') {
+          throw requestError;
+        }
+
+        // Fallback picker to handle devices that do not advertise the standard service
+        // until after pairing.
+        device = await bluetoothClient.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: ['heart_rate', 'battery_service'],
+        });
+      }
 
       const server = await device.gatt?.connect();
       if (!server) throw new Error('Could not connect to device.');
@@ -286,7 +322,9 @@ export const HeartRateProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
     } catch (error: any) {
       if (error?.name === 'NotFoundError') {
-        setHrError('No device selected. Turn on WHOOP Heart Rate Broadcast and retry.');
+        setHrError('No device selected. Ensure your wearable is in heart-rate broadcast mode and retry.');
+      } else if (error?.name === 'NotSupportedError') {
+        setHrError(getUnsupportedBluetoothMessage());
       } else {
         setHrError(error?.message || 'Failed to connect heart-rate device.');
       }

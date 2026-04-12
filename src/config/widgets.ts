@@ -92,8 +92,8 @@ export const ALL_WIDGETS: WidgetConfig[] = [
   },
   {
     id: 'whoop_row',
-    name: 'WHOOP Data',
-    description: 'Recovery · HRV · Sleep · Strain',
+    name: 'Device Data',
+    description: 'Recovery · HRV · Sleep · Strain from your wearable',
     icon: 'whoop_row',
     defaultVisible: true,
     canHide: true,

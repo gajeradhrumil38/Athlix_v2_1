@@ -6,7 +6,7 @@
 
 @layer base {
   :root {
-    /* Base — WHOOP navy dark, NOT pure black */
+    /* Base — deep navy dark, not pure black */
     --bg-base:       #0D1117;
     --bg-surface:    #141C28;
     --bg-elevated:   #1A2538;
@@ -24,7 +24,7 @@
     --accent-dim:   rgba(0, 212, 255, 0.12);
     --accent-glow:  rgba(0, 212, 255, 0.3);
 
-    /* Metric ring colors (WHOOP-matched) */
+    /* Metric ring colors matched to Athlix(TM) theme */
     --ring-volume:    #4FC3F7;   /* blue  — volume */
     --ring-recovery:  #FFD54F;   /* yellow — readiness */
     --ring-strain:    #00D4FF;   /* cyan  — strain */

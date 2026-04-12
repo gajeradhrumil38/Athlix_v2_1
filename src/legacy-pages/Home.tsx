@@ -718,7 +718,7 @@ export const Home: React.FC = () => {
           ))}
         </div>
         <div className="text-center mt-2 animate-card-enter" style={{ animationDelay: '420ms' }}>
-          <span className="text-[10px] text-[var(--accent)]/50 cursor-pointer">Connect Whoop →</span>
+          <span className="text-[10px] text-[var(--accent)]/50 cursor-pointer">Connect your device →</span>
         </div>
       </div>
     )

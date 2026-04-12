@@ -342,8 +342,8 @@ export const Settings: React.FC = () => {
             <div className="flex items-center space-x-3">
               <Activity className="w-5 h-5 text-gray-400" />
               <div>
-                <p className="text-white font-medium">Whoop</p>
-                <p className="text-xs text-gray-500">Sync recovery & strain</p>
+                <p className="text-white font-medium">Wearable Sync (Athlix(TM))</p>
+                <p className="text-xs text-gray-500">Sync recovery and strain from supported devices</p>
               </div>
             </div>
             <button disabled className="px-3 py-1.5 bg-white/5 text-xs text-gray-400 rounded-lg border border-white/10">

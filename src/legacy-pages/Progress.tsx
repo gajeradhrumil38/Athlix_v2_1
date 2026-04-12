@@ -281,6 +281,17 @@ export const Progress: React.FC = () => {
     if (currentBpm < 175) return { label: 'Hard', color: '#FF9F1C' };
     return { label: 'Peak', color: '#FF5A5F' };
   }, [currentBpm]);
+  const bluetoothSupportHint = useMemo(() => {
+    if (typeof navigator === 'undefined') return null;
+    const ua = navigator.userAgent || '';
+    if (/iPhone|iPad|iPod/i.test(ua)) {
+      return 'iOS browsers currently limit Web Bluetooth pairing. For live pairing, use Android Chrome or desktop Chrome/Edge.';
+    }
+    if (/Android/i.test(ua)) {
+      return 'On Android, keep your wearable in heart-rate broadcast mode before tapping Connect device.';
+    }
+    return null;
+  }, []);
   const currentZoneIndex = useMemo(() => (currentBpm ? getHeartRateZoneIndex(currentBpm) : -1), [currentBpm]);
   const zoneDistribution = useMemo(() => {
     const counts = HEART_RATE_ZONES.map(() => 0);
@@ -1363,7 +1374,7 @@ export const Progress: React.FC = () => {
                     Live Heart Rate
                   </h2>
                   <p className="text-sm text-[#97A3B6] mt-1">
-                    Real-time WHOOP broadcast with live trend and zone tracking.
+                    Real-time wearable broadcast with live trend and zone tracking in Athlix(TM).
                   </p>
                 </div>
                 {!hrConnected ? (
@@ -1373,7 +1384,7 @@ export const Progress: React.FC = () => {
                     className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#00D4FF] px-4 py-2.5 text-sm font-bold text-black disabled:opacity-50"
                   >
                     <PlugZap className="w-4 h-4" />
-                    {hrConnecting ? 'Connecting...' : 'Connect WHOOP'}
+                    {hrConnecting ? 'Connecting...' : 'Connect device'}
                   </button>
                 ) : (
                   <button
@@ -1831,16 +1842,23 @@ export const Progress: React.FC = () => {
             )}
 
             <div className="rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-gray-300">
-              <div className="text-white font-semibold mb-2">WHOOP setup</div>
-              <p>1. In WHOOP app, enable Heart Rate Broadcast.</p>
-              <p>2. Keep WHOOP nearby and unlocked for pairing.</p>
-              <p>3. Open this Live HR view in Chrome/Edge and tap Connect WHOOP.</p>
+              <div className="text-white font-semibold mb-2">Athlix(TM) device setup</div>
+              <p>1. On your wearable, enable Heart Rate Broadcast mode.</p>
+              <p>2. Keep the wearable nearby, charged, and ready to pair.</p>
+              <p>3. Open this Live HR view and tap Connect device.</p>
             </div>
 
             {!supportsWebBluetooth && (
               <div className="rounded-xl border border-yellow-400/30 bg-yellow-400/10 p-3 text-sm text-yellow-100 inline-flex items-start gap-2">
                 <Info className="w-4 h-4 mt-0.5" />
                 Web Bluetooth requires a secure origin (HTTPS) and a compatible browser (Chrome/Edge).
+              </div>
+            )}
+
+            {bluetoothSupportHint && (
+              <div className="rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-sm text-sky-100 inline-flex items-start gap-2">
+                <Info className="w-4 h-4 mt-0.5" />
+                {bluetoothSupportHint}
               </div>
             )}
           </div>
