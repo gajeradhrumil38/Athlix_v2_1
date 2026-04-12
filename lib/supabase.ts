@@ -2,19 +2,17 @@ import { createBrowserClient, createServerClient } from '@supabase/ssr';
 import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js';
 import type { Database } from './database.types';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const DEFAULT_SUPABASE_URL = 'https://mrntwydykqsdawpklumf.supabase.co';
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_h8Mv7ku_c2I9XIS1tzarYQ_ozj9Dkxw';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
 const supabasePublicKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  DEFAULT_SUPABASE_PUBLISHABLE_KEY;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const getServerSupabaseEnv = () => {
-  if (!supabaseUrl || !supabasePublicKey) {
-    throw new Error(
-      'Missing NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
-    );
-  }
-
   return {
     url: supabaseUrl,
     publicKey: supabasePublicKey,
@@ -22,15 +20,11 @@ const getServerSupabaseEnv = () => {
 };
 
 export function createClient() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
   const key =
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-  if (!url || !key) {
-    console.warn('Supabase env vars not set');
-    return null as any;
-  }
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    DEFAULT_SUPABASE_PUBLISHABLE_KEY;
 
   return createBrowserClient<Database>(url, key, {
     auth: {

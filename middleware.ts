@@ -3,6 +3,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import type { Database } from '@/lib/database.types';
 
 const protectedRoutes = ['/dashboard'];
+const DEFAULT_SUPABASE_URL = 'https://mrntwydykqsdawpklumf.supabase.co';
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_h8Mv7ku_c2I9XIS1tzarYQ_ozj9Dkxw';
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({
@@ -11,27 +13,13 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
   const supabasePublicKey =
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    DEFAULT_SUPABASE_PUBLISHABLE_KEY;
   const pathname = request.nextUrl.pathname;
   const requiresAuth = protectedRoutes.some((route) => pathname.startsWith(route));
-
-  if (!supabaseUrl || !supabasePublicKey) {
-    if (pathname === '/') {
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.pathname = '/login';
-      return NextResponse.redirect(redirectUrl);
-    }
-
-    if (!requiresAuth) return response;
-
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = '/login';
-    redirectUrl.searchParams.set('error', 'Missing Supabase environment variables.');
-    return NextResponse.redirect(redirectUrl);
-  }
 
   const supabase = createServerClient<Database>(
     supabaseUrl,

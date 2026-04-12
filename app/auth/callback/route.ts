@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export const dynamic = 'force-dynamic';
+const DEFAULT_SUPABASE_URL = 'https://mrntwydykqsdawpklumf.supabase.co';
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_h8Mv7ku_c2I9XIS1tzarYQ_ozj9Dkxw';
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -11,16 +13,11 @@ export async function GET(request: NextRequest) {
   const origin = requestUrl.origin;
   const next = requestUrl.searchParams.get('next');
   const redirectPath = next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
   const supabasePublicKey =
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-  if (!supabaseUrl || !supabasePublicKey) {
-    return NextResponse.redirect(
-      `${origin}/login?error=Missing%20Supabase%20environment%20variables.`,
-    );
-  }
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    DEFAULT_SUPABASE_PUBLISHABLE_KEY;
 
   if (code) {
     const cookieStore = cookies();

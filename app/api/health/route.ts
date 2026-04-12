@@ -2,19 +2,28 @@ import { NextResponse } from 'next/server';
 import { createRouteHandlerSupabaseClient } from '@/lib/supabase';
 
 export const runtime = 'edge';
+const DEFAULT_SUPABASE_URL = 'https://mrntwydykqsdawpklumf.supabase.co';
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_h8Mv7ku_c2I9XIS1tzarYQ_ozj9Dkxw';
 
 export async function GET() {
-  const publicKey =
+  const resolvedUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+  const resolvedPublicKey =
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    DEFAULT_SUPABASE_PUBLISHABLE_KEY;
 
   const env = {
     hasUrl: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
-    hasPublicKey: Boolean(publicKey),
+    hasResolvedUrl: Boolean(resolvedUrl),
+    hasPublicKey: Boolean(
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    ),
+    hasResolvedPublicKey: Boolean(resolvedPublicKey),
     hasServiceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
   };
 
-  if (!env.hasUrl || !env.hasPublicKey) {
+  if (!env.hasResolvedUrl || !env.hasResolvedPublicKey) {
     return NextResponse.json(
       {
         ok: false,
