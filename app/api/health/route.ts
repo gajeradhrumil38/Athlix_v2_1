@@ -4,13 +4,17 @@ import { createRouteHandlerSupabaseClient } from '@/lib/supabase';
 export const runtime = 'edge';
 
 export async function GET() {
+  const publicKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
   const env = {
     hasUrl: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL),
-    hasAnonKey: Boolean(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+    hasPublicKey: Boolean(publicKey),
     hasServiceRole: Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY),
   };
 
-  if (!env.hasUrl || !env.hasAnonKey) {
+  if (!env.hasUrl || !env.hasPublicKey) {
     return NextResponse.json(
       {
         ok: false,

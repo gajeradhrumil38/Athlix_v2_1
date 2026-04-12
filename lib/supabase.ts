@@ -3,23 +3,29 @@ import { createClient as createSupabaseAdminClient } from '@supabase/supabase-js
 import type { Database } from './database.types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabasePublicKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const getServerSupabaseEnv = () => {
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  if (!supabaseUrl || !supabasePublicKey) {
+    throw new Error(
+      'Missing NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+    );
   }
 
   return {
     url: supabaseUrl,
-    anonKey: supabaseAnonKey,
+    publicKey: supabasePublicKey,
   };
 };
 
 export function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const key =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
   if (!url || !key) {
     console.warn('Supabase env vars not set');
@@ -43,7 +49,7 @@ export async function createServerSupabaseClient() {
   const cookieStore = cookies();
   const env = getServerSupabaseEnv();
 
-  return createServerClient<Database>(env.url, env.anonKey, {
+  return createServerClient<Database>(env.url, env.publicKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -72,7 +78,7 @@ export async function createRouteHandlerSupabaseClient() {
   const cookieStore = cookies();
   const env = getServerSupabaseEnv();
 
-  return createServerClient<Database>(env.url, env.anonKey, {
+  return createServerClient<Database>(env.url, env.publicKey, {
     cookies: {
       getAll() {
         return cookieStore.getAll();

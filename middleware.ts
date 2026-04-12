@@ -12,11 +12,19 @@ export async function middleware(request: NextRequest) {
   });
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabasePublicKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  const pathname = request.nextUrl.pathname;
+  const requiresAuth = protectedRoutes.some((route) => pathname.startsWith(route));
 
-  if (!supabaseUrl || !supabaseAnonKey) {
-    const pathname = request.nextUrl.pathname;
-    const requiresAuth = protectedRoutes.some((route) => pathname.startsWith(route));
+  if (!supabaseUrl || !supabasePublicKey) {
+    if (pathname === '/') {
+      const redirectUrl = request.nextUrl.clone();
+      redirectUrl.pathname = '/login';
+      return NextResponse.redirect(redirectUrl);
+    }
+
     if (!requiresAuth) return response;
 
     const redirectUrl = request.nextUrl.clone();
@@ -27,7 +35,7 @@ export async function middleware(request: NextRequest) {
 
   const supabase = createServerClient<Database>(
     supabaseUrl,
-    supabaseAnonKey,
+    supabasePublicKey,
     {
       cookies: {
         getAll() {
@@ -47,8 +55,11 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const pathname = request.nextUrl.pathname;
-  const requiresAuth = protectedRoutes.some((route) => pathname.startsWith(route));
+  if (pathname === '/') {
+    const redirectUrl = request.nextUrl.clone();
+    redirectUrl.pathname = user ? '/dashboard' : '/login';
+    return NextResponse.redirect(redirectUrl);
+  }
 
   if (requiresAuth && !user) {
     const redirectUrl = request.nextUrl.clone();
@@ -57,7 +68,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (pathname.startsWith('/login') && user) {
+  if ((pathname.startsWith('/login') || pathname.startsWith('/signup')) && user) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = '/dashboard';
     return NextResponse.redirect(redirectUrl);

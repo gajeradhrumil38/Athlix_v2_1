@@ -9,12 +9,24 @@ export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get('code');
   const origin = requestUrl.origin;
+  const next = requestUrl.searchParams.get('next');
+  const redirectPath = next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard';
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabasePublicKey =
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+  if (!supabaseUrl || !supabasePublicKey) {
+    return NextResponse.redirect(
+      `${origin}/login?error=Missing%20Supabase%20environment%20variables.`,
+    );
+  }
 
   if (code) {
     const cookieStore = cookies();
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      supabaseUrl,
+      supabasePublicKey,
       {
         cookies: {
           getAll() {
@@ -28,9 +40,12 @@ export async function GET(request: NextRequest) {
         },
       },
     );
-    await supabase.auth.exchangeCodeForSession(code);
+
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      return NextResponse.redirect(`${origin}/login?error=Unable%20to%20complete%20sign-in.`);
+    }
   }
 
-  // Redirect to dashboard after successful login
-  return NextResponse.redirect(`${origin}/dashboard`);
+  return NextResponse.redirect(`${origin}${redirectPath}`);
 }
