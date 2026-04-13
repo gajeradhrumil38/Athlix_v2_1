@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MoreVertical, Plus, Trophy, Sparkles } from 'lucide-react';
-import { ExerciseEntry, Set } from '../../legacy-pages/Log';
+import type { ExerciseEntry, Set } from '../../legacy-pages/Log';
 import { SetRow } from './SetRow';
 import { useAuth } from '../../contexts/AuthContext';
 import { getLastExerciseSession } from '../../lib/supabaseData';

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
-import { ExerciseEntry } from '../../legacy-pages/Log';
+import type { ExerciseEntry } from '../../legacy-pages/Log';
 
 interface ExerciseTabBarProps {
   exercises: ExerciseEntry[];

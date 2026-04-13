@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ClipboardList, ArrowRight, Plus } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { ExerciseEntry } from '../../legacy-pages/Log';
+import type { ExerciseEntry } from '../../legacy-pages/Log';
 import { FitnessBadge } from '../FitnessIcons';
 import { buildExercisesFromWorkout, getTemplates, getWorkouts } from '../../lib/supabaseData';
 import { parseDateAtStartOfDay } from '../../lib/dates';

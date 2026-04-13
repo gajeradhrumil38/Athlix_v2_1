@@ -1,178 +1,261 @@
-import React, { useRef, useMemo } from 'react';
-import { Plus, Sparkles, Copy } from 'lucide-react';
-import { ExerciseEntry } from '../../legacy-pages/Log';
+import React, { useMemo, useRef } from 'react';
+import { ArrowLeft, Sparkles } from 'lucide-react';
+import type { ExerciseEntry } from '../../legacy-pages/Log';
 import { SetRow } from './SetRow';
+import {
+  DistanceUnit,
+  WeightUnit,
+  formatSetValue,
+  getFieldKinds,
+  getInputLabels,
+  getUnitDisplay,
+  isDistanceExerciseType,
+  isWeightExerciseType,
+  resolveExerciseInputType,
+} from '../../lib/exerciseTypes';
 
 interface ExerciseContentProps {
   exercise: ExerciseEntry;
-  weightUnit?: 'kg' | 'lbs';
+  weightUnit?: WeightUnit;
+  distanceUnit?: DistanceUnit;
+  elapsedLabel: string;
+  startedAtLabel: string;
+  onWeightUnitChange: (unit: WeightUnit) => void;
+  onDistanceUnitChange: (unit: DistanceUnit) => void;
   onUpdateSet: (setId: string, field: 'weight' | 'reps', value: number) => void;
   onMarkSetDone: (setId: string) => void;
   onAddSet: () => void;
-  onCopyLastSet: () => void;
-  startTimeLabel: string;
-  endTimeLabel: string;
-  editingTimeField?: 'startAt' | 'endAt' | null;
-  onEditStartTime: (anchor: HTMLButtonElement) => void;
-  onEditEndTime: (anchor: HTMLButtonElement) => void;
-  onOpenModal: (setId: string, field: 'weight' | 'reps', currentValue: number) => void;
+  onClearPrefill: () => void;
+  showPrefillBanner: boolean;
+  onOpenDial: (setId: string, field: 'weight' | 'reps') => void;
   onSwipeLeft: () => void;
   onSwipeRight: () => void;
+  onFinishExercise: () => void;
 }
+
+const getFieldBinding = (type: ReturnType<typeof resolveExerciseInputType>) => {
+  switch (type) {
+    case 'reps_only':
+      return { primary: 'reps' as const, secondary: null };
+    case 'distance_only':
+      return { primary: 'weight' as const, secondary: null };
+    default:
+      return { primary: 'weight' as const, secondary: 'reps' as const };
+  }
+};
 
 export const ExerciseContent: React.FC<ExerciseContentProps> = ({
   exercise,
   weightUnit = 'kg',
-  onUpdateSet,
+  distanceUnit = 'km',
+  elapsedLabel,
+  startedAtLabel,
+  onWeightUnitChange,
+  onDistanceUnitChange,
   onMarkSetDone,
   onAddSet,
-  onCopyLastSet,
-  startTimeLabel,
-  endTimeLabel,
-  editingTimeField,
-  onEditStartTime,
-  onEditEndTime,
-  onOpenModal,
+  onClearPrefill,
+  showPrefillBanner,
+  onOpenDial,
   onSwipeLeft,
   onSwipeRight,
+  onFinishExercise,
 }) => {
-  const touchStart = useRef<number>(0);
-  const touchEnd = useRef<number>(0);
+  const touchStart = useRef(0);
+  const touchEnd = useRef(0);
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStart.current = e.targetTouches[0].clientX;
+  const exerciseType = useMemo(() => resolveExerciseInputType(exercise.name), [exercise.name]);
+  const inputLabels = useMemo(
+    () => getInputLabels(exerciseType, { weightUnit, distanceUnit }),
+    [distanceUnit, exerciseType, weightUnit],
+  );
+  const fieldKinds = useMemo(() => getFieldKinds(exerciseType), [exerciseType]);
+  const binding = useMemo(() => getFieldBinding(exerciseType), [exerciseType]);
+
+  const handleTouchStart = (event: React.TouchEvent) => {
+    touchStart.current = event.targetTouches[0].clientX;
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    touchEnd.current = e.targetTouches[0].clientX;
+  const handleTouchMove = (event: React.TouchEvent) => {
+    touchEnd.current = event.targetTouches[0].clientX;
   };
 
   const handleTouchEnd = () => {
-    const diff = touchStart.current - touchEnd.current;
-    if (diff > 50) onSwipeLeft();
-    if (diff < -50) onSwipeRight();
+    const delta = touchStart.current - touchEnd.current;
+    if (delta > 50) onSwipeLeft();
+    if (delta < -50) onSwipeRight();
   };
 
-  const activeSetIndex = exercise.sets.findIndex(s => !s.done);
-  const currentSetId = activeSetIndex !== -1 ? exercise.sets[activeSetIndex].id : null;
+  const completedSets = useMemo(() => exercise.sets.filter((set) => set.done).length, [exercise.sets]);
 
-  const exerciseVolume = useMemo(() => 
-    exercise.sets
-      .filter(s => s.done)
-      .reduce((sum, s) => sum + (Number(s.weight || 0) * Number(s.reps || 0)), 0)
-  , [exercise.sets]);
+  const totalVolume = useMemo(
+    () =>
+      exercise.sets
+        .filter((set) => set.done)
+        .reduce((sum, set) => sum + Number(set.weight || 0) * Number(set.reps || 0), 0),
+    [exercise.sets],
+  );
 
   const lastSessionVolume = exercise.lastSession?.totalVolume || 0;
-  const vsLastSession = exerciseVolume - lastSessionVolume;
+  const vsLast = totalVolume - lastSessionVolume;
+  const allSetsDone = exercise.sets.length > 0 && completedSets === exercise.sets.length;
+
+  const statUnit = getUnitDisplay(exerciseType, { weightUnit, distanceUnit }).toLowerCase();
 
   return (
-    <div 
-      className="flex-1 overflow-y-auto bg-[#141C28] p-2.5 flex flex-col"
+    <div
+      className="flex-1 overflow-y-auto bg-[#0F1724] pb-[calc(env(safe-area-inset-bottom)+120px)]"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Last Session Row */}
-      <div className="w-full bg-[#0a1520] border border-[#1E2F42] rounded-lg p-2.5 mb-2 flex justify-between items-center">
-        <div className="flex flex-col">
-          <span className="text-[8px] font-bold text-[#3A5060] uppercase tracking-[0.8px] mb-0.5">
-            LAST SESSION · {exercise.lastSession?.date || 'N/A'}
-          </span>
-          <span className="text-[10px] font-bold text-[#8892A4]">
-            {exercise.lastSession
-              ? `${exercise.lastSession.sets} sets · Top ${exercise.lastSession.reps} reps @ ${exercise.lastSession.weight}${weightUnit} · Total ${lastSessionVolume}${weightUnit}`
-              : 'No history found'}
+      <div className="sticky top-0 z-20 border-b border-white/10 bg-[#0F1724]/85 px-3 pb-3 pt-3 backdrop-blur-xl">
+        <div className="mb-2 flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#00D4FF]">Exercise</p>
+            <h2 className="text-[20px] font-black text-white tracking-tight">{exercise.name}</h2>
+          </div>
+          <button
+            onClick={onSwipeRight}
+            className="h-10 rounded-xl border border-white/15 bg-white/5 px-3 text-[12px] font-semibold text-[#C5D5E5] inline-flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
+        </div>
+
+        <div className="mb-2 rounded-xl border border-white/10 bg-[#111B2B] px-3 py-2 text-[13px] text-[#AFC3D7]">
+          <span className="font-semibold text-[#D8E6F4]">Started {startedAtLabel}</span>
+          <span className="mx-2 text-white/30">→</span>
+          <span>
+            Elapsed: <span className="font-black tabular-nums text-[#00D4FF]">{elapsedLabel}</span>
           </span>
         </div>
-        {exercise.lastSession ? (
-          <span className="text-[8px] font-bold text-[#5DCAA5] uppercase tracking-wider">Beat it ›</span>
-        ) : (
-          <span className="text-[8px] font-bold text-[#00D4FF] uppercase tracking-wider inline-flex items-center gap-1"><Sparkles className="w-3 h-3" /> First time</span>
+
+        <div className="rounded-2xl border border-white/10 bg-[#111B2B]/90 p-3">
+          <div className="grid grid-cols-4 gap-2">
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.14em] text-[#7E93A7]">Sets</div>
+              <div className="text-[20px] font-black text-white tabular-nums">{completedSets}/{exercise.sets.length}</div>
+            </div>
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.14em] text-[#7E93A7]">Vol</div>
+              <div className="text-[20px] font-black text-white tabular-nums">{totalVolume.toLocaleString()}</div>
+            </div>
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.14em] text-[#7E93A7]">Vs Last</div>
+              <div className={`text-[20px] font-black tabular-nums ${vsLast >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                {vsLast >= 0 ? '+' : ''}{vsLast.toLocaleString()}
+              </div>
+            </div>
+            <div>
+              <div className="text-[11px] uppercase tracking-[0.14em] text-[#7E93A7]">Unit</div>
+              {isWeightExerciseType(exerciseType) && (
+                <div className="mt-1 inline-flex rounded-xl border border-white/10 bg-[#0D1522] p-1">
+                  {(['kg', 'lbs'] as const).map((unit) => (
+                    <button
+                      key={unit}
+                      onClick={() => onWeightUnitChange(unit)}
+                      className={`h-7 min-w-[40px] rounded-lg px-2 text-[11px] font-bold uppercase ${
+                        weightUnit === unit ? 'bg-[#00D4FF] text-black' : 'text-[#8EA7BE]'
+                      }`}
+                    >
+                      {unit}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {isDistanceExerciseType(exerciseType) && (
+                <div className="mt-1 inline-flex rounded-xl border border-white/10 bg-[#0D1522] p-1">
+                  {(['km', 'mi'] as const).map((unit) => (
+                    <button
+                      key={unit}
+                      onClick={() => onDistanceUnitChange(unit)}
+                      className={`h-7 min-w-[40px] rounded-lg px-2 text-[11px] font-bold uppercase ${
+                        distanceUnit === unit ? 'bg-[#00D4FF] text-black' : 'text-[#8EA7BE]'
+                      }`}
+                    >
+                      {unit}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {!isWeightExerciseType(exerciseType) && !isDistanceExerciseType(exerciseType) && (
+                <div className="text-[14px] font-black text-[#BFD0DF] uppercase">{statUnit || '--'}</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="px-3 pt-3 space-y-3">
+        {showPrefillBanner && exercise.lastSession && (
+          <div className="rounded-xl border border-[#00D4FF]/30 bg-[#00D4FF]/10 p-3 text-sm text-[#C8F5FF] flex items-center justify-between">
+            <div>
+              Pre-filled from last session · {exercise.lastSession.date}
+            </div>
+            <button
+              onClick={onClearPrefill}
+              className="text-[12px] font-bold uppercase tracking-wider text-[#8BE9FF]"
+            >
+              Clear
+            </button>
+          </div>
         )}
-      </div>
 
-      {/* Start / End Time Row */}
-      <div className="grid grid-cols-2 gap-2 mb-2">
+        {!exercise.lastSession && (
+          <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/10 p-3 text-sm text-emerald-100 inline-flex items-center gap-2">
+            <Sparkles className="w-4 h-4" />
+            First time doing this exercise! Start building your benchmark.
+          </div>
+        )}
+
+        {exercise.sets.map((set, index) => {
+          const primaryField = binding.primary;
+          const secondaryField = binding.secondary;
+
+          return (
+            <SetRow
+              key={set.id}
+              index={index + 1}
+              set={set}
+              onMarkDone={() => onMarkSetDone(set.id)}
+              onOpenDial={(field) => onOpenDial(set.id, field)}
+              primary={{
+                field: primaryField,
+                label: inputLabels.primary,
+                value: set[primaryField],
+                displayValue: formatSetValue(fieldKinds.primary, set[primaryField]),
+              }}
+              secondary={
+                secondaryField && inputLabels.secondary
+                  ? {
+                      field: secondaryField,
+                      label: inputLabels.secondary,
+                      value: set[secondaryField],
+                      displayValue: formatSetValue(fieldKinds.secondary || 'reps', set[secondaryField]),
+                    }
+                  : null
+              }
+            />
+          );
+        })}
+
         <button
-          onClick={(event) => onEditStartTime(event.currentTarget)}
-          className={`h-11 rounded-lg flex flex-col items-center justify-center active:scale-[0.98] transition-all duration-200 ${
-            editingTimeField === 'startAt'
-              ? 'bg-[#18283A] border border-[#00D4FF]/45 shadow-[0_0_0_1px_rgba(0,212,255,0.15),0_0_22px_rgba(0,212,255,0.10)]'
-              : 'bg-[#141C28] border border-[#1E2F42]'
-          }`}
-        >
-          <span className={`text-[8px] font-bold uppercase tracking-wider ${editingTimeField === 'startAt' ? 'text-[#8ADFFF]' : 'text-[#3A5060]'}`}>Start</span>
-          <span className="text-[14px] font-black text-[#E2E8F0] tabular-nums">{startTimeLabel}</span>
-        </button>
-        <button
-          onClick={(event) => onEditEndTime(event.currentTarget)}
-          className={`h-11 rounded-lg flex flex-col items-center justify-center active:scale-[0.98] transition-all duration-200 ${
-            editingTimeField === 'endAt'
-              ? 'bg-[#18283A] border border-[#00D4FF]/45 shadow-[0_0_0_1px_rgba(0,212,255,0.15),0_0_22px_rgba(0,212,255,0.10)]'
-              : 'bg-[#141C28] border border-[#1E2F42]'
-          }`}
-        >
-          <span className={`text-[8px] font-bold uppercase tracking-wider ${editingTimeField === 'endAt' ? 'text-[#8ADFFF]' : 'text-[#3A5060]'}`}>End</span>
-          <span className="text-[14px] font-black text-[#E2E8F0] tabular-nums">{endTimeLabel}</span>
-        </button>
-      </div>
-
-      {/* Set Column Headers */}
-      <div className="grid grid-cols-[24px_1fr_1fr_36px] gap-1 px-1 mb-1.5">
-        <span className="text-[8px] font-bold text-[#3A5060] uppercase tracking-widest text-center">SET</span>
-        <span className="text-[8px] font-bold text-[#3A5060] uppercase tracking-widest text-center">{weightUnit}</span>
-        <span className="text-[8px] font-bold text-[#3A5060] uppercase tracking-widest text-center">REPS</span>
-        <span className="w-9"></span>
-      </div>
-
-      {/* Set Rows */}
-      <div className="space-y-1">
-        {exercise.sets.map((set, i) => (
-          <SetRow 
-            key={set.id}
-            index={i + 1}
-            set={set}
-            weightUnit={weightUnit}
-            isActive={set.id === currentSetId}
-            onUpdate={(field, value) => onUpdateSet(set.id, field, value)}
-            onMarkDone={() => onMarkSetDone(set.id)}
-            onOpenModal={(field) => onOpenModal(set.id, field, Number(set[field] || 0))}
-          />
-        ))}
-      </div>
-
-      {/* Set Actions */}
-      <div className="flex items-center gap-2 border-t border-[#1E2F42] mt-1 pt-2">
-        <button 
           onClick={onAddSet}
-          className="flex-1 h-9 text-[10px] font-bold text-[#00D4FF] bg-[#00D4FF]/10 border border-[#00D4FF]/20 rounded-lg flex items-center justify-center gap-1 active:scale-95 transition-transform"
+          className="w-full h-14 rounded-xl border border-dashed border-[#00D4FF]/55 bg-[#00D4FF]/5 text-[#7DE5F6] text-[16px] font-semibold"
         >
-          <Plus className="w-3 h-3" /> Add Set
+          + Add Set
         </button>
-        <button
-          onClick={onCopyLastSet}
-          className="flex-1 h-9 text-[10px] font-bold text-[#E2E8F0] bg-white/5 border border-white/15 rounded-lg flex items-center justify-center gap-1 active:scale-95 transition-transform"
-        >
-          <Copy className="w-3 h-3" /> Copy Last
-        </button>
-      </div>
 
-      {/* Volume Footer */}
-      <div className="mt-auto pt-4 border-t border-[#1E2F42] flex justify-between items-center px-1">
-        <div className="flex flex-col">
-          <span className="text-[8px] font-bold text-[#3A5060] uppercase tracking-wider">Done</span>
-          <span className="text-[11px] font-black text-[#E2E8F0]">{exercise.sets.filter(s => s.done).length}/{exercise.sets.length}</span>
-        </div>
-        <div className="flex flex-col items-center">
-          <span className="text-[8px] font-bold text-[#3A5060] uppercase tracking-wider">Vol {weightUnit}</span>
-          <span className="text-[11px] font-black text-[#E2E8F0]">{exerciseVolume.toLocaleString()}</span>
-        </div>
-        <div className="flex flex-col items-end">
-          <span className="text-[8px] font-bold text-[#3A5060] uppercase tracking-wider">vs Last</span>
-          <span className={`text-[11px] font-black ${vsLastSession >= 0 ? 'text-[#5DCAA5]' : 'text-[#EF4444]'}`}>
-            {vsLastSession >= 0 ? '+' : ''}{vsLastSession.toLocaleString()}{weightUnit}
-          </span>
-        </div>
+        {allSetsDone && (
+          <button
+            onClick={onFinishExercise}
+            className="w-full h-14 rounded-xl bg-emerald-500 text-[#062A14] text-[16px] font-black animate-pulse"
+          >
+            Finish Exercise
+          </button>
+        )}
       </div>
     </div>
   );

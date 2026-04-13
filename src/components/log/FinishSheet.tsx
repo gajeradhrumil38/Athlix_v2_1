@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Check, Trophy, Clock, Weight, Activity } from 'lucide-react';
-import { WorkoutState } from '../../legacy-pages/Log';
+import type { WorkoutState } from '../../legacy-pages/Log';
 
 interface FinishSheetProps {
   workout: WorkoutState;

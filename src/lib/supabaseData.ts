@@ -1071,12 +1071,14 @@ export const saveWorkout = async (
   const validExercises = input.exercises
     .map((exercise) => ({
       ...exercise,
-      completed_sets: (exercise.completed_sets || []).filter((set) => Number(set.reps || 0) > 0),
+      completed_sets: (exercise.completed_sets || []).filter(
+        (set) => Number(set.reps || 0) > 0 || Number(set.weight || 0) > 0,
+      ),
     }))
     .filter((exercise) => exercise.completed_sets.length > 0);
 
   if (validExercises.length === 0) {
-    throw new Error('Complete at least one set with reps greater than 0 before saving.');
+    throw new Error('Complete at least one set before saving.');
   }
 
   const rpcPayload = {

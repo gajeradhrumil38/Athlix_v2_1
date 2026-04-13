@@ -132,8 +132,7 @@ const clearDraft = () => {
 };
 
 export const Log: React.FC = () => {
-  const { user, profile } = useAuth();
-  const weightUnit = (profile?.unit_preference || 'kg') as 'kg' | 'lbs';
+  const { user, profile, updateProfile } = useAuth();
   const location = useLocation();
   const allowLiveAddExercise = Boolean(profile?.start_workout_enabled);
   const showStartSheet = Boolean(profile?.show_start_sheet);
@@ -146,6 +145,34 @@ export const Log: React.FC = () => {
   const [openPickerOnStart, setOpenPickerOnStart] = useState(false);
   const [showFinish, setShowFinish] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [weightUnit, setWeightUnit] = useState<'kg' | 'lbs'>((profile?.unit_preference || 'kg') as 'kg' | 'lbs');
+  const [distanceUnit, setDistanceUnit] = useState<'km' | 'mi'>(() => {
+    if (typeof window === 'undefined') return 'km';
+    const stored = localStorage.getItem('athlix_distance_unit');
+    return stored === 'mi' ? 'mi' : 'km';
+  });
+
+  useEffect(() => {
+    setWeightUnit((profile?.unit_preference || 'kg') as 'kg' | 'lbs');
+  }, [profile?.unit_preference]);
+
+  const handleWeightUnitChange = useCallback(async (nextUnit: 'kg' | 'lbs') => {
+    setWeightUnit(nextUnit);
+    try {
+      await updateProfile({ unit_preference: nextUnit });
+    } catch {
+      // keep local fallback even if remote update fails
+    }
+  }, [updateProfile]);
+
+  const handleDistanceUnitChange = useCallback((nextUnit: 'km' | 'mi') => {
+    setDistanceUnit(nextUnit);
+    try {
+      localStorage.setItem('athlix_distance_unit', nextUnit);
+    } catch {
+      // ignore storage failures
+    }
+  }, []);
 
   const createWorkoutState = useCallback((initialExercises: ExerciseEntry[] = [], title?: string, dateOverride?: string | null): WorkoutState => {
     const now = new Date();
@@ -234,14 +261,14 @@ export const Log: React.FC = () => {
     const completedExercises = workout.exercises
       .map((exercise, exerciseIndex) => {
         const completedSets = exercise.sets.filter(
-          (set) => set.done && Number(set.reps || 0) > 0,
+          (set) => set.done && (Number(set.reps || 0) > 0 || Number(set.weight || 0) > 0),
         );
         return { exercise, completedSets, exerciseIndex };
       })
       .filter(({ completedSets }) => completedSets.length > 0);
 
     if (completedExercises.length === 0) {
-      toast.error('Complete at least one set with reps greater than 0 before saving.');
+      toast.error('Complete at least one set before saving.');
       return;
     }
 
@@ -316,6 +343,9 @@ export const Log: React.FC = () => {
           allowLiveAddExercise={allowLiveAddExercise}
           openExercisePickerOnStart={openPickerOnStart}
           weightUnit={weightUnit}
+          distanceUnit={distanceUnit}
+          onWeightUnitChange={handleWeightUnitChange}
+          onDistanceUnitChange={handleDistanceUnitChange}
         />
       )}
 
