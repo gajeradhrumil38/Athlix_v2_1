@@ -29,46 +29,35 @@ export const ExerciseTabBar: React.FC<ExerciseTabBarProps> = ({
     }
   }, [activeIndex]);
 
-  const getMuscleColor = (muscle: string) => {
-    const colors: Record<string, string> = {
-      'Chest': '#C45A7A',
-      'Back': '#5A7AC4',
-      'Shoulders': '#C49A5A',
-      'Biceps': '#7AC45A',
-      'Triceps': '#5AC49A',
-      'Legs': '#9A5AC4',
-      'Abs': '#C4C45A',
-      'Cardio': '#5AC4C4',
-    };
-    return colors[muscle] || '#8892A4';
-  };
-
   return (
-    <div className="h-[44px] flex-shrink-0 flex items-center bg-[#0D1117] border-b border-[#1E2F42] px-2.5 overflow-hidden">
+    <div className="h-[48px] flex-shrink-0 flex items-center bg-[#0B1019] border-b border-white/10 px-3 overflow-hidden">
       <div 
         ref={scrollRef}
-        className="flex-1 flex items-center overflow-x-auto no-scrollbar h-full pt-2"
+        className="flex-1 flex items-center overflow-x-auto no-scrollbar h-full"
       >
         {exercises.map((ex, i) => {
           const isActive = activeIndex === i;
           const doneSets = ex.sets.filter(s => s.done).length;
           const totalSets = ex.sets.length;
-          const isAllDone = doneSets === totalSets && totalSets > 0;
-          const color = getMuscleColor(ex.muscleGroup);
 
           return (
             <button
               key={ex.id}
               onClick={() => onTabClick(i)}
-              className={`inline-flex flex-col items-center px-3 py-1.5 mr-1 rounded-t-lg min-w-fit cursor-pointer transition-all border-x border-t ${isActive ? 'bg-[#141C28] border-[#1E2F42] border-b-transparent' : 'bg-transparent border-transparent'}`}
+              className={`inline-flex flex-col items-center px-3 py-1.5 mr-2 rounded-xl min-w-fit cursor-pointer transition-all border ${
+                isActive
+                  ? 'bg-[#161F2D] border-[#334258]'
+                  : 'bg-transparent border-transparent'
+              }`}
             >
               <span 
-                className={`text-[9px] font-bold uppercase tracking-wider ${isActive ? '' : 'text-[#8892A4]'}`}
-                style={{ color: isActive ? color : undefined }}
+                className={`text-[9px] font-semibold uppercase tracking-wider ${
+                  isActive ? 'text-[#E2E8F0]' : 'text-[#8B9CAF]'
+                }`}
               >
                 {ex.name.length > 12 ? ex.name.substring(0, 10) + '..' : ex.name}
               </span>
-              <span className={`text-[7px] font-bold tracking-[0.5px] mt-0.5 ${isAllDone ? 'text-[#5DCAA5]' : doneSets > 0 ? 'text-[#00D4FF]' : 'text-[#3A5060]'}`}>
+              <span className="text-[7px] font-semibold tracking-[0.5px] mt-0.5 text-[#73859B]">
                 {doneSets}/{totalSets} SETS
               </span>
             </button>
@@ -79,7 +68,7 @@ export const ExerciseTabBar: React.FC<ExerciseTabBarProps> = ({
       {showAddButton && (
         <button 
           onClick={onAddExercise}
-          className="w-7 h-7 rounded-full bg-[#1A2538] border border-[#1E2F42] text-[#00D4FF] flex items-center justify-center ml-2 active:scale-90 transition-transform"
+          className="w-8 h-8 rounded-full bg-[#1A2433] border border-white/10 text-[#B6C5D6] flex items-center justify-center ml-2 active:scale-90 transition-transform"
         >
           <Plus className="w-4 h-4" />
         </button>

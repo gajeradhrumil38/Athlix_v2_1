@@ -1,5 +1,5 @@
 import React, { useMemo, useRef } from 'react';
-import { ArrowLeft, Sparkles } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import type { ExerciseEntry } from '../../legacy-pages/Log';
 import { SetRow } from './SetRow';
 import {
@@ -44,23 +44,25 @@ const getFieldBinding = (type: ReturnType<typeof resolveExerciseInputType>) => {
   }
 };
 
-export const ExerciseContent: React.FC<ExerciseContentProps> = ({
-  exercise,
-  weightUnit = 'kg',
-  distanceUnit = 'km',
-  elapsedLabel,
-  startedAtLabel,
-  onWeightUnitChange,
-  onDistanceUnitChange,
-  onMarkSetDone,
-  onAddSet,
-  onClearPrefill,
-  showPrefillBanner,
-  onOpenDial,
-  onSwipeLeft,
-  onSwipeRight,
-  onFinishExercise,
-}) => {
+export const ExerciseContent: React.FC<ExerciseContentProps> = (props) => {
+  const {
+    exercise,
+    weightUnit = 'kg',
+    distanceUnit = 'km',
+    elapsedLabel,
+    startedAtLabel,
+    onWeightUnitChange,
+    onDistanceUnitChange,
+    onMarkSetDone,
+    onAddSet,
+    onClearPrefill,
+    showPrefillBanner,
+    onOpenDial,
+    onSwipeLeft,
+    onSwipeRight,
+    onFinishExercise,
+  } = props;
+
   const touchStart = useRef(0);
   const touchEnd = useRef(0);
 
@@ -96,68 +98,54 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = ({
     [exercise.sets],
   );
 
-  const lastSessionVolume = exercise.lastSession?.totalVolume || 0;
-  const vsLast = totalVolume - lastSessionVolume;
   const allSetsDone = exercise.sets.length > 0 && completedSets === exercise.sets.length;
-
   const statUnit = getUnitDisplay(exerciseType, { weightUnit, distanceUnit }).toLowerCase();
 
   return (
     <div
-      className="flex-1 overflow-y-auto bg-[#0F1724] pb-[calc(env(safe-area-inset-bottom)+120px)]"
+      className="flex-1 overflow-y-auto bg-[#0E141F] pb-[calc(env(safe-area-inset-bottom)+140px)]"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <div className="sticky top-0 z-20 border-b border-white/10 bg-[#0F1724]/85 px-3 pb-3 pt-3 backdrop-blur-xl">
-        <div className="mb-2 flex items-center justify-between">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#00D4FF]">Exercise</p>
-            <h2 className="text-[20px] font-black text-white tracking-tight">{exercise.name}</h2>
-          </div>
+      <div className="sticky top-0 z-20 border-b border-white/10 bg-[#0E141F]/94 px-4 pb-4 pt-4 backdrop-blur-xl">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-[42px] leading-none font-black tracking-tight text-white">{exercise.name}</h2>
           <button
             onClick={onSwipeRight}
-            className="h-10 rounded-xl border border-white/15 bg-white/5 px-3 text-[12px] font-semibold text-[#C5D5E5] inline-flex items-center gap-2"
+            className="h-10 rounded-xl border border-white/15 bg-[#1A2433] px-3 text-[12px] font-medium text-[#D2DEEA] inline-flex items-center gap-2 whitespace-nowrap"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
           </button>
         </div>
 
-        <div className="mb-2 rounded-xl border border-white/10 bg-[#111B2B] px-3 py-2 text-[13px] text-[#AFC3D7]">
-          <span className="font-semibold text-[#D8E6F4]">Started {startedAtLabel}</span>
-          <span className="mx-2 text-white/30">→</span>
-          <span>
-            Elapsed: <span className="font-black tabular-nums text-[#00D4FF]">{elapsedLabel}</span>
-          </span>
+        <div className="mb-3 rounded-xl border border-white/10 bg-[#141C2A] px-3 py-2 text-[13px] text-[#AEBECD]">
+          <span>Started {startedAtLabel}</span>
+          <span className="mx-2 text-white/30">·</span>
+          <span className="tabular-nums">Elapsed {elapsedLabel}</span>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-[#111B2B]/90 p-3">
-          <div className="grid grid-cols-4 gap-2">
+        <div className="rounded-2xl border border-white/10 bg-[#141C2A] p-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
-              <div className="text-[11px] uppercase tracking-[0.14em] text-[#7E93A7]">Sets</div>
-              <div className="text-[20px] font-black text-white tabular-nums">{completedSets}/{exercise.sets.length}</div>
+              <div className="text-[11px] uppercase tracking-[0.14em] text-[#8294A9]">Sets</div>
+              <div className="text-[22px] font-bold text-white tabular-nums">{completedSets}/{exercise.sets.length}</div>
             </div>
             <div>
-              <div className="text-[11px] uppercase tracking-[0.14em] text-[#7E93A7]">Vol</div>
-              <div className="text-[20px] font-black text-white tabular-nums">{totalVolume.toLocaleString()}</div>
+              <div className="text-[11px] uppercase tracking-[0.14em] text-[#8294A9]">Volume</div>
+              <div className="text-[22px] font-bold text-white tabular-nums">{totalVolume.toLocaleString()}</div>
             </div>
             <div>
-              <div className="text-[11px] uppercase tracking-[0.14em] text-[#7E93A7]">Vs Last</div>
-              <div className={`text-[20px] font-black tabular-nums ${vsLast >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-                {vsLast >= 0 ? '+' : ''}{vsLast.toLocaleString()}
-              </div>
-            </div>
-            <div>
-              <div className="text-[11px] uppercase tracking-[0.14em] text-[#7E93A7]">Unit</div>
+              <div className="text-[11px] uppercase tracking-[0.14em] text-[#8294A9]">Unit</div>
               {isWeightExerciseType(exerciseType) && (
-                <div className="mt-1 inline-flex rounded-xl border border-white/10 bg-[#0D1522] p-1">
+                <div className="mt-1 inline-flex rounded-lg border border-white/10 bg-[#0E1624] p-1">
                   {(['kg', 'lbs'] as const).map((unit) => (
                     <button
                       key={unit}
                       onClick={() => onWeightUnitChange(unit)}
-                      className={`h-7 min-w-[40px] rounded-lg px-2 text-[11px] font-bold uppercase ${
-                        weightUnit === unit ? 'bg-[#00D4FF] text-black' : 'text-[#8EA7BE]'
+                      className={`h-7 min-w-[40px] rounded-md px-2 text-[11px] font-semibold uppercase ${
+                        weightUnit === unit ? 'bg-[#2C3D54] text-white' : 'text-[#8EA2B8]'
                       }`}
                     >
                       {unit}
@@ -166,13 +154,13 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = ({
                 </div>
               )}
               {isDistanceExerciseType(exerciseType) && (
-                <div className="mt-1 inline-flex rounded-xl border border-white/10 bg-[#0D1522] p-1">
+                <div className="mt-1 inline-flex rounded-lg border border-white/10 bg-[#0E1624] p-1">
                   {(['km', 'mi'] as const).map((unit) => (
                     <button
                       key={unit}
                       onClick={() => onDistanceUnitChange(unit)}
-                      className={`h-7 min-w-[40px] rounded-lg px-2 text-[11px] font-bold uppercase ${
-                        distanceUnit === unit ? 'bg-[#00D4FF] text-black' : 'text-[#8EA7BE]'
+                      className={`h-7 min-w-[40px] rounded-md px-2 text-[11px] font-semibold uppercase ${
+                        distanceUnit === unit ? 'bg-[#2C3D54] text-white' : 'text-[#8EA2B8]'
                       }`}
                     >
                       {unit}
@@ -181,32 +169,26 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = ({
                 </div>
               )}
               {!isWeightExerciseType(exerciseType) && !isDistanceExerciseType(exerciseType) && (
-                <div className="text-[14px] font-black text-[#BFD0DF] uppercase">{statUnit || '--'}</div>
+                <div className="text-[14px] font-semibold text-[#C6D3DF] uppercase">{statUnit || '--'}</div>
               )}
             </div>
           </div>
         </div>
       </div>
 
-      <div className="px-3 pt-3 space-y-3">
+      <div className="px-4 pt-4 space-y-4">
         {showPrefillBanner && exercise.lastSession && (
-          <div className="rounded-xl border border-[#00D4FF]/30 bg-[#00D4FF]/10 p-3 text-sm text-[#C8F5FF] flex items-center justify-between">
-            <div>
-              Pre-filled from last session · {exercise.lastSession.date}
-            </div>
-            <button
-              onClick={onClearPrefill}
-              className="text-[12px] font-bold uppercase tracking-wider text-[#8BE9FF]"
-            >
+          <div className="rounded-xl border border-white/10 bg-[#151E2B] p-3 text-sm text-[#C4D1DE] flex items-center justify-between gap-2">
+            <span>Prefilled from last session ({exercise.lastSession.date})</span>
+            <button onClick={onClearPrefill} className="text-[12px] font-semibold text-[#DDE7F3]">
               Clear
             </button>
           </div>
         )}
 
         {!exercise.lastSession && (
-          <div className="rounded-xl border border-emerald-400/25 bg-emerald-500/10 p-3 text-sm text-emerald-100 inline-flex items-center gap-2">
-            <Sparkles className="w-4 h-4" />
-            First time doing this exercise! Start building your benchmark.
+          <div className="rounded-xl border border-white/10 bg-[#151E2B] p-3 text-sm text-[#AEBECD]">
+            First time doing this exercise.
           </div>
         )}
 
@@ -243,7 +225,7 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = ({
 
         <button
           onClick={onAddSet}
-          className="w-full h-14 rounded-xl border border-dashed border-[#00D4FF]/55 bg-[#00D4FF]/5 text-[#7DE5F6] text-[16px] font-semibold"
+          className="w-full h-14 rounded-xl border border-dashed border-white/20 bg-[#151E2B] text-[#D2DEEA] text-[16px] font-medium"
         >
           + Add Set
         </button>
@@ -251,7 +233,7 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = ({
         {allSetsDone && (
           <button
             onClick={onFinishExercise}
-            className="w-full h-14 rounded-xl bg-emerald-500 text-[#062A14] text-[16px] font-black animate-pulse"
+            className="w-full h-14 rounded-xl bg-[#DDE6F0] text-[#111827] text-[16px] font-semibold"
           >
             Finish Exercise
           </button>

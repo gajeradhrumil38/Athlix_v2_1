@@ -5,7 +5,6 @@ import toast from 'react-hot-toast';
 import type { WorkoutState, ExerciseEntry, Set } from '../../legacy-pages/Log';
 import { ExerciseTabBar } from './ExerciseTabBar';
 import { ExerciseContent } from './ExerciseContent';
-import { RestTimer } from './RestTimer';
 import { ExercisePicker } from './ExercisePicker';
 import { DialPicker } from './DialPicker';
 import { useAuth } from '../../contexts/AuthContext';
@@ -101,7 +100,6 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
   const [activeIndex, setActiveIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
-  const [activeRestTimer, setActiveRestTimer] = useState<{ duration: number; exerciseName: string } | null>(null);
   const [dialPicker, setDialPicker] = useState<DialPickerState | null>(null);
   const [hiddenPrefillExerciseIds, setHiddenPrefillExerciseIds] = useState<string[]>([]);
   const [showExerciseSummary, setShowExerciseSummary] = useState(false);
@@ -208,7 +206,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
 
       if (nextDone && !isSetReadyForCompletion(inputType, { weight: set.weight, reps: set.reps })) {
         haptics.error();
-        toast.error('Add valid values before completing this set.');
+        toast.error('Add values before marking this set complete.');
         return;
       }
 
@@ -229,8 +227,6 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
 
       if (nextDone) {
         haptics.success();
-        setActiveRestTimer({ duration: 90, exerciseName: exercise.name });
-
         const doneCount = exercise.sets.filter((entry) => entry.done || entry.id === setId).length;
         if (doneCount === exercise.sets.length) {
           haptics.complete();
@@ -399,18 +395,10 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
 
   const currentSummary = useMemo(() => {
     if (!currentExercise) return null;
-    const totalVolume = currentExercise.sets
-      .filter((set) => set.done)
-      .reduce((sum, set) => sum + Number(set.weight || 0) * Number(set.reps || 0), 0);
-
     const doneSets = currentExercise.sets.filter((set) => set.done).length;
-    const vsLast = totalVolume - Number(currentExercise.lastSession?.totalVolume || 0);
-
     return {
-      totalVolume,
       doneSets,
       totalSets: currentExercise.sets.length,
-      vsLast,
     };
   }, [currentExercise]);
 
@@ -418,17 +406,19 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
     Boolean(currentExercise?.lastSession) && !hiddenPrefillExerciseIds.includes(currentExercise?.id || '');
 
   return (
-    <div className="fixed inset-0 z-40 bg-[#0D1117] flex flex-col overflow-hidden">
-      <div className="h-[68px] shrink-0 border-b border-[#1E2F42] bg-[#0D1117] px-4 flex items-center justify-between">
+    <div className="fixed inset-0 z-40 bg-[#0B1019] flex flex-col overflow-hidden">
+      <div className="h-[68px] shrink-0 border-b border-white/10 bg-[#0B1019] px-4 flex items-center justify-between">
         <div>
-          <h1 className="text-[15px] font-black uppercase tracking-wide text-[#E2E8F0]">{workout.title}</h1>
-          <p className="text-[11px] text-[#8FA6BD]">{workout.exercises.length} exercise{workout.exercises.length === 1 ? '' : 's'}</p>
+          <h1 className="text-[15px] font-semibold tracking-wide text-[#E2E8F0]">{workout.title}</h1>
+          <p className="text-[11px] text-[#8FA6BD]">
+            {workout.exercises.length} exercise{workout.exercises.length === 1 ? '' : 's'}
+          </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsPaused((prev) => !prev)}
-            className="h-9 w-9 rounded-full border border-white/20 bg-white/5 text-[#9FDFF0] flex items-center justify-center"
+            className="h-9 w-9 rounded-full border border-white/15 bg-[#1A2433] text-[#C4D0DC] flex items-center justify-center"
           >
             {isPaused ? <Play className="w-4 h-4 fill-current" /> : <Pause className="w-4 h-4" />}
           </button>
@@ -437,7 +427,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
               haptics.complete();
               onFinish();
             }}
-            className="h-9 rounded-full bg-[#00D4FF] px-4 text-[12px] font-black text-black"
+            className="h-9 rounded-full bg-[#DDE6F0] px-4 text-[12px] font-semibold text-[#111827]"
           >
             Finish
           </button>
@@ -494,11 +484,11 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
             transition={{ duration: 0.15, ease: 'easeOut' }}
           >
             <Activity className="w-12 h-12 text-[#1E2F42] mb-4" />
-            <h3 className="text-[16px] font-black text-[#8892A4] mb-2">No exercises yet</h3>
-            <p className="text-[12px] text-[#3A5060] mb-6">Add your first exercise to start tracking.</p>
+            <h3 className="text-[16px] font-semibold text-[#B6C2CF] mb-2">No exercises yet</h3>
+            <p className="text-[12px] text-[#7B8FA5] mb-6">Add your first exercise to start tracking.</p>
             <button
               onClick={() => setShowExercisePicker(true)}
-              className="h-11 px-8 bg-[#141C28] border border-[#1E2F42] text-[#00D4FF] text-[12px] font-black rounded-xl"
+              className="h-11 px-8 bg-[#1A2433] border border-white/10 text-[#E3ECF5] text-[12px] font-semibold rounded-xl"
             >
               + Add Exercise
             </button>
@@ -506,10 +496,10 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
         )}
       </AnimatePresence>
 
-      <div className="h-[52px] shrink-0 bg-[#0D1117]/95 border-t border-[#1E2F42] px-4 flex items-center justify-between">
+      <div className="min-h-[56px] shrink-0 bg-[#0B1019] border-t border-white/10 px-4 py-1 pb-[max(0px,env(safe-area-inset-bottom))] flex items-center justify-between">
         <button
           onClick={handleDeleteExercise}
-          className="p-2 text-[#3A5060] hover:text-[#EF4444] transition-colors"
+          className="p-2 text-[#5F738A] hover:text-[#D8E1EB] transition-colors"
           disabled={!currentExercise}
         >
           <Trash2 className="w-4 h-4" />
@@ -519,18 +509,18 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
           <button
             onClick={() => hasExercises && activeIndex > 0 && setActiveIndex(activeIndex - 1)}
             disabled={!hasExercises || activeIndex === 0}
-            className={`p-2 ${!hasExercises || activeIndex === 0 ? 'text-[#1E2F42]' : 'text-[#A7B7C8]'}`}
+            className={`p-2 ${!hasExercises || activeIndex === 0 ? 'text-[#2A3545]' : 'text-[#A7B7C8]'}`}
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <span className="text-[11px] text-[#6F8499] font-bold tabular-nums">
+          <span className="text-[11px] text-[#7F92A8] font-semibold tabular-nums">
             {hasExercises ? activeIndex + 1 : 0} / {workout.exercises.length}
           </span>
           <button
             onClick={() => hasExercises && activeIndex < workout.exercises.length - 1 && setActiveIndex(activeIndex + 1)}
             disabled={!hasExercises || activeIndex >= workout.exercises.length - 1}
             className={`p-2 ${
-              !hasExercises || activeIndex >= workout.exercises.length - 1 ? 'text-[#1E2F42]' : 'text-[#A7B7C8]'
+              !hasExercises || activeIndex >= workout.exercises.length - 1 ? 'text-[#2A3545]' : 'text-[#A7B7C8]'
             }`}
           >
             <ChevronRight className="w-5 h-5" />
@@ -539,17 +529,6 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
 
         <div className="w-8" />
       </div>
-
-      <AnimatePresence>
-        {activeRestTimer && (
-          <RestTimer
-            duration={activeRestTimer.duration}
-            exerciseName={activeRestTimer.exerciseName}
-            onComplete={() => setActiveRestTimer(null)}
-            onSkip={() => setActiveRestTimer(null)}
-          />
-        )}
-      </AnimatePresence>
 
       <AnimatePresence>
         {showExercisePicker && (
@@ -581,7 +560,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
       <AnimatePresence>
         {showExerciseSummary && currentExercise && currentSummary && (
           <motion.div
-            className="fixed inset-0 z-[210] bg-black/65 backdrop-blur-[2px] flex items-end justify-center"
+            className="fixed inset-0 z-[210] bg-black/60 backdrop-blur-[2px] flex items-end justify-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -591,32 +570,12 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 26, stiffness: 260 }}
-              className="w-full max-w-[480px] rounded-t-[22px] border-t border-white/10 bg-[#0F1724] p-5 pb-[calc(env(safe-area-inset-bottom)+20px)]"
+              className="w-full max-w-[480px] rounded-t-[20px] border-t border-white/10 bg-[#121A28] p-5 pb-[calc(env(safe-area-inset-bottom)+20px)]"
             >
-              <h3 className="text-[24px] font-black text-white">Great work! 💪</h3>
-              <p className="text-[#9EB4C8] mt-1">{currentExercise.name} summary</p>
-
-              <div className="mt-4 space-y-2 rounded-xl border border-white/10 bg-white/5 p-3 text-[15px]">
-                <div className="flex justify-between text-[#C9DAEA]">
-                  <span>Total volume</span>
-                  <span className="font-black text-white">
-                    {currentSummary.totalVolume.toLocaleString()} {weightUnit}
-                  </span>
-                </div>
-                <div className="flex justify-between text-[#C9DAEA]">
-                  <span>Sets completed</span>
-                  <span className="font-black text-white">
-                    {currentSummary.doneSets}/{currentSummary.totalSets}
-                  </span>
-                </div>
-                <div className="flex justify-between text-[#C9DAEA]">
-                  <span>vs Last session</span>
-                  <span className={`font-black ${currentSummary.vsLast >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>
-                    {currentSummary.vsLast >= 0 ? '+' : ''}
-                    {currentSummary.vsLast.toLocaleString()} {weightUnit}
-                  </span>
-                </div>
-              </div>
+              <h3 className="text-[20px] font-semibold text-white">Exercise completed</h3>
+              <p className="text-[#AABBCB] mt-1 text-[14px]">
+                {currentSummary.doneSets}/{currentSummary.totalSets} sets finished.
+              </p>
 
               <button
                 onClick={() => {
@@ -625,7 +584,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
                     setActiveIndex(activeIndex + 1);
                   }
                 }}
-                className="mt-5 w-full h-[52px] rounded-xl bg-[#00D4FF] text-black font-black"
+                className="mt-5 w-full h-[48px] rounded-xl bg-[#DDE6F0] text-[#111827] font-semibold"
               >
                 Done
               </button>

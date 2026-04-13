@@ -25,11 +25,11 @@ const ValueBox: React.FC<{
   return (
     <button
       onClick={onTap}
-      className="h-20 rounded-xl border border-[#00D4FF]/20 bg-white/5 px-3 text-center transition-all active:scale-[0.99] active:border-[#00D4FF]/60 active:shadow-[0_0_24px_rgba(0,212,255,0.18)]"
+      className="h-20 rounded-xl border border-white/10 bg-[#1A2230] px-3 text-center transition-all active:scale-[0.99] active:border-white/20"
     >
       <div className="text-[36px] leading-[1] font-black text-white tabular-nums">{field.displayValue}</div>
-      <div className="mt-1 text-[13px] font-semibold tracking-[0.12em] text-[#76D9EA]">{field.label}</div>
-      <div className="text-[11px] text-[#8BA0B7]">Tap to edit</div>
+      <div className="mt-1 text-[13px] font-semibold tracking-[0.12em] text-[#A7B7C9]">{field.label}</div>
+      <div className="text-[11px] text-[#8090A4]">Tap to edit</div>
     </button>
   );
 };
@@ -46,19 +46,17 @@ export const SetRow: React.FC<SetRowProps> = ({
     <div
       className={`relative rounded-2xl border p-3 transition-all ${
         set.done
-          ? 'border-emerald-400/45 bg-emerald-500/10'
-          : 'border-white/10 bg-[#111927]/70'
+          ? 'border-[#3B4A61] bg-[#172232]'
+          : 'border-white/10 bg-[#131C2A]'
       }`}
     >
-      {set.done && <div className="pointer-events-none absolute inset-0 rounded-2xl bg-emerald-500/5" />}
-
       <div className="mb-3 flex items-center justify-between">
         <div className="inline-flex items-center gap-2">
           <div
             className={`h-11 w-11 rounded-full border flex items-center justify-center font-bold text-[18px] ${
               set.done
-                ? 'border-[#00D4FF] bg-[#00D4FF] text-black'
-                : 'border-[#00D4FF]/50 text-white'
+                ? 'border-[#5E738D] bg-[#2A3B52] text-[#E7EEF6]'
+                : 'border-[#42546D] text-white'
             }`}
           >
             {set.done ? <Check className="w-5 h-5" /> : index}
@@ -71,8 +69,8 @@ export const SetRow: React.FC<SetRowProps> = ({
           aria-label={set.done ? `Mark set ${index} incomplete` : `Mark set ${index} complete`}
           className={`h-[52px] w-[52px] rounded-full border flex items-center justify-center transition-all active:scale-95 ${
             set.done
-              ? 'border-emerald-300 bg-emerald-500 text-white shadow-[0_0_18px_rgba(34,197,94,0.35)]'
-              : 'border-white/20 bg-white/5 text-white/50'
+              ? 'border-[#7087A4] bg-[#2A3B52] text-[#EAF2FA]'
+              : 'border-white/20 bg-[#1A2433] text-white/50'
           }`}
         >
           <Check className="w-6 h-6" />
