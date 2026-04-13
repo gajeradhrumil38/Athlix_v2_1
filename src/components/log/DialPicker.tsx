@@ -25,6 +25,9 @@ interface PickerColumn {
 const DIAL_ITEM_HEIGHT = 44;
 const DIAL_VIEW_HEIGHT = 220;
 const DIAL_PADDING = (DIAL_VIEW_HEIGHT - DIAL_ITEM_HEIGHT) / 2;
+const DIAL_SNAP_DELAY = 90;
+
+const clampIndex = (index: number, length: number) => Math.max(0, Math.min(length - 1, index));
 
 const buildColumns = (
   fieldKind: DialFieldKind,
@@ -183,6 +186,7 @@ const DialColumn: React.FC<DialColumnProps> = ({ values, format, initialIndex, o
   const itemRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const [selectedIndex, setSelectedIndex] = useState(initialIndex);
   const hasMountedRef = useRef(false);
+  const snapTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     setSelectedIndex(initialIndex);
@@ -196,44 +200,55 @@ const DialColumn: React.FC<DialColumnProps> = ({ values, format, initialIndex, o
     if (target) {
       root.scrollTo({ top: target.offsetTop - DIAL_PADDING, behavior: 'auto' });
     }
+    hasMountedRef.current = false;
+    const enableHapticsTimer = window.setTimeout(() => {
+      hasMountedRef.current = true;
+    }, 120);
+
+    return () => {
+      window.clearTimeout(enableHapticsTimer);
+    };
   }, [initialIndex]);
 
-  useEffect(() => {
+  useEffect(
+    () => () => {
+      if (snapTimerRef.current) {
+        window.clearTimeout(snapTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  const syncSelectedIndex = (scrollTop: number) => {
+    const nextIndex = clampIndex(Math.round(scrollTop / DIAL_ITEM_HEIGHT), values.length);
+    setSelectedIndex((prev) => {
+      if (prev !== nextIndex && hasMountedRef.current) {
+        haptics.tick();
+      }
+      return nextIndex;
+    });
+    return nextIndex;
+  };
+
+  const snapToNearest = (behavior: ScrollBehavior = 'smooth') => {
+    const root = columnRef.current;
+    if (!root) return;
+    const nextIndex = clampIndex(Math.round(root.scrollTop / DIAL_ITEM_HEIGHT), values.length);
+    root.scrollTo({ top: nextIndex * DIAL_ITEM_HEIGHT, behavior });
+  };
+
+  const handleScroll = () => {
     const root = columnRef.current;
     if (!root) return;
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-
-        if (!visible) return;
-
-        const index = Number((visible.target as HTMLElement).dataset.index || 0);
-        if (Number.isNaN(index)) return;
-
-        setSelectedIndex((prev) => {
-          if (prev !== index && hasMountedRef.current) {
-            haptics.tick();
-          }
-          return index;
-        });
-      },
-      {
-        root,
-        threshold: [0.6, 0.75, 0.9],
-      },
-    );
-
-    itemRefs.current.forEach((element) => {
-      if (element) observer.observe(element);
-    });
-
-    hasMountedRef.current = true;
-
-    return () => observer.disconnect();
-  }, [values.length]);
+    syncSelectedIndex(root.scrollTop);
+    if (snapTimerRef.current) {
+      window.clearTimeout(snapTimerRef.current);
+    }
+    snapTimerRef.current = window.setTimeout(() => {
+      snapToNearest('smooth');
+    }, DIAL_SNAP_DELAY);
+  };
 
   useEffect(() => {
     const nextValue = values[selectedIndex];
@@ -245,7 +260,10 @@ const DialColumn: React.FC<DialColumnProps> = ({ values, format, initialIndex, o
     <div className="relative flex-1 min-w-0">
       <div
         ref={columnRef}
-        className="dial-column h-[220px] overflow-y-scroll rounded-xl border border-white/10 bg-[#141D2B]"
+        onScroll={handleScroll}
+        onTouchEnd={() => snapToNearest('smooth')}
+        onMouseUp={() => snapToNearest('smooth')}
+        className="dial-column h-[220px] overflow-y-auto rounded-2xl border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03)_0%,rgba(255,255,255,0.01)_100%)]"
         style={{
           scrollSnapType: 'y mandatory',
           WebkitOverflowScrolling: 'touch',
@@ -267,8 +285,8 @@ const DialColumn: React.FC<DialColumnProps> = ({ values, format, initialIndex, o
                 if (!node || !columnRef.current) return;
                 columnRef.current.scrollTo({ top: node.offsetTop - DIAL_PADDING, behavior: 'smooth' });
               }}
-              className={`dial-item h-11 w-full flex items-center justify-center text-center transition-all duration-100 scroll-snap-align-center ${
-                selected ? 'text-white text-[28px] font-semibold selected' : 'text-white/35 text-[22px] font-medium'
+              className={`dial-item h-11 w-full flex items-center justify-center text-center tabular-nums font-mono transition-all duration-100 scroll-snap-align-center ${
+                selected ? 'text-[#F3F7FB] text-[30px] font-semibold selected' : 'text-[#6F8298] text-[22px] font-medium'
               }`}
               style={{ scrollSnapAlign: 'center' }}
             >
@@ -278,9 +296,9 @@ const DialColumn: React.FC<DialColumnProps> = ({ values, format, initialIndex, o
         })}
       </div>
 
-      <div className="pointer-events-none absolute left-1 right-1 top-1/2 -translate-y-1/2 h-11 rounded-lg border-y border-white/20 bg-white/5" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 rounded-t-xl bg-gradient-to-b from-[#101724] to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 rounded-b-xl bg-gradient-to-t from-[#101724] to-transparent" />
+      <div className="pointer-events-none absolute left-1 right-1 top-1/2 -translate-y-1/2 h-11 rounded-xl border border-white/15 bg-[rgba(142,160,178,0.09)]" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 rounded-t-2xl bg-gradient-to-b from-[#0D1421] via-[#0D1421]/80 to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 rounded-b-2xl bg-gradient-to-t from-[#0D1421] via-[#0D1421]/80 to-transparent" />
     </div>
   );
 };
@@ -291,6 +309,7 @@ export const DialPicker: React.FC<DialPickerProps> = ({
   inputType,
   initialValue,
   weightUnit = 'kg',
+  distanceUnit = 'km',
   onClose,
   onConfirm,
 }) => {
@@ -325,7 +344,7 @@ export const DialPicker: React.FC<DialPickerProps> = ({
         type="button"
         aria-label="Dismiss picker"
         onClick={onClose}
-        className="absolute inset-0 bg-black/55"
+        className="absolute inset-0 bg-black/60 backdrop-blur-[1px]"
       />
 
       <motion.div
@@ -333,24 +352,27 @@ export const DialPicker: React.FC<DialPickerProps> = ({
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="absolute bottom-0 left-0 right-0 mx-auto w-full max-w-[860px] rounded-t-[20px] border border-white/10 border-b-0 bg-[#101724] px-4 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-3"
+        className="absolute bottom-0 left-0 right-0 mx-auto w-full max-w-[860px] rounded-t-[24px] border border-white/10 border-b-0 bg-[rgba(11,17,27,0.96)] px-4 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-3"
       >
-        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/30" />
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/25" />
 
         <div className="mb-3 flex items-center justify-between">
           <button
             type="button"
             onClick={onClose}
-            className="h-9 rounded-lg border border-white/10 bg-[#1A2433] px-3 text-[12px] font-medium text-[#D1DCE7] inline-flex items-center gap-1"
+            className="inline-flex h-9 items-center gap-1 rounded-lg bg-white/5 px-3 text-[12px] font-medium text-[#D1DCE7] transition-colors hover:bg-white/10"
           >
             <ChevronLeft className="w-4 h-4" />
             Back
           </button>
-          <h3 className="text-[16px] font-semibold text-white">{title}</h3>
+          <h3 className="text-[16px] font-semibold text-white">
+            {title}
+            {fieldKind === 'distance' ? ` (${distanceUnit.toUpperCase()})` : ''}
+          </h3>
           <button
             type="button"
             onClick={onClose}
-            className="h-9 w-9 rounded-lg border border-white/10 bg-[#1A2433] text-[#9FB1C3] flex items-center justify-center"
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 text-[#9FB1C3] transition-colors hover:bg-white/10"
           >
             <X className="w-4 h-4" />
           </button>
@@ -371,7 +393,7 @@ export const DialPicker: React.FC<DialPickerProps> = ({
         <button
           type="button"
           onClick={submit}
-          className="w-full h-[52px] rounded-xl bg-[#DDE6F0] text-[#111827] font-semibold text-[15px]"
+          className="h-[52px] w-full rounded-xl bg-[#C9D6E4] text-[15px] font-semibold text-[#0E1A27] transition-colors hover:bg-[#D4DEE9]"
         >
           Done
         </button>

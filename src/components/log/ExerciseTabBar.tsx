@@ -30,7 +30,7 @@ export const ExerciseTabBar: React.FC<ExerciseTabBarProps> = ({
   }, [activeIndex]);
 
   return (
-    <div className="h-[48px] flex-shrink-0 flex items-center bg-[#0B1019] border-b border-white/10 px-3 overflow-hidden">
+    <div className="flex h-[52px] flex-shrink-0 items-center overflow-hidden border-b border-white/5 bg-[#0B1019]/70 px-3 backdrop-blur-xl">
       <div 
         ref={scrollRef}
         className="flex-1 flex items-center overflow-x-auto no-scrollbar h-full"
@@ -46,18 +46,18 @@ export const ExerciseTabBar: React.FC<ExerciseTabBarProps> = ({
               onClick={() => onTabClick(i)}
               className={`inline-flex flex-col items-center px-3 py-1.5 mr-2 rounded-xl min-w-fit cursor-pointer transition-all border ${
                 isActive
-                  ? 'bg-[#161F2D] border-[#334258]'
+                  ? 'border-white/20 bg-white/[0.05]'
                   : 'bg-transparent border-transparent'
               }`}
             >
               <span 
                 className={`text-[9px] font-semibold uppercase tracking-wider ${
-                  isActive ? 'text-[#E2E8F0]' : 'text-[#8B9CAF]'
+                  isActive ? 'text-[#DFE8F2]' : 'text-[#7D91A7]'
                 }`}
               >
                 {ex.name.length > 12 ? ex.name.substring(0, 10) + '..' : ex.name}
               </span>
-              <span className="text-[7px] font-semibold tracking-[0.5px] mt-0.5 text-[#73859B]">
+              <span className="mt-0.5 text-[7px] font-semibold tracking-[0.5px] text-[#6D8299]">
                 {doneSets}/{totalSets} SETS
               </span>
             </button>
@@ -68,7 +68,7 @@ export const ExerciseTabBar: React.FC<ExerciseTabBarProps> = ({
       {showAddButton && (
         <button 
           onClick={onAddExercise}
-          className="w-8 h-8 rounded-full bg-[#1A2433] border border-white/10 text-[#B6C5D6] flex items-center justify-center ml-2 active:scale-90 transition-transform"
+          className="ml-2 flex h-8 w-8 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-[#B6C5D6] transition-transform active:scale-90"
         >
           <Plus className="w-4 h-4" />
         </button>

@@ -102,6 +102,7 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({ onSelect, onClos
   }, [user, search, selectedMuscle]);
 
   const filteredExercises = useMemo(() => libraryExercises, [libraryExercises]);
+  const isNestedView = Boolean(search.trim()) || Boolean(selectedMuscle);
 
   const handleSelect = (exercise: Exercise) => {
     onSelect(exercise);
@@ -130,13 +131,13 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({ onSelect, onClos
         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
         className="absolute inset-0 mx-auto w-full max-w-[860px] bg-[#0F1623] flex flex-col border-x border-white/10"
       >
-        <div className="h-[64px] flex items-center justify-between px-4 border-b border-white/10">
+        <div className="flex items-center justify-between border-b border-white/10 px-4 pb-2 pt-[calc(env(safe-area-inset-top)+10px)]">
           <button
             onClick={handleBack}
             className="h-9 rounded-lg border border-white/10 bg-[#1A2433] px-3 text-[12px] font-medium text-[#D1DCE7] inline-flex items-center gap-1"
           >
             <ChevronLeft className="w-4 h-4" />
-            Back
+            {isNestedView ? 'Back' : 'Close'}
           </button>
           <h2 className="text-[16px] font-semibold text-[#E7EEF6] tracking-tight">Add Exercise</h2>
           <button

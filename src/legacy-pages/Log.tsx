@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
@@ -134,6 +134,7 @@ const clearDraft = () => {
 export const Log: React.FC = () => {
   const { user, profile, updateProfile } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const allowLiveAddExercise = Boolean(profile?.start_workout_enabled);
   const showStartSheet = Boolean(profile?.show_start_sheet);
   const searchParams = new URLSearchParams(location.search);
@@ -255,6 +256,14 @@ export const Log: React.FC = () => {
     setShowFinish(true);
   };
 
+  const handleBackToPrevious = useCallback(() => {
+    if (window.history.length > 1) {
+      navigate(-1);
+      return;
+    }
+    navigate('/');
+  }, [navigate]);
+
   const handleSave = async (title: string, notes: string) => {
     if (!workout || !user) return;
 
@@ -340,6 +349,7 @@ export const Log: React.FC = () => {
           workout={workout}
           setWorkout={setWorkout}
           onFinish={handleFinish}
+          onBackToPrevious={handleBackToPrevious}
           allowLiveAddExercise={allowLiveAddExercise}
           openExercisePickerOnStart={openPickerOnStart}
           weightUnit={weightUnit}

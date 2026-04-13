@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Activity, ChevronLeft, ChevronRight, Pause, Play, Trash2 } from 'lucide-react';
+import { Activity, ArrowLeft, ChevronLeft, ChevronRight, Pause, Play, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import type { WorkoutState, ExerciseEntry, Set } from '../../legacy-pages/Log';
 import { ExerciseTabBar } from './ExerciseTabBar';
@@ -26,6 +26,7 @@ interface ActiveWorkoutProps {
   workout: WorkoutState;
   setWorkout: React.Dispatch<React.SetStateAction<WorkoutState | null>>;
   onFinish: () => void;
+  onBackToPrevious?: () => void;
   allowLiveAddExercise?: boolean;
   openExercisePickerOnStart?: boolean;
   weightUnit?: WeightUnit;
@@ -89,6 +90,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
   workout,
   setWorkout,
   onFinish,
+  onBackToPrevious,
   allowLiveAddExercise = true,
   openExercisePickerOnStart = false,
   weightUnit = 'kg',
@@ -405,21 +407,47 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
   const showPrefillBanner =
     Boolean(currentExercise?.lastSession) && !hiddenPrefillExerciseIds.includes(currentExercise?.id || '');
 
+  const handleBackToPrevious = useCallback(() => {
+    if (onBackToPrevious) {
+      onBackToPrevious();
+      return;
+    }
+
+    if (typeof window === 'undefined') return;
+
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    window.location.hash = '#/';
+  }, [onBackToPrevious]);
+
   return (
     <div className="fixed inset-0 z-40 bg-[#0B1019] overflow-hidden">
-      <div className="mx-auto w-full max-w-[920px] h-full flex flex-col border-x border-white/10 bg-[#0B1019]">
-      <div className="h-[68px] shrink-0 border-b border-white/10 bg-[#0B1019] px-4 flex items-center justify-between">
-        <div>
-          <h1 className="text-[15px] font-semibold tracking-wide text-[#E2E8F0]">{workout.title}</h1>
-          <p className="text-[11px] text-[#8FA6BD]">
-            {workout.exercises.length} exercise{workout.exercises.length === 1 ? '' : 's'}
-          </p>
+      <div className="mx-auto flex h-full w-full max-w-[920px] flex-col bg-[radial-gradient(circle_at_top,rgba(31,45,66,0.28)_0%,rgba(11,16,25,0.96)_40%,#0B1019_100%)]">
+      <div className="flex h-[68px] shrink-0 items-center justify-between border-b border-white/5 bg-[#0B1019]/74 px-4 backdrop-blur-xl">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleBackToPrevious}
+            className="inline-flex h-9 items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-[12px] font-medium text-[#D2DEEA]"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
+          <div>
+            <h1 className="text-[15px] font-semibold tracking-wide text-[#E2E8F0]">{workout.title}</h1>
+            <p className="text-[11px] text-[#8FA6BD]">
+              {workout.exercises.length} exercise{workout.exercises.length === 1 ? '' : 's'}
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsPaused((prev) => !prev)}
-            className="h-9 w-9 rounded-full border border-white/15 bg-[#1A2433] text-[#C4D0DC] flex items-center justify-center"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-[#C4D0DC]"
           >
             {isPaused ? <Play className="w-4 h-4 fill-current" /> : <Pause className="w-4 h-4" />}
           </button>
@@ -428,7 +456,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
               haptics.complete();
               onFinish();
             }}
-            className="h-9 rounded-full bg-[#DDE6F0] px-4 text-[12px] font-semibold text-[#111827]"
+            className="h-9 rounded-full bg-[#CAD7E4] px-4 text-[12px] font-semibold text-[#0F1A27]"
           >
             Finish
           </button>
@@ -489,7 +517,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
             <p className="text-[12px] text-[#7B8FA5] mb-6">Add your first exercise to start tracking.</p>
             <button
               onClick={() => setShowExercisePicker(true)}
-              className="h-11 px-8 bg-[#1A2433] border border-white/10 text-[#E3ECF5] text-[12px] font-semibold rounded-xl"
+              className="h-11 rounded-xl border border-white/15 bg-white/[0.04] px-8 text-[12px] font-semibold text-[#E3ECF5]"
             >
               + Add Exercise
             </button>
@@ -497,7 +525,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
         )}
       </AnimatePresence>
 
-      <div className="min-h-[56px] shrink-0 bg-[#0B1019] border-t border-white/10 px-4 py-1 pb-[max(0px,env(safe-area-inset-bottom))] flex items-center justify-between">
+      <div className="flex min-h-[56px] shrink-0 items-center justify-between border-t border-white/5 bg-[#0B1019]/78 px-4 py-1 pb-[max(0px,env(safe-area-inset-bottom))] backdrop-blur-xl">
         <button
           onClick={handleDeleteExercise}
           className="p-2 text-[#5F738A] hover:text-[#D8E1EB] transition-colors"
