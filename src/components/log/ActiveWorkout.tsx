@@ -406,7 +406,8 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
     Boolean(currentExercise?.lastSession) && !hiddenPrefillExerciseIds.includes(currentExercise?.id || '');
 
   return (
-    <div className="fixed inset-0 z-40 bg-[#0B1019] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-40 bg-[#0B1019] overflow-hidden">
+      <div className="mx-auto w-full max-w-[920px] h-full flex flex-col border-x border-white/10 bg-[#0B1019]">
       <div className="h-[68px] shrink-0 border-b border-white/10 bg-[#0B1019] px-4 flex items-center justify-between">
         <div>
           <h1 className="text-[15px] font-semibold tracking-wide text-[#E2E8F0]">{workout.title}</h1>
@@ -528,6 +529,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
         </div>
 
         <div className="w-8" />
+      </div>
       </div>
 
       <AnimatePresence>

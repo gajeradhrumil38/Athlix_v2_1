@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { ChevronLeft, X } from 'lucide-react';
 import type { DialFieldKind, ExerciseInputType, WeightUnit, DistanceUnit } from '../../lib/exerciseTypes';
 import { haptics } from '../../lib/haptics';
 
@@ -245,7 +245,7 @@ const DialColumn: React.FC<DialColumnProps> = ({ values, format, initialIndex, o
     <div className="relative flex-1 min-w-0">
       <div
         ref={columnRef}
-        className="dial-column h-[220px] overflow-y-scroll rounded-xl border border-white/10 bg-[#111927]"
+        className="dial-column h-[220px] overflow-y-scroll rounded-xl border border-white/10 bg-[#141D2B]"
         style={{
           scrollSnapType: 'y mandatory',
           WebkitOverflowScrolling: 'touch',
@@ -268,7 +268,7 @@ const DialColumn: React.FC<DialColumnProps> = ({ values, format, initialIndex, o
                 columnRef.current.scrollTo({ top: node.offsetTop - DIAL_PADDING, behavior: 'smooth' });
               }}
               className={`dial-item h-11 w-full flex items-center justify-center text-center transition-all duration-100 scroll-snap-align-center ${
-                selected ? 'text-white text-[28px] font-bold selected' : 'text-white/30 text-[22px] font-medium'
+                selected ? 'text-white text-[28px] font-semibold selected' : 'text-white/35 text-[22px] font-medium'
               }`}
               style={{ scrollSnapAlign: 'center' }}
             >
@@ -278,9 +278,9 @@ const DialColumn: React.FC<DialColumnProps> = ({ values, format, initialIndex, o
         })}
       </div>
 
-      <div className="pointer-events-none absolute left-1 right-1 top-1/2 -translate-y-1/2 h-11 rounded-lg border-y border-[#00D4FF]/25 bg-[#00D4FF]/10" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 rounded-t-xl bg-gradient-to-b from-[#0D1117] to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 rounded-b-xl bg-gradient-to-t from-[#0D1117] to-transparent" />
+      <div className="pointer-events-none absolute left-1 right-1 top-1/2 -translate-y-1/2 h-11 rounded-lg border-y border-white/20 bg-white/5" />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-20 rounded-t-xl bg-gradient-to-b from-[#101724] to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 rounded-b-xl bg-gradient-to-t from-[#101724] to-transparent" />
     </div>
   );
 };
@@ -325,7 +325,7 @@ export const DialPicker: React.FC<DialPickerProps> = ({
         type="button"
         aria-label="Dismiss picker"
         onClick={onClose}
-        className="absolute inset-0 bg-black/60"
+        className="absolute inset-0 bg-black/55"
       />
 
       <motion.div
@@ -333,16 +333,24 @@ export const DialPicker: React.FC<DialPickerProps> = ({
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-        className="absolute bottom-0 left-0 right-0 rounded-t-[20px] border-t border-white/10 bg-[#0D1117] px-4 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-3"
+        className="absolute bottom-0 left-0 right-0 mx-auto w-full max-w-[860px] rounded-t-[20px] border border-white/10 border-b-0 bg-[#101724] px-4 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-3"
       >
-        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/20" />
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/30" />
 
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-[16px] font-bold text-white">{title}</h3>
           <button
             type="button"
             onClick={onClose}
-            className="h-9 w-9 rounded-full border border-white/10 bg-white/5 text-[#9FB1C3] flex items-center justify-center"
+            className="h-9 rounded-lg border border-white/10 bg-[#1A2433] px-3 text-[12px] font-medium text-[#D1DCE7] inline-flex items-center gap-1"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Back
+          </button>
+          <h3 className="text-[16px] font-semibold text-white">{title}</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-9 w-9 rounded-lg border border-white/10 bg-[#1A2433] text-[#9FB1C3] flex items-center justify-center"
           >
             <X className="w-4 h-4" />
           </button>
@@ -363,7 +371,7 @@ export const DialPicker: React.FC<DialPickerProps> = ({
         <button
           type="button"
           onClick={submit}
-          className="w-full h-[52px] rounded-xl bg-[#00D4FF] text-black font-black text-[15px]"
+          className="w-full h-[52px] rounded-xl bg-[#DDE6F0] text-[#111827] font-semibold text-[15px]"
         >
           Done
         </button>

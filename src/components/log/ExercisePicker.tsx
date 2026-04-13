@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, X, Plus, History, LayoutGrid } from 'lucide-react';
-import { MUSCLE_COLORS } from '../FitnessIcons';
+import { Search, X, Plus, History, LayoutGrid, ChevronLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getExerciseLibraryByGroup, getRecentExerciseOptions, searchExerciseLibrary } from '../../lib/supabaseData';
 import { ExerciseImage } from '../shared/ExerciseImage';
@@ -25,14 +24,14 @@ interface ExercisePickerProps {
 }
 
 const MUSCLE_GROUPS = [
-  { name: 'Chest', color: MUSCLE_COLORS.Chest, previewExerciseId: 'ot_benchpress' },
-  { name: 'Back', color: MUSCLE_COLORS.Back, previewExerciseId: 'ot_tbarrow' },
-  { name: 'Shoulders', color: MUSCLE_COLORS.Shoulders, previewExerciseId: 'ot_arnoldpress' },
-  { name: 'Biceps', color: MUSCLE_COLORS.Biceps, previewExerciseId: 'ot_bicepscurl' },
-  { name: 'Triceps', color: MUSCLE_COLORS.Triceps, previewExerciseId: 'ot_tricepskickback' },
-  { name: 'Legs', color: MUSCLE_COLORS.Legs, previewExerciseId: 'ot_legpressx' },
-  { name: 'Core', color: MUSCLE_COLORS.Core, previewExerciseId: 'ot_crunches' },
-  { name: 'Cardio', color: MUSCLE_COLORS.Cardio, previewExerciseId: '' },
+  { name: 'Chest', previewExerciseId: 'ot_benchpress' },
+  { name: 'Back', previewExerciseId: 'ot_tbarrow' },
+  { name: 'Shoulders', previewExerciseId: 'ot_arnoldpress' },
+  { name: 'Biceps', previewExerciseId: 'ot_bicepscurl' },
+  { name: 'Triceps', previewExerciseId: 'ot_tricepskickback' },
+  { name: 'Legs', previewExerciseId: 'ot_legpressx' },
+  { name: 'Core', previewExerciseId: 'ot_crunches' },
+  { name: 'Cardio', previewExerciseId: '' },
 ];
 
 export const ExercisePicker: React.FC<ExercisePickerProps> = ({ onSelect, onClose, recentExercises }) => {
@@ -62,8 +61,8 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({ onSelect, onClos
             : undefined,
         })),
       );
-    }
-    loadRecent();
+    };
+    void loadRecent();
   }, [user]);
 
   useEffect(() => {
@@ -99,150 +98,183 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({ onSelect, onClos
       setLibraryExercises([]);
     };
 
-    loadList();
+    void loadList();
   }, [user, search, selectedMuscle]);
 
   const filteredExercises = useMemo(() => libraryExercises, [libraryExercises]);
 
-  const handleSelect = (ex: Exercise) => {
-    onSelect(ex);
+  const handleSelect = (exercise: Exercise) => {
+    onSelect(exercise);
+    onClose();
+  };
+
+  const handleBack = () => {
+    if (search.trim()) {
+      setSearch('');
+      setActiveTab(selectedMuscle ? 'muscle' : 'recent');
+      return;
+    }
+    if (selectedMuscle) {
+      setSelectedMuscle(null);
+      return;
+    }
     onClose();
   };
 
   return (
-    <motion.div 
-      initial={{ y: '100%' }}
-      animate={{ y: 0 }}
-      exit={{ y: '100%' }}
-      transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-      className="fixed inset-0 z-50 bg-[#0D1117] flex flex-col"
-    >
-      {/* Header */}
-      <div className="h-[60px] flex items-center justify-between px-4 border-b border-[#1E2F42]">
-        <h2 className="text-[16px] font-black text-[#E2E8F0] tracking-tight">ADD EXERCISE</h2>
-        <button onClick={onClose} className="p-2 text-[#8892A4] hover:text-white transition-colors">
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* Search Bar */}
-      <div className="px-4 py-3">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A5060]" />
-          <input 
-            type="text"
-            placeholder="Search exercises..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              if (e.target.value) setActiveTab('search');
-            }}
-            className="w-full h-11 bg-[#141C28] border border-[#1E2F42] rounded-xl pl-10 pr-4 text-[14px] text-white placeholder-[#3A5060] focus:outline-none focus:border-[#00D4FF]/50 transition-all"
-          />
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex px-4 gap-2 mb-4">
-        {[
-          { id: 'recent', label: 'Recent', icon: History },
-          { id: 'muscle', label: 'Muscle', icon: LayoutGrid },
-        ].map(tab => (
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
+      <motion.div
+        initial={{ y: '100%' }}
+        animate={{ y: 0 }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 28, stiffness: 260 }}
+        className="absolute inset-0 mx-auto w-full max-w-[860px] bg-[#0F1623] flex flex-col border-x border-white/10"
+      >
+        <div className="h-[64px] flex items-center justify-between px-4 border-b border-white/10">
           <button
-            key={tab.id}
-            onClick={() => {
-              setActiveTab(tab.id as any);
-              setSearch('');
-              setSelectedMuscle(null);
-            }}
-            className={`flex-1 h-10 rounded-xl flex items-center justify-center gap-2 text-[11px] font-bold transition-all ${activeTab === tab.id ? 'bg-[#00D4FF]/15 text-[#00D4FF] border border-[#00D4FF]/40' : 'bg-[#141C28] text-[#8892A4] border border-[#1E2F42]'}`}
+            onClick={handleBack}
+            className="h-9 rounded-lg border border-white/10 bg-[#1A2433] px-3 text-[12px] font-medium text-[#D1DCE7] inline-flex items-center gap-1"
           >
-            <tab.icon className="w-3.5 h-3.5" />
-            {tab.label}
+            <ChevronLeft className="w-4 h-4" />
+            Back
           </button>
-        ))}
-      </div>
+          <h2 className="text-[16px] font-semibold text-[#E7EEF6] tracking-tight">Add Exercise</h2>
+          <button
+            onClick={onClose}
+            className="h-9 w-9 rounded-lg border border-white/10 bg-[#1A2433] text-[#9CB1C7] inline-flex items-center justify-center"
+            aria-label="Close add exercise"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
-      {/* Content Area */}
-      <div className="flex-1 overflow-y-auto px-4 pb-8 no-scrollbar">
-        {activeTab === 'recent' && !search && (
-          <div className="space-y-2">
-            {recentExercises.length > 0 ? recentExercises.map(ex => (
-              <ExerciseRow key={ex.id} ex={ex} onSelect={handleSelect} />
-            )) : recentLibraryExercises.length > 0 ? recentLibraryExercises.map(ex => (
-              <ExerciseRow key={ex.id} ex={ex} onSelect={handleSelect} />
-            )) : (
-              <div className="text-center py-12 text-[#3A5060] text-[12px] font-medium">No recent exercises</div>
-            )}
+        <div className="px-4 pt-3 pb-2 border-b border-white/5">
+          <div className="relative mb-3">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#687E95]" />
+            <input
+              type="text"
+              placeholder="Search exercises"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                if (event.target.value) setActiveTab('search');
+              }}
+              className="w-full h-11 rounded-xl bg-[#161F2C] border border-white/10 pl-10 pr-4 text-[14px] text-white placeholder-[#6F8398] focus:outline-none focus:border-[#3D5067] transition-colors"
+            />
           </div>
-        )}
 
-        {activeTab === 'muscle' && !search && !selectedMuscle && (
-          <div className="grid grid-cols-2 gap-3">
-            {MUSCLE_GROUPS.map(m => (
+          <div className="flex gap-2">
+            {[
+              { id: 'recent', label: 'Recent', icon: History },
+              { id: 'muscle', label: 'Muscle', icon: LayoutGrid },
+            ].map((tab) => (
               <button
-                key={m.name}
-                onClick={() => setSelectedMuscle(m.name)}
-                className="h-24 bg-[#141C28] border border-[#1E2F42] rounded-3xl flex flex-col items-center justify-center gap-2 active:scale-95 transition-all"
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id as 'recent' | 'muscle');
+                  setSearch('');
+                  setSelectedMuscle(null);
+                }}
+                className={`flex-1 h-10 rounded-xl border text-[12px] font-medium flex items-center justify-center gap-2 transition-colors ${
+                  activeTab === tab.id
+                    ? 'bg-[#212E40] border-[#3D5067] text-white'
+                    : 'bg-[#161F2C] border-white/10 text-[#9CB1C7]'
+                }`}
               >
-                <ExerciseImage
-                  exerciseId={m.previewExerciseId}
-                  exerciseName={m.name}
-                  muscleGroup={m.name}
-                  size="sm"
-                />
-                <span className="text-[11px] font-black text-[#E2E8F0] uppercase tracking-wider">{m.name}</span>
+                <tab.icon className="w-3.5 h-3.5" />
+                {tab.label}
               </button>
             ))}
           </div>
-        )}
+        </div>
 
-        {(selectedMuscle || activeTab === 'search') && (
-          <div className="space-y-2">
-            {selectedMuscle && (
-              <button 
-                onClick={() => setSelectedMuscle(null)}
-                className="text-[10px] font-bold text-[#00D4FF] uppercase tracking-widest mb-2 flex items-center gap-1"
-              >
-                ← Back to Muscle Groups
-              </button>
-            )}
-            {filteredExercises.map(ex => (
-              <ExerciseRow key={ex.id} ex={ex} onSelect={handleSelect} />
-            ))}
-            {filteredExercises.length === 0 && (
-              <div className="text-center py-12 text-[#3A5060] text-[12px] font-medium">No exercises found</div>
-            )}
-          </div>
-        )}
-      </div>
-    </motion.div>
+        <div className="flex-1 overflow-y-auto px-4 py-4 pb-[calc(env(safe-area-inset-bottom)+24px)] no-scrollbar">
+          {activeTab === 'recent' && !search && (
+            <div className="space-y-2">
+              {(recentExercises.length > 0 ? recentExercises : recentLibraryExercises).map((exercise) => (
+                <ExerciseRow key={exercise.id} exercise={exercise} onSelect={handleSelect} />
+              ))}
+              {recentExercises.length === 0 && recentLibraryExercises.length === 0 && (
+                <div className="text-center py-12 text-[#7D90A6] text-[13px]">No recent exercises</div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'muscle' && !search && !selectedMuscle && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {MUSCLE_GROUPS.map((muscle) => (
+                <button
+                  key={muscle.name}
+                  onClick={() => setSelectedMuscle(muscle.name)}
+                  className="h-24 rounded-2xl border border-white/10 bg-[#161F2C] flex flex-col items-center justify-center gap-2 active:scale-[0.98]"
+                >
+                  <ExerciseImage
+                    exerciseId={muscle.previewExerciseId}
+                    exerciseName={muscle.name}
+                    muscleGroup={muscle.name}
+                    size="sm"
+                  />
+                  <span className="text-[11px] font-semibold text-[#E3EBF4] uppercase tracking-wide">{muscle.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {(selectedMuscle || activeTab === 'search') && (
+            <div className="space-y-2">
+              {selectedMuscle && (
+                <button
+                  onClick={() => setSelectedMuscle(null)}
+                  className="text-[12px] font-medium text-[#C1CFDC] inline-flex items-center gap-1 mb-1"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Back to muscle groups
+                </button>
+              )}
+
+              {filteredExercises.map((exercise) => (
+                <ExerciseRow key={exercise.id} exercise={exercise} onSelect={handleSelect} />
+              ))}
+
+              {filteredExercises.length === 0 && (
+                <div className="text-center py-12 text-[#7D90A6] text-[13px]">No exercises found</div>
+              )}
+            </div>
+          )}
+        </div>
+      </motion.div>
+    </div>
   );
 };
 
-const ExerciseRow: React.FC<{ ex: Exercise, onSelect: (ex: Exercise) => void }> = ({ ex, onSelect }) => {
+const ExerciseRow: React.FC<{ exercise: Exercise; onSelect: (exercise: Exercise) => void }> = ({ exercise, onSelect }) => {
   return (
-    <button 
-      onClick={() => onSelect(ex)}
-      className="w-full h-16 bg-[#141C28] border border-[#1E2F42] rounded-2xl p-3 flex items-center gap-3 active:scale-[0.98] transition-all text-left"
+    <button
+      onClick={() => onSelect(exercise)}
+      className="w-full min-h-[66px] rounded-2xl border border-white/10 bg-[#161F2C] px-3 py-3 flex items-center gap-3 text-left active:scale-[0.995] transition-transform"
     >
       <ExerciseImage
-        exerciseId={ex.exercise_db_id || ''}
-        exerciseName={ex.name}
-        muscleGroup={ex.muscleGroup}
+        exerciseId={exercise.exercise_db_id || ''}
+        exerciseName={exercise.name}
+        muscleGroup={exercise.muscleGroup}
         size="sm"
       />
-      <div className="flex-1 flex flex-col">
-        <span className="text-[13px] font-black text-[#E2E8F0] tracking-tight leading-tight">{ex.name}</span>
-        <span className="text-[9px] font-bold text-[#3A5060] uppercase tracking-wider mt-0.5">{ex.muscleGroup}</span>
+
+      <div className="flex-1 min-w-0">
+        <div className="text-[14px] font-semibold text-[#EDF4FB] truncate">{exercise.name}</div>
+        <div className="text-[11px] text-[#8DA1B6]">{exercise.muscleGroup}</div>
       </div>
-      {ex.lastSession && (
-        <div className="flex flex-col items-end">
-          <span className="text-[10px] font-black text-[#8892A4]">{ex.lastSession.weight}kg × {ex.lastSession.reps}</span>
-          <span className="text-[8px] font-bold text-[#3A5060] uppercase tracking-widest">{ex.lastSession.date}</span>
+
+      {exercise.lastSession && (
+        <div className="hidden sm:flex flex-col items-end pr-1">
+          <span className="text-[11px] text-[#B4C4D4] tabular-nums">
+            {exercise.lastSession.weight}kg × {exercise.lastSession.reps}
+          </span>
+          <span className="text-[10px] text-[#7489A0]">{exercise.lastSession.date}</span>
         </div>
       )}
-      <div className="w-9 h-9 rounded-2xl bg-[#00D4FF]/10 border border-[#00D4FF]/15 flex items-center justify-center text-[#00D4FF] ml-1 shadow-[0_0_16px_rgba(0,212,255,0.08)]">
+
+      <div className="h-8 w-8 rounded-lg border border-white/10 bg-[#202C3C] text-[#D9E4EF] flex items-center justify-center">
         <Plus className="w-4 h-4" />
       </div>
     </button>

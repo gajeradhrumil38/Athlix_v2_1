@@ -110,7 +110,7 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = (props) => {
     >
       <div className="sticky top-0 z-20 border-b border-white/10 bg-[#0E141F]/94 px-4 pb-4 pt-4 backdrop-blur-xl">
         <div className="mb-3 flex items-center justify-between gap-3">
-          <h2 className="text-[42px] leading-none font-black tracking-tight text-white">{exercise.name}</h2>
+          <h2 className="text-[34px] sm:text-[40px] leading-none font-black tracking-tight text-white">{exercise.name}</h2>
           <button
             onClick={onSwipeRight}
             className="h-10 rounded-xl border border-white/15 bg-[#1A2433] px-3 text-[12px] font-medium text-[#D2DEEA] inline-flex items-center gap-2 whitespace-nowrap"
