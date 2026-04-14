@@ -79,7 +79,7 @@ export const INPUT_LABELS: Record<
   calories_time: { primary: 'CAL', secondary: 'MIN' },
 };
 
-const CARDIO_HINT_NAMES = ['run', 'jog', 'cycle', 'bike', 'row', 'swim', 'elliptical', 'stair', 'ski', 'rope'];
+const CARDIO_HINT_NAMES = ['run', 'jog', 'cycle', 'bike', 'row', 'swim', 'elliptical', 'stair', 'ski'];
 
 const normalizeKey = (value: string) =>
   value

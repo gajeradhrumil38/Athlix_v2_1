@@ -172,11 +172,25 @@ const EXERCISE_MUSCLE_PATTERNS: ExercisePatternProfile[] = [
     targets: [target('triceps', 0.95), target('chest', 0.35), target('deltoids', 0.22)],
   },
   {
-    patterns: [/bench press/i, /chest press/i, /machine press/i, /smith press/i, /decline press/i, /dumbbell press/i, /floor press/i],
+    patterns: [
+      /bench press/i,
+      /chest press/i,
+      /machine chest press/i,
+      /smith (bench )?press/i,
+      /decline (bench )?press/i,
+      /dumbbell (bench|chest) press/i,
+      /floor press/i,
+    ],
     targets: [target('chest', 1), target('triceps', 0.55), target('deltoids', 0.42)],
   },
   {
-    patterns: [/cable fly/i, /flye/i, /pec deck/i, /crossover/i],
+    patterns: [/reverse pec deck/i, /rear delt fly/i, /rear delt raise/i],
+    targets: [target('deltoids', 0.8), target('upper-back', 0.52), target('trapezius', 0.3)],
+    primaryRegions: ['Shoulders'],
+    secondaryRegions: ['Back'],
+  },
+  {
+    patterns: [/cable fly/i, /flye/i, /\bfly\b/i, /pec deck/i, /crossover/i],
     targets: [target('chest', 1), target('deltoids', 0.16)],
   },
   {
@@ -210,6 +224,11 @@ const EXERCISE_MUSCLE_PATTERNS: ExercisePatternProfile[] = [
   {
     patterns: [/chest.?supported row/i, /seal row/i, /seated cable row/i, /machine row/i],
     targets: [target('upper-back', 0.9), target('trapezius', 0.38), target('biceps', 0.34)],
+  },
+  {
+    patterns: [/upright row/i],
+    targets: [target('deltoids', 0.75), target('trapezius', 0.6), target('biceps', 0.12)],
+    primaryRegions: ['Shoulders', 'Back'],
   },
   {
     patterns: [/bent over row/i, /barbell row/i, /t-?bar row/i, /pendlay row/i, /single arm row/i, /\brow\b/i],
@@ -246,7 +265,7 @@ const EXERCISE_MUSCLE_PATTERNS: ExercisePatternProfile[] = [
     primaryRegions: ['Legs', 'Back'],
   },
   {
-    patterns: [/overhead press/i, /shoulder press/i, /arnold press/i, /military press/i],
+    patterns: [/overhead press/i, /shoulder press/i, /dumbbell shoulder press/i, /seated dumbbell press/i, /arnold press/i, /military press/i],
     targets: [target('deltoids', 1), target('triceps', 0.55), target('trapezius', 0.18)],
   },
   {
@@ -258,11 +277,24 @@ const EXERCISE_MUSCLE_PATTERNS: ExercisePatternProfile[] = [
     targets: [target('deltoids', 0.95)],
   },
   {
-    patterns: [/upright row/i],
-    targets: [target('deltoids', 0.75), target('trapezius', 0.6), target('biceps', 0.12)],
+    patterns: [/leg curl/i, /hamstring curl/i, /nordic curl/i],
+    targets: [target('hamstring', 1)],
+    primaryRegions: ['Legs'],
   },
   {
-    patterns: [/barbell curl/i, /dumbbell curl/i, /hammer curl/i, /preacher curl/i, /incline curl/i, /\bcurl\b/i],
+    patterns: [
+      /barbell curl/i,
+      /dumbbell curl/i,
+      /hammer curl/i,
+      /preacher curl/i,
+      /incline dumbbell curl/i,
+      /incline curl/i,
+      /cable curl/i,
+      /ez bar curl/i,
+      /spider curl/i,
+      /machine bicep curl/i,
+      /reverse curl/i,
+    ],
     targets: [target('biceps', 1)],
   },
   {
@@ -277,11 +309,6 @@ const EXERCISE_MUSCLE_PATTERNS: ExercisePatternProfile[] = [
   {
     patterns: [/leg extension/i],
     targets: [target('quadriceps', 1)],
-    primaryRegions: ['Legs'],
-  },
-  {
-    patterns: [/leg curl/i, /hamstring curl/i, /nordic curl/i],
-    targets: [target('hamstring', 1)],
     primaryRegions: ['Legs'],
   },
   {

@@ -80,6 +80,15 @@ const CountUp = ({ value, duration = 600, decimals = 0 }: { value: number, durat
   return <>{count.toFixed(decimals)}</>;
 };
 
+const BACK_VIEW_SLUGS = new Set([
+  'hamstring',
+  'gluteal',
+  'calves',
+  'lower-back',
+  'upper-back',
+  'trapezius',
+]);
+
 // --- Main Component ---
 export const Home: React.FC = () => {
   const { user, profile } = useAuth();
@@ -272,6 +281,26 @@ export const Home: React.FC = () => {
     });
     return data;
   }, [rangeWorkouts, bodyWeightKg, toDisplayExerciseWeight]);
+
+  useEffect(() => {
+    if (viewMode !== 'Day') return;
+    if (muscleView !== 'front') return;
+
+    const entries = Object.entries(muscleMapData).filter(([, data]) => (data.relativeLoad || data.load) > 0);
+    if (entries.length === 0) return;
+
+    const frontLoad = entries
+      .filter(([slug]) => !BACK_VIEW_SLUGS.has(slug))
+      .reduce((sum, [, data]) => sum + (data.relativeLoad || data.load || 0), 0);
+
+    const backLoad = entries
+      .filter(([slug]) => BACK_VIEW_SLUGS.has(slug))
+      .reduce((sum, [, data]) => sum + (data.relativeLoad || data.load || 0), 0);
+
+    if (backLoad > 0 && frontLoad === 0) {
+      setMuscleView('back');
+    }
+  }, [muscleMapData, muscleView, viewMode]);
 
   const weekDays = useMemo(() => {
     const start = startOfWeek(currentDate, { weekStartsOn: 1 });
