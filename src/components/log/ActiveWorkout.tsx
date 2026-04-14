@@ -475,7 +475,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
         {currentExercise ? (
           <motion.div
             key={currentExercise.id}
-            className="flex-1 min-h-0"
+            className="flex-1 min-h-0 overflow-hidden"
             initial={{ opacity: 0, x: 16 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -16 }}

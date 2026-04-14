@@ -270,6 +270,15 @@ const WheelColumn: React.FC<WheelColumnProps> = ({ values, format, initialIndex,
     const node = scrollRef.current;
     if (!node) return;
 
+    // Hard-clamp scroll position — prevents the decimal column (2 items)
+    // from rubber-banding past its valid range on iOS bounce scroll.
+    const maxScroll = (values.length - 1) * ITEM_HEIGHT;
+    if (node.scrollTop < 0) {
+      node.scrollTop = 0;
+    } else if (node.scrollTop > maxScroll) {
+      node.scrollTop = maxScroll;
+    }
+
     if (rafRef.current) {
       window.cancelAnimationFrame(rafRef.current);
     }
@@ -281,6 +290,8 @@ const WheelColumn: React.FC<WheelColumnProps> = ({ values, format, initialIndex,
     if (settleTimerRef.current) {
       window.clearTimeout(settleTimerRef.current);
     }
+    // Give momentum scrolling time to finish before snapping.
+    // Do NOT snap immediately on touchEnd — that kills velocity.
     settleTimerRef.current = window.setTimeout(() => {
       snapToNearest('smooth');
     }, SCROLL_SETTLE_MS);
@@ -291,8 +302,6 @@ const WheelColumn: React.FC<WheelColumnProps> = ({ values, format, initialIndex,
       <div
         ref={scrollRef}
         onScroll={handleScroll}
-        onTouchEnd={() => snapToNearest('smooth')}
-        onMouseUp={() => snapToNearest('smooth')}
         className="no-scrollbar overflow-y-auto [scrollbar-width:none]"
         style={{
           height: `${VIEW_HEIGHT}px`,

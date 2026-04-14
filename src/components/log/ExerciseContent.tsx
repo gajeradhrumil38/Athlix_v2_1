@@ -103,7 +103,7 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = (props) => {
 
   return (
     <div
-      className="flex-1 overflow-y-auto bg-transparent pb-[calc(env(safe-area-inset-bottom)+208px)]"
+      className="h-full overflow-y-auto bg-transparent pb-[calc(env(safe-area-inset-bottom)+208px)]"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
