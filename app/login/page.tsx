@@ -134,7 +134,9 @@ export default function LoginPage() {
     // they don't require the code_verifier cookie that PKCE links need.
     const resetClient = createPasswordResetClient();
     const { error } = await resetClient.auth.resetPasswordForEmail(candidateEmail, {
-      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
+      // Clean URL — no query params — so it matches exactly what's in the
+      // Supabase Dashboard → Auth → URL Configuration → Redirect URLs list.
+      redirectTo: `${window.location.origin}/auth/confirm`,
     });
     setForgotSending(false);
     if (error) {
