@@ -875,6 +875,7 @@ export const signUpLocal = async (email: string, password: string, fullName?: st
       data: {
         full_name: fullName || normalizedEmail.split('@')[0],
       },
+      emailRedirectTo: 'https://athlix-v2-1.vercel.app/auth/callback',
     },
   });
 
