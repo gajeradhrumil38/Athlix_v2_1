@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, Plus, History, LayoutGrid, ChevronLeft } from 'lucide-react';
+import { Search, X, Plus, History, LayoutGrid, ChevronLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getExerciseLibraryByGroup, getRecentExerciseOptions, searchExerciseLibrary } from '../../lib/supabaseData';
 import { ExerciseImage } from '../shared/ExerciseImage';
@@ -139,13 +139,14 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({ onSelect, onClos
             <ChevronLeft className="w-4 h-4" />
             {isNestedView ? 'Back' : 'Close'}
           </button>
-          <div className="text-center">
-            <h2 className="text-[16px] font-semibold text-[#E7EEF6] tracking-tight">Add Exercise</h2>
-            <p className="text-[10px] text-[#8AA0B7]">
-              {selectedMuscle ? `${selectedMuscle} library` : 'Choose from recent or by muscle group'}
-            </p>
-          </div>
-          <div className="w-[72px]" />
+          <h2 className="text-[16px] font-semibold text-[#E7EEF6] tracking-tight">Add Exercise</h2>
+          <button
+            onClick={onClose}
+            className="h-9 w-9 rounded-lg border border-white/10 bg-[#1A2433] text-[#9CB1C7] inline-flex items-center justify-center"
+            aria-label="Close add exercise"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
 
         <div className="px-4 pt-3 pb-2 border-b border-white/5">
@@ -153,7 +154,7 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({ onSelect, onClos
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#687E95]" />
             <input
               type="text"
-              placeholder="Search exercise name"
+              placeholder="Search exercises"
               value={search}
               onChange={(event) => {
                 setSearch(event.target.value);
@@ -191,11 +192,6 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({ onSelect, onClos
         <div className="flex-1 overflow-y-auto px-4 py-4 pb-[calc(env(safe-area-inset-bottom)+24px)] no-scrollbar">
           {activeTab === 'recent' && !search && (
             <div className="space-y-2">
-              {(recentExercises.length > 0 || recentLibraryExercises.length > 0) && (
-                <div className="px-1 pb-1 text-[11px] font-medium text-[#8AA0B7]">
-                  Recent exercises
-                </div>
-              )}
               {(recentExercises.length > 0 ? recentExercises : recentLibraryExercises).map((exercise) => (
                 <ExerciseRow key={exercise.id} exercise={exercise} onSelect={handleSelect} />
               ))}

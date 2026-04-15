@@ -123,6 +123,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   const [dialPicker, setDialPicker] = useState<DialPickerState | null>(null);
   const [hiddenPrefillExerciseIds, setHiddenPrefillExerciseIds] = useState<string[]>([]);
+  const [showExerciseSummary, setShowExerciseSummary] = useState(false);
   const autoOpenedPickerForStartRef = useRef<number | null>(null);
 
   const createSetId = () =>
@@ -167,23 +168,6 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
 
   const currentExercise = workout.exercises[activeIndex];
   const hasExercises = workout.exercises.length > 0;
-  const completedSetCount = useMemo(
-    () =>
-      workout.exercises.reduce(
-        (sum, exercise) =>
-          sum +
-          exercise.sets.filter(
-            (set) => set.done && (Number(set.reps || 0) > 0 || Number(set.weight || 0) > 0),
-          ).length,
-        0,
-      ),
-    [workout.exercises],
-  );
-  const completedExerciseCount = useMemo(
-    () => workout.exercises.filter((exercise) => exercise.sets.some((set) => set.done)).length,
-    [workout.exercises],
-  );
-  const canFinishWorkout = completedSetCount > 0;
 
   const updateSetField = useCallback(
     (setId: string, field: 'weight' | 'reps', value: number) => {
@@ -430,6 +414,15 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
     setDialPicker(null);
   };
 
+  const currentSummary = useMemo(() => {
+    if (!currentExercise) return null;
+    const doneSets = currentExercise.sets.filter((set) => set.done).length;
+    return {
+      doneSets,
+      totalSets: currentExercise.sets.length,
+    };
+  }, [currentExercise]);
+
   const showPrefillBanner =
     Boolean(currentExercise?.lastSession) && !hiddenPrefillExerciseIds.includes(currentExercise?.id || '');
 
@@ -503,7 +496,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
           <div>
             <h1 className="text-[15px] font-semibold tracking-wide text-[#E2E8F0]">{workout.title}</h1>
             <p className="text-[11px] text-[#8FA6BD]">
-              {workout.exercises.length} exercise{workout.exercises.length === 1 ? '' : 's'} · {completedExerciseCount} complete
+              {workout.exercises.length} exercise{workout.exercises.length === 1 ? '' : 's'}
             </p>
             <label className="mt-1 inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] font-semibold text-[#9FB4C8]">
               <CalendarDays className="h-3.5 w-3.5" />
@@ -527,22 +520,12 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
           </button>
           <button
             onClick={() => {
-              if (!canFinishWorkout) {
-                haptics.error();
-                toast.error('Complete at least one set before finishing.');
-                return;
-              }
               haptics.complete();
               onFinish();
             }}
-            disabled={!canFinishWorkout}
-            className={`h-9 rounded-full px-4 text-[12px] font-semibold transition-colors ${
-              canFinishWorkout
-                ? 'bg-[#CAD7E4] text-[#0F1A27]'
-                : 'bg-white/[0.08] text-[#6E8298] cursor-not-allowed'
-            }`}
+            className="h-9 rounded-full bg-[#CAD7E4] px-4 text-[12px] font-semibold text-[#0F1A27]"
           >
-            Review
+            Finish
           </button>
         </div>
       </div>
@@ -584,40 +567,28 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
               onSwipeRight={() => activeIndex > 0 && setActiveIndex(activeIndex - 1)}
               onFinishExercise={() => {
                 haptics.success();
-                if (activeIndex < workout.exercises.length - 1) {
-                  toast.success('Exercise complete. Continue to the next exercise.');
-                  setActiveIndex(activeIndex + 1);
-                  return;
-                }
-                toast.success('Exercise complete. Review and save your workout.');
-                onFinish();
+                setShowExerciseSummary(true);
               }}
             />
           </motion.div>
         ) : (
           <motion.div
             key="empty-workout"
-            className="flex-1 flex items-center justify-center p-6"
+            className="flex-1 flex flex-col items-center justify-center p-8 text-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
           >
-            <div className="w-full max-w-[520px] rounded-3xl border border-white/10 bg-[linear-gradient(180deg,rgba(20,30,45,0.8)_0%,rgba(14,22,35,0.65)_100%)] p-8 text-center">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.03]">
-                <Activity className="w-6 h-6 text-[#3C5672]" />
-              </div>
-              <h3 className="text-[22px] font-semibold text-[#E7EEF6]">Start building this workout</h3>
-              <p className="mt-2 text-[13px] text-[#93A8BD]">
-                Add your first exercise to begin tracking sets, volume, and progress.
-              </p>
-              <button
-                onClick={() => setShowExercisePicker(true)}
-                className="mt-6 h-11 rounded-xl border border-white/15 bg-white/[0.05] px-8 text-[13px] font-semibold text-[#E3ECF5] hover:bg-white/[0.08] transition-colors"
-              >
-                + Add Exercise
-              </button>
-            </div>
+            <Activity className="w-12 h-12 text-[#1E2F42] mb-4" />
+            <h3 className="text-[16px] font-semibold text-[#B6C2CF] mb-2">No exercises yet</h3>
+            <p className="text-[12px] text-[#7B8FA5] mb-6">Add your first exercise to start tracking.</p>
+            <button
+              onClick={() => setShowExercisePicker(true)}
+              className="h-11 rounded-xl border border-white/15 bg-white/[0.04] px-8 text-[12px] font-semibold text-[#E3ECF5]"
+            >
+              + Add Exercise
+            </button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -681,6 +652,42 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
             onClose={() => setDialPicker(null)}
             onConfirm={handleDialConfirm}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showExerciseSummary && currentExercise && currentSummary && (
+          <motion.div
+            className="fixed inset-0 z-[210] bg-black/60 backdrop-blur-[2px] flex items-end justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 26, stiffness: 260 }}
+              className="w-full max-w-[480px] rounded-t-[20px] border-t border-white/10 bg-[#121A28] p-5 pb-[calc(env(safe-area-inset-bottom)+20px)]"
+            >
+              <h3 className="text-[20px] font-semibold text-white">Exercise completed</h3>
+              <p className="text-[#AABBCB] mt-1 text-[14px]">
+                {currentSummary.doneSets}/{currentSummary.totalSets} sets finished.
+              </p>
+
+              <button
+                onClick={() => {
+                  setShowExerciseSummary(false);
+                  if (activeIndex < workout.exercises.length - 1) {
+                    setActiveIndex(activeIndex + 1);
+                  }
+                }}
+                className="mt-5 w-full h-[48px] rounded-xl bg-[#DDE6F0] text-[#111827] font-semibold"
+              >
+                Done
+              </button>
+            </motion.div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
