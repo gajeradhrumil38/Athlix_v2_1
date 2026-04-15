@@ -1,15 +1,25 @@
 import { redirect } from 'next/navigation';
-import { getAuthenticatedUser } from '@/lib/db';
+import { createServerSupabaseClient } from '@/lib/supabase';
 import { LegacyDashboardApp } from '@/components/legacy/legacy-dashboard-app';
 
 export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
-  const user = await getAuthenticatedUser();
+  const supabase = await createServerSupabaseClient();
 
-  if (!user) {
-    redirect('/login');
-  }
+  // Authoritative check — verifies the JWT with Supabase servers
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect('/login');
 
-  return <LegacyDashboardApp />;
+  // Retrieve the raw tokens so we can inject them into the Vite iframe.
+  // getSession() is intentionally used here (not getUser()) because we only
+  // need the tokens, and we've already verified the user above.
+  const { data: { session } } = await supabase.auth.getSession();
+
+  return (
+    <LegacyDashboardApp
+      accessToken={session?.access_token ?? ''}
+      refreshToken={session?.refresh_token ?? ''}
+    />
+  );
 }
