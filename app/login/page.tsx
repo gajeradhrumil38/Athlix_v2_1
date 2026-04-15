@@ -65,7 +65,9 @@ export default function LoginPage() {
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotMessage, setForgotMessage] = useState<string | null>(null);
+  const [forgotMessageType, setForgotMessageType] = useState<'success' | 'error'>('error');
   const [forgotCountdown, setForgotCountdown] = useState(0);
+  const [forgotSending, setForgotSending] = useState(false);
   const [showApple, setShowApple] = useState(false);
   const [shakeNonce, setShakeNonce] = useState(0);
   const [redirectPath, setRedirectPath] = useState('/dashboard');
@@ -114,14 +116,30 @@ export default function LoginPage() {
 
   const sendResetEmail = async (event?: FormEvent) => {
     event?.preventDefault();
-    if (!supabase) { setForgotMessage('Connection issue. Please try again.'); return; }
     const candidateEmail = (forgotEmail || email).trim().toLowerCase();
-    if (!emailSchema.safeParse(candidateEmail).success) { setForgotMessage('Enter a valid email address.'); return; }
+    if (!emailSchema.safeParse(candidateEmail).success) {
+      setForgotMessage('Enter a valid email address.');
+      setForgotMessageType('error');
+      return;
+    }
+    if (!supabase) {
+      setForgotMessage('Connection issue. Please try again.');
+      setForgotMessageType('error');
+      return;
+    }
+    setForgotSending(true);
+    setForgotMessage(null);
     const { error } = await supabase.auth.resetPasswordForEmail(candidateEmail, {
-      redirectTo: 'https://athlix-v2-1.vercel.app/auth/callback?next=/reset-password',
+      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
     });
-    if (error) { setForgotMessage('Connection issue. Please try again.'); return; }
-    setForgotMessage('Reset link sent! Check your inbox.');
+    setForgotSending(false);
+    if (error) {
+      setForgotMessage('Could not send reset email. Try again.');
+      setForgotMessageType('error');
+      return;
+    }
+    setForgotMessage('Reset link sent! Check your inbox (and spam folder).');
+    setForgotMessageType('success');
     setForgotCountdown(RESEND_WAIT_SECONDS);
   };
 
@@ -445,44 +463,55 @@ export default function LoginPage() {
             {/* Forgot password panel */}
             <AnimatePresence>
               {forgotOpen && (
-                <motion.form
+                <motion.div
+                  key="forgot-panel"
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                  onSubmit={sendResetEmail}
-                  className="overflow-hidden rounded-lg border border-[#2a2a2a] bg-[#1a1a1a] p-4"
+                  transition={{ duration: 0.22, ease: 'easeOut' }}
+                  style={{ overflow: 'hidden' }}
                 >
-                  <label htmlFor="forgot-email" className="brand-label">Reset your password</label>
-                  <input
-                    id="forgot-email"
-                    type="email"
-                    autoComplete="email"
-                    inputMode="email"
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    onBlur={() => setForgotEmail(forgotEmail.trim().toLowerCase())}
-                    placeholder="you@example.com"
-                    className="brand-input"
-                  />
-                  <button
-                    type="submit"
-                    className="mt-3 flex h-11 w-full items-center justify-center rounded-lg border border-[#2a2a2a] text-[13px] font-medium text-[#f0f0f0] hover:bg-white/5"
+                  <form
+                    onSubmit={sendResetEmail}
+                    noValidate
+                    className="rounded-lg border border-[#C8FF00]/20 bg-[#1a1a1a] p-4"
                   >
-                    Send reset link
-                  </button>
-                  {forgotMessage && (
-                    <p className="mt-2 text-[13px] text-[#888]" aria-live="polite">{forgotMessage}</p>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => sendResetEmail()}
-                    disabled={forgotCountdown > 0}
-                    className="mt-2 text-[12px] text-[#C8FF00] disabled:text-[#444]"
-                  >
-                    {forgotCountdown > 0 ? `Resend in ${forgotCountdown}s` : 'Resend email'}
-                  </button>
-                </motion.form>
+                    <p className="mb-3 text-[13px] font-medium text-[#f0f0f0]">Reset your password</p>
+                    <input
+                      id="forgot-email"
+                      type="email"
+                      autoComplete="email"
+                      inputMode="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      onBlur={() => setForgotEmail(forgotEmail.trim().toLowerCase())}
+                      placeholder="your@email.com"
+                      className="brand-input"
+                    />
+                    <button
+                      type="submit"
+                      disabled={forgotSending || forgotCountdown > 0}
+                      className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg text-[13px] font-semibold transition-all disabled:opacity-50"
+                      style={{ background: '#C8FF00', color: '#000' }}
+                    >
+                      {forgotSending
+                        ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</>
+                        : forgotCountdown > 0
+                          ? `Resend in ${forgotCountdown}s`
+                          : 'Send reset link'
+                      }
+                    </button>
+                    {forgotMessage && (
+                      <p
+                        className="mt-3 text-[13px]"
+                        style={{ color: forgotMessageType === 'success' ? '#4dff91' : '#ff8080' }}
+                        aria-live="polite"
+                      >
+                        {forgotMessage}
+                      </p>
+                    )}
+                  </form>
+                </motion.div>
               )}
             </AnimatePresence>
 

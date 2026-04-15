@@ -44,8 +44,8 @@ export const Auth: React.FC = () => {
   const [alreadyExists, setAlreadyExists] = useState(false);
   const [shakeKey, setShakeKey]   = useState(0);
 
-  /* forgot password (unused — handled via redirect) */
-  const [forgotEmail] = useState('');
+  /* forgotEmail kept only for pre-filling the query param on redirect */
+  const [forgotEmail, setForgotEmail] = useState('');
 
   const strength = getStrength(password);
   const isSignUp = mode === 'signup';
@@ -78,7 +78,10 @@ export const Auth: React.FC = () => {
     const withEmail = email.trim()
       ? `${base}&email=${encodeURIComponent(email.trim().toLowerCase())}`
       : base;
-    window.location.href = withEmail;
+    // Use window.top so the redirect applies to the full page, not just the
+    // iframe. When running outside an iframe (direct navigation) window.top
+    // === window, so this is safe in both contexts.
+    (window.top || window).location.href = withEmail;
   };
 
   /* autofocus on mount */
