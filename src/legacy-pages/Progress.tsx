@@ -16,7 +16,8 @@ import {
   subDays,
   subWeeks,
 } from 'date-fns';
-import { LineChart, AreaChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
+
+import { LineChart, AreaChart, ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { Trophy, TrendingUp, Activity, Scale, ChevronDown, Heart, Bluetooth, PlugZap, Unplug, Info } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -916,6 +917,47 @@ export const Progress: React.FC = () => {
     previous: previousWeekVolume[muscle] || 0,
   })).sort((a, b) => b.current - a.current);
 
+  // ── Set-count per muscle per week (last 6 weeks) for sparklines ──────────
+  const setsByMuscleWeek = useMemo(() => {
+    const result: Record<string, number[]> = {};
+    const weeks = Array.from({ length: 6 }, (_, i) => {
+      const start = startOfWeek(subWeeks(new Date(), 5 - i), { weekStartsOn: 1 });
+      const end   = endOfWeek(subWeeks(new Date(), 5 - i), { weekStartsOn: 1 });
+      return { start, end };
+    });
+    exercises.forEach((ex) => {
+      const date = parseDateAtStartOfDay(ex.workouts?.date);
+      if (!date) return;
+      const mg = ex.muscle_group;
+      if (!mg) return;
+      const wi = weeks.findIndex((w) => date >= w.start && date <= w.end);
+      if (wi === -1) return;
+      if (!result[mg]) result[mg] = new Array(6).fill(0);
+      result[mg][wi] += ex.sets || 0;
+    });
+    return result;
+  }, [exercises]);
+
+  // ── Set-count totals per muscle for the Rows chart (current & previous week) ──
+  const setVolumeData = useMemo(() => {
+    const computeSets = (wList: any[]) => {
+      const map: Record<string, number> = {};
+      wList.forEach((w) => {
+        exercises.filter((ex) => ex.workout_id === w.id).forEach((ex) => {
+          const mg = ex.muscle_group;
+          if (mg) map[mg] = (map[mg] || 0) + (ex.sets || 0);
+        });
+      });
+      return map;
+    };
+    const cur  = computeSets(currentWeekWorkouts);
+    const prev = computeSets(previousWeekWorkouts);
+    const muscles = Array.from(new Set([...Object.keys(cur), ...Object.keys(prev)]));
+    return muscles
+      .map((m) => ({ muscle: m, current: cur[m] || 0, previous: prev[m] || 0 }))
+      .sort((a, b) => b.current - a.current);
+  }, [exercises, currentWeekWorkouts, previousWeekWorkouts]);
+
   // Calculate balance score (0-100)
   const totalVolume = Object.values(currentWeekVolume).reduce((a, b) => a + b, 0);
   let balanceScore = 100;
@@ -992,214 +1034,288 @@ export const Progress: React.FC = () => {
         {activeTab === 'overview' && (
           <div className="space-y-6">
             {/* Heatmap */}
-            <div className="bg-[#1A1A1A] p-6 rounded-2xl border border-white/5">
+            <div className="glass-card p-5">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold text-white flex items-center">
-                  <Activity className="w-5 h-5 mr-2 text-[var(--accent)]" />
-                  Workout Frequency (30 Days)
-                </h2>
-                <div className="flex space-x-4 text-right">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[1.4px] text-[var(--text-muted)]">
+                    Workout Frequency · 30 Days
+                  </p>
+                </div>
+                <div className="flex gap-5 text-right">
                   <div>
-                    <p className="text-xs text-gray-400">Current Streak</p>
-                    <p className="text-lg font-bold text-[var(--accent)]">{currentStreak} days</p>
+                    <p className="text-[10px] uppercase tracking-[1.2px] text-[var(--text-muted)]">Streak</p>
+                    <p className="text-[15px] font-bold text-[var(--accent)] tabular-nums">{currentStreak}d</p>
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400">Max Streak</p>
-                    <p className="text-lg font-bold text-white">{maxStreak} days</p>
+                    <p className="text-[10px] uppercase tracking-[1.2px] text-[var(--text-muted)]">Best</p>
+                    <p className="text-[15px] font-bold text-[var(--text-primary)] tabular-nums">{maxStreak}d</p>
                   </div>
                 </div>
               </div>
               <div className="flex flex-wrap gap-1.5">
-                {heatmapData.map((day, i) => {
-                  let bgColor = 'bg-white/5';
+                {heatmapData.map((day) => {
+                  let bgColor = 'bg-[var(--bg-elevated)]';
                   if (day.intensity > 0) bgColor = 'bg-[var(--accent)]/20';
                   if (day.intensity > 1) bgColor = 'bg-[var(--accent)]/40';
                   if (day.intensity > 2) bgColor = 'bg-[var(--accent)]/70';
                   if (day.intensity > 3) bgColor = 'bg-[var(--accent)]';
 
                   return (
-                    <div 
+                    <div
                       key={day.date}
-                      title={`${day.date}: ${day.count} workouts`}
-                      className={`w-[calc(14.28%-6px)] aspect-square rounded-sm ${bgColor} transition-colors hover:ring-2 hover:ring-white/50`}
+                      title={`${day.date}: ${day.count} workout${day.count !== 1 ? 's' : ''}`}
+                      className={`w-[calc(14.28%-6px)] aspect-square rounded-sm ${bgColor} transition-colors`}
                     />
                   );
                 })}
               </div>
-              <div className="flex items-center justify-end space-x-2 mt-3 text-xs text-gray-500">
+              <div className="flex items-center justify-end gap-2 mt-3 text-[10px] text-[var(--text-muted)]">
                 <span>Less</span>
-                <div className="flex space-x-1">
-                  <div className="w-3 h-3 rounded-sm bg-white/5"></div>
-                  <div className="w-3 h-3 rounded-sm bg-[var(--accent)]/20"></div>
-                  <div className="w-3 h-3 rounded-sm bg-[var(--accent)]/40"></div>
-                  <div className="w-3 h-3 rounded-sm bg-[var(--accent)]/70"></div>
-                  <div className="w-3 h-3 rounded-sm bg-[var(--accent)]"></div>
+                <div className="flex gap-1">
+                  <div className="w-3 h-3 rounded-sm bg-[var(--bg-elevated)]" />
+                  <div className="w-3 h-3 rounded-sm bg-[var(--accent)]/20" />
+                  <div className="w-3 h-3 rounded-sm bg-[var(--accent)]/40" />
+                  <div className="w-3 h-3 rounded-sm bg-[var(--accent)]/70" />
+                  <div className="w-3 h-3 rounded-sm bg-[var(--accent)]" />
                 </div>
                 <span>More</span>
               </div>
             </div>
 
-            {/* Volume Chart */}
-            <div className="bg-[#1A1A1A] p-6 rounded-2xl border border-white/5">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold text-white flex items-center">
-                  <TrendingUp className="w-5 h-5 mr-2 text-[#00FF87]" />
-                  Weekly Volume by Muscle
-                </h2>
-                <div className="text-right">
-                  <p className="text-xs text-gray-400">Balance Score</p>
-                  <p className={`text-lg font-bold ${balanceScore > 80 ? 'text-[#00FF87]' : balanceScore > 50 ? 'text-yellow-400' : 'text-red-400'}`}>
-                    {balanceScore.toFixed(0)}/100
+            {/* Volume Chart — Rows style */}
+            <div className="glass-card p-5">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-[1.4px] text-[var(--text-muted)]">
+                    Weekly Volume · by muscle
                   </p>
+                  {setVolumeData.length > 0 && (
+                    <p className="text-[22px] font-bold text-[var(--text-primary)] mt-1 tabular-nums">
+                      {setVolumeData.reduce((a, d) => a + d.current, 0)}
+                      <span className="text-[14px] font-medium text-[var(--text-muted)] ml-1">sets this week</span>
+                    </p>
+                  )}
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] uppercase tracking-[1.2px] text-[var(--text-muted)]">Balance</p>
+                  <p className={`text-[15px] font-bold tabular-nums ${
+                    balanceScore > 80 ? 'text-[var(--accent)]' : balanceScore > 50 ? 'text-[var(--yellow)]' : 'text-[var(--red)]'
+                  }`}>{balanceScore.toFixed(0)}</p>
                 </div>
               </div>
-              <div className="flex items-center space-x-4 mb-4 text-xs">
-                <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 rounded-sm bg-[#00FF87]"></div>
-                  <span className="text-gray-400">This Week</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <div className="w-3 h-3 rounded-sm bg-white/20"></div>
-                  <span className="text-gray-400">Last Week</span>
-                </div>
-              </div>
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={volumeData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                    <XAxis dataKey="muscle" stroke="#666" tick={{fill: '#666', fontSize: 10}} axisLine={false} tickLine={false} />
-                    <YAxis stroke="#666" tick={{fill: '#666', fontSize: 10}} axisLine={false} tickLine={false} tickFormatter={(val) => `${(val/1000).toFixed(1)}k`} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#1A1A1A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
-                      cursor={{fill: 'rgba(255,255,255,0.05)'}}
-                      formatter={(value: number) => [`${value.toFixed(0)} ${displayUnit}`, 'Volume']}
-                    />
-                    <Bar dataKey="previous" fill="rgba(255,255,255,0.2)" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="current" fill="#00FF87" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+
+              {setVolumeData.length === 0 ? (
+                <p className="text-[13px] text-[var(--text-muted)] py-4 text-center">Log workouts this week to see volume.</p>
+              ) : (
+                <>
+                  {/* Column headers */}
+                  <div
+                    className="grid text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] border-b border-[var(--border)] pb-2 mb-1"
+                    style={{ gridTemplateColumns: '80px 1fr 88px 36px', gap: '12px' }}
+                  >
+                    <div>Group</div>
+                    <div>Sets</div>
+                    <div>6-week</div>
+                    <div className="text-right">Δ</div>
+                  </div>
+
+                  {setVolumeData.map((item, idx) => {
+                    const isTop = idx === 0;
+                    const maxSets = setVolumeData[0]?.current || 1;
+                    const pct = item.current / maxSets;
+                    const sparkData: number[] = setsByMuscleWeek[item.muscle] || new Array(6).fill(0);
+                    const delta = item.current - item.previous;
+                    const sw = 80, sh = 22;
+                    const sMax = Math.max(...sparkData, 1);
+                    const sx = (i: number) => (i / Math.max(sparkData.length - 1, 1)) * sw;
+                    const sy = (v: number) => sh - (v / sMax) * (sh - 2) - 1;
+                    const sparkPath = sparkData.map((v, i) => `${i ? 'L' : 'M'}${sx(i).toFixed(1)} ${sy(v).toFixed(1)}`).join(' ');
+                    const areaPath = `${sparkPath} L ${sw} ${sh} L 0 ${sh} Z`;
+
+                    return (
+                      <div
+                        key={item.muscle}
+                        className="grid items-center py-3 border-b border-[var(--border)] last:border-0"
+                        style={{ gridTemplateColumns: '80px 1fr 88px 36px', gap: '12px' }}
+                      >
+                        <div className={`text-[13px] font-semibold truncate ${isTop ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>
+                          {item.muscle}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-2 bg-[var(--bg-elevated)] rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{
+                                width: `${pct * 100}%`,
+                                background: isTop ? 'var(--accent)' : 'var(--text-secondary)',
+                                opacity: isTop ? 1 : 0.55,
+                              }}
+                            />
+                          </div>
+                          <span className="text-[13px] font-bold text-[var(--text-primary)] tabular-nums w-5 text-right">{item.current}</span>
+                        </div>
+                        <svg viewBox={`0 0 ${sw} ${sh}`} width={sw} height={sh} style={{ display: 'block', flexShrink: 0 }}>
+                          <path d={areaPath} fill={isTop ? 'var(--accent)' : 'var(--text-secondary)'} fillOpacity={isTop ? 0.15 : 0.06} />
+                          <path d={sparkPath} fill="none" stroke={isTop ? 'var(--accent)' : 'var(--text-secondary)'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                          <circle cx={sx(sparkData.length - 1).toFixed(1)} cy={sy(sparkData[sparkData.length - 1]).toFixed(1)} r="2" fill={isTop ? 'var(--accent)' : 'var(--text-secondary)'} />
+                        </svg>
+                        <div className={`text-right text-[12px] font-semibold tabular-nums ${delta >= 0 ? 'text-[var(--accent)]' : 'text-[var(--red)]'}`}>
+                          {delta > 0 ? '+' : ''}{delta}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
             </div>
           </div>
         )}
 
         {activeTab === 'overload' && (
           <div className="space-y-6">
-            <div className="bg-[#1A1A1A] p-6 rounded-2xl border border-white/5">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-4 md:space-y-0">
-                <h2 className="text-lg font-bold text-white flex items-center">
-                  <TrendingUp className="w-5 h-5 mr-2 text-[var(--accent)]" />
+            <div className="glass-card p-5">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-4">
+                <p className="text-[11px] font-bold uppercase tracking-[1.4px] text-[var(--text-muted)]">
                   Progressive Overload
-                </h2>
+                </p>
                 <div className="relative w-full md:w-64">
                   <select
                     value={selectedExerciseForOverload}
                     onChange={(e) => setSelectedExerciseForOverload(e.target.value)}
-                    className="w-full bg-black border border-white/10 rounded-xl px-4 py-2 text-white appearance-none focus:outline-none focus:border-[var(--accent)]"
+                    className="w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-4 py-2 text-[var(--text-primary)] appearance-none focus:outline-none focus:border-[var(--accent)] text-[14px]"
                   >
                     {Array.from(new Set(exercises.map(ex => ex.name))).map(name => (
                       <option key={name as string} value={name as string}>{name as string}</option>
                     ))}
                   </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)] pointer-events-none" />
                 </div>
               </div>
 
               {selectedExerciseForOverload ? (() => {
-                const overloadData = exercises
-                  .filter(ex => ex.name === selectedExerciseForOverload)
-                  .map(ex => ({
-                    date: ex.workouts.date,
-                    weight: ex.weight,
-                    volume: ex.weight * ex.reps * ex.sets
-                  }))
-                  .sort(
-                    (a, b) =>
-                      (parseDateAtStartOfDay(a.date)?.getTime() ?? 0) -
-                      (parseDateAtStartOfDay(b.date)?.getTime() ?? 0),
-                  );
+                // Collect all sets for the selected exercise, sorted by date
+                const rawRows = exercises
+                  .filter(ex => ex.name === selectedExerciseForOverload && ex.weight > 0)
+                  .sort((a, b) => (parseDateAtStartOfDay(a.workouts.date)?.getTime() ?? 0) - (parseDateAtStartOfDay(b.workouts.date)?.getTime() ?? 0));
 
-                // Group by date to get max weight per day
-                const groupedData = overloadData.reduce((acc, curr) => {
-                  if (!acc[curr.date] || acc[curr.date].weight < curr.weight) {
-                    acc[curr.date] = curr;
-                  }
-                  return acc;
-                }, {} as Record<string, any>);
+                // Group by date → min / max / middle set weight
+                const byDate: Record<string, number[]> = {};
+                rawRows.forEach(ex => {
+                  if (!byDate[ex.workouts.date]) byDate[ex.workouts.date] = [];
+                  byDate[ex.workouts.date].push(ex.weight);
+                });
 
-                const chartData = Object.values(groupedData) as any[];
+                const chartData = Object.entries(byDate).map(([date, weights]) => {
+                  const sorted = [...weights].sort((a, b) => a - b);
+                  const mn = sorted[0];
+                  const mx = sorted[sorted.length - 1];
+                  return { date, min: mn, max: mx, range: mx - mn, mid: sorted[Math.floor((sorted.length - 1) / 2)] };
+                }).sort((a, b) => a.date > b.date ? 1 : -1);
 
                 if (chartData.length < 2) {
                   return (
-                    <div className="text-center py-12 text-gray-500">
+                    <div className="text-center py-12 text-[var(--text-muted)]">
                       <p>Not enough data to show progression.</p>
-                      <p className="text-sm">Log this exercise at least twice.</p>
+                      <p className="text-sm mt-1">Log this exercise at least twice.</p>
                     </div>
                   );
                 }
 
-                const firstWeight = chartData[0].weight;
-                const lastWeight = chartData[chartData.length - 1].weight;
-                const percentChange = firstWeight > 0 ? ((lastWeight - firstWeight) / firstWeight) * 100 : 0;
-                
-                let trendColor = '#FFD700'; // Yellow for no change
-                if (percentChange > 0) trendColor = '#00FF87'; // Green for positive
-                if (percentChange < 0) trendColor = '#FF4444'; // Red for negative
+                const firstMax = chartData[0].max;
+                const lastMax  = chartData[chartData.length - 1].max;
+                const percentChange = firstMax > 0 ? ((lastMax - firstMax) / firstMax) * 100 : 0;
+                const trendColor = percentChange > 0 ? 'var(--accent)' : percentChange < 0 ? 'var(--red)' : 'var(--yellow)';
 
                 return (
                   <>
-                    <div className="flex items-center justify-between mb-6 bg-black p-4 rounded-xl border border-white/5">
-                      <div>
-                        <p className="text-sm text-gray-400">Progression</p>
-                        <p className={`text-2xl font-bold`} style={{ color: trendColor }}>
+                    {/* Stat strip */}
+                    <div className="grid grid-cols-2 gap-3 mb-5">
+                      <div className="bg-[var(--bg-elevated)] rounded-xl p-4 border border-[var(--border)]">
+                        <p className="text-[11px] uppercase tracking-[1.2px] text-[var(--text-muted)] mb-1">Progression</p>
+                        <p className="text-[22px] font-bold tabular-nums" style={{ color: trendColor }}>
                           {percentChange > 0 ? '+' : ''}{percentChange.toFixed(1)}%
                         </p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-400">Current Max</p>
-                        <p className="text-2xl font-bold text-white">{lastWeight} {displayUnit}</p>
+                      <div className="bg-[var(--bg-elevated)] rounded-xl p-4 border border-[var(--border)] text-right">
+                        <p className="text-[11px] uppercase tracking-[1.2px] text-[var(--text-muted)] mb-1">Top set</p>
+                        <p className="text-[22px] font-bold text-[var(--text-primary)] tabular-nums">
+                          {lastMax} <span className="text-[14px] font-medium text-[var(--text-muted)]">{displayUnit}</span>
+                        </p>
                       </div>
                     </div>
 
+                    {/* ABR Chart — median line with min/max band */}
                     <div className="h-64">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={chartData}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                          <XAxis 
-                            dataKey="date" 
-                            stroke="#666" 
-                            tick={{fill: '#666'}} 
-                            axisLine={false} 
+                        <ComposedChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                          <defs>
+                            <linearGradient id="abrBand" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%"   stopColor="var(--accent)" stopOpacity={0.20} />
+                              <stop offset="100%" stopColor="var(--accent)" stopOpacity={0.04} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                          <XAxis
+                            dataKey="date"
+                            tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                            axisLine={false}
                             tickLine={false}
                             tickFormatter={(val) => formatStoredDate(val, 'MMM d')}
+                            interval="preserveStartEnd"
                           />
-                          <YAxis 
-                            domain={['auto', 'auto']} 
-                            stroke="#666" 
-                            tick={{fill: '#666'}} 
-                            axisLine={false} 
-                            tickLine={false} 
+                          <YAxis
+                            domain={['auto', 'auto']}
+                            tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                            axisLine={false}
+                            tickLine={false}
+                            width={36}
                           />
-                          <Tooltip 
-                            contentStyle={{ backgroundColor: '#1A1A1A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
-                            labelFormatter={(val) => formatStoredDate(val, 'MMM d, yyyy')}
-                            formatter={(value: number) => [`${value.toFixed(1)} ${displayUnit}`, 'Weight']}
+                          <Tooltip
+                            content={({ active, payload, label }) => {
+                              if (!active || !payload?.length) return null;
+                              const minV  = payload.find(p => p.dataKey === 'min')?.value as number | undefined;
+                              const rangeV = payload.find(p => p.dataKey === 'range')?.value as number | undefined;
+                              const midV  = payload.find(p => p.dataKey === 'mid')?.value as number | undefined;
+                              const maxV  = minV != null && rangeV != null ? (minV + rangeV).toFixed(1) : '—';
+                              return (
+                                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: 'var(--text-primary)' }}>
+                                  <p style={{ color: 'var(--text-muted)', marginBottom: 4, fontSize: 11 }}>{formatStoredDate(label, 'EEE, MMM d yyyy')}</p>
+                                  {midV != null && <p>Top set: <strong>{midV.toFixed(1)} {displayUnit}</strong></p>}
+                                  {minV != null && <p style={{ color: 'var(--text-muted)', fontSize: 11 }}>Range: {minV.toFixed(1)}–{maxV} {displayUnit}</p>}
+                                </div>
+                              );
+                            }}
                           />
-                          <Line 
-                            type="monotone" 
-                            dataKey="weight" 
-                            stroke={trendColor} 
-                            strokeWidth={3}
-                            dot={{ fill: trendColor, strokeWidth: 2, r: 4 }}
-                            activeDot={{ r: 6, fill: '#fff' }}
+                          {/* Invisible base to lift the band to min height */}
+                          <Area type="monotone" dataKey="min" stackId="band" fill="transparent" stroke="none" dot={false} legendType="none" isAnimationActive={false} />
+                          {/* The band (range = max − min) */}
+                          <Area type="monotone" dataKey="range" stackId="band" fill="url(#abrBand)" stroke="none" dot={false} legendType="none" />
+                          {/* Median line */}
+                          <Line
+                            type="monotone"
+                            dataKey="mid"
+                            stroke="var(--accent)"
+                            strokeWidth={2.2}
+                            dot={{ fill: 'var(--accent)', r: 3, strokeWidth: 0 }}
+                            activeDot={{ r: 5, fill: 'var(--accent)', stroke: 'var(--bg-base)', strokeWidth: 2 }}
                           />
-                        </LineChart>
+                        </ComposedChart>
                       </ResponsiveContainer>
+                    </div>
+                    <div className="flex items-center gap-6 mt-3 px-1">
+                      <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
+                        <div className="w-4 h-0.5 bg-[var(--accent)]" />
+                        <span>Median set weight</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
+                        <div className="w-4 h-2 rounded-sm" style={{ background: 'color-mix(in srgb, var(--accent) 20%, transparent)' }} />
+                        <span>Min – max band</span>
+                      </div>
                     </div>
                   </>
                 );
               })() : (
-                <div className="text-center py-12 text-gray-500">
+                <div className="text-center py-12 text-[var(--text-muted)]">
                   <p>Select an exercise to view progression.</p>
                 </div>
               )}
@@ -1210,31 +1326,36 @@ export const Progress: React.FC = () => {
         {activeTab === 'prs' && (
           <div className="space-y-4">
             {prs.length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
-                <Trophy className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                <p>No personal records yet.</p>
-                <p className="text-sm">Keep lifting to set some PRs!</p>
+              <div className="glass-card flex flex-col items-center justify-center py-16 text-center">
+                <Trophy className="w-10 h-10 mb-3 text-[var(--text-muted)] opacity-40" />
+                <p className="text-[15px] font-semibold text-[var(--text-primary)] mb-1">No records yet</p>
+                <p className="text-[13px] text-[var(--text-muted)]">Keep training — PRs will appear here.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {prs.map(pr => (
-                  <div key={pr.id} className="bg-[#1A1A1A] p-5 rounded-2xl border border-white/5 flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
+                  <div key={pr.id} className="glass-card p-5 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
                       <div className="flex-shrink-0">
-                        <ExerciseImage 
-                          exerciseId={pr.exercise_db_id} 
-                          exerciseName={pr.exercise_name} 
+                        <ExerciseImage
+                          exerciseId={pr.exercise_db_id}
+                          exerciseName={pr.exercise_name}
                           size="md"
                         />
                       </div>
                       <div>
-                        <h3 className="text-white font-bold text-lg">{pr.exercise_name}</h3>
-                        <p className="text-sm text-gray-400">Achieved {formatStoredDate(pr.achieved_date, 'MMM d, yyyy')}</p>
+                        <h3 className="text-[var(--text-primary)] font-bold text-[15px]">{pr.exercise_name}</h3>
+                        <p className="text-[12px] text-[var(--text-muted)] mt-0.5">
+                          {formatStoredDate(pr.achieved_date, 'MMM d, yyyy')}
+                        </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-black text-[var(--accent)]">{pr.best_weight} <span className="text-sm text-gray-400 font-medium">{displayUnit}</span></div>
-                      <div className="text-sm text-gray-400">{pr.best_reps} reps</div>
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-[20px] font-black text-[var(--accent)] tabular-nums">
+                        {pr.best_weight}
+                        <span className="text-[12px] font-medium text-[var(--text-muted)] ml-1">{displayUnit}</span>
+                      </div>
+                      <div className="text-[12px] text-[var(--text-muted)]">{pr.best_reps} reps</div>
                     </div>
                   </div>
                 ))}
