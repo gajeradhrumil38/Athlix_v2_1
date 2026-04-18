@@ -210,7 +210,7 @@
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: #4a5568;
+  background: var(--text-muted);
   transition: transform 0.2s, background 0.2s;
 }
 

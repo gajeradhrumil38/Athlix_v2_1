@@ -70,16 +70,16 @@ export const WeightRepsModal: React.FC<WeightRepsModalProps> = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[200] bg-[#0D1117] flex flex-col"
+      className="fixed inset-0 z-[200] bg-[var(--bg-base)] flex flex-col"
     >
       {/* Header */}
-      <header className="h-[52px] flex-shrink-0 flex items-center justify-between px-3 border-b border-[#1E2F42]">
-        <button onClick={onClose} className="p-2 text-[#8892A4]">
+      <header className="h-[52px] flex-shrink-0 flex items-center justify-between px-3 border-b border-[var(--border)]">
+        <button onClick={onClose} className="p-2 text-[var(--text-secondary)]">
           <ChevronLeft className="w-6 h-6" />
         </button>
         <div className="text-center">
-          <div className="text-[13px] font-bold text-[#E2E8F0]">Set {setNumber}</div>
-          <div className="text-[10px] text-[#8892A4] uppercase tracking-wider">{exerciseName}</div>
+          <div className="text-[13px] font-bold text-[var(--text-primary)]">Set {setNumber}</div>
+          <div className="text-[10px] text-[var(--text-secondary)] uppercase tracking-wider">{exerciseName}</div>
         </div>
         <button 
           onClick={() => onConfirm(value)}
@@ -93,10 +93,10 @@ export const WeightRepsModal: React.FC<WeightRepsModalProps> = ({
       <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-12">
         {/* Big Value Display */}
         <div className="text-center">
-          <div className="text-[72px] font-black text-[#E2E8F0] leading-none tabular-nums">
-            {value}<span className="text-[24px] font-bold text-[#3A5060] ml-1">{unit}</span>
+          <div className="text-[72px] font-black text-[var(--text-primary)] leading-none tabular-nums">
+            {value}<span className="text-[24px] font-bold text-[var(--text-muted)] ml-1">{unit}</span>
           </div>
-          <div className="text-[12px] font-bold text-[#3A5060] uppercase tracking-[2px] mt-2">
+          <div className="text-[12px] font-bold text-[var(--text-muted)] uppercase tracking-[2px] mt-2">
             Target {field}
           </div>
         </div>
@@ -105,13 +105,13 @@ export const WeightRepsModal: React.FC<WeightRepsModalProps> = ({
         <div className="flex items-center gap-4">
           <button 
             onClick={() => handleAdjust(-stepBig)}
-            className="w-[52px] h-[52px] rounded-full bg-[#1A2538] border border-[#1E2F42] flex items-center justify-center text-[#E2E8F0] active:scale-90 transition-transform"
+            className="w-[52px] h-[52px] rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] active:scale-90 transition-transform"
           >
             <span className="text-[18px] font-bold">--</span>
           </button>
           <button 
             onClick={() => handleAdjust(-stepSmall)}
-            className="w-[52px] h-[52px] rounded-full bg-[#1A2538] border border-[#1E2F42] flex items-center justify-center text-[#E2E8F0] active:scale-90 transition-transform"
+            className="w-[52px] h-[52px] rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] active:scale-90 transition-transform"
           >
             <Minus className="w-6 h-6" />
           </button>
@@ -120,13 +120,13 @@ export const WeightRepsModal: React.FC<WeightRepsModalProps> = ({
 
           <button 
             onClick={() => handleAdjust(stepSmall)}
-            className="w-[52px] h-[52px] rounded-full bg-[#1A2538] border border-[#1E2F42] flex items-center justify-center text-[#E2E8F0] active:scale-90 transition-transform"
+            className="w-[52px] h-[52px] rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] active:scale-90 transition-transform"
           >
             <Plus className="w-6 h-6" />
           </button>
           <button 
             onClick={() => handleAdjust(stepBig)}
-            className="w-[52px] h-[52px] rounded-full bg-[#1A2538] border border-[#1E2F42] flex items-center justify-center text-[#E2E8F0] active:scale-90 transition-transform"
+            className="w-[52px] h-[52px] rounded-full bg-[var(--bg-elevated)] border border-[var(--border)] flex items-center justify-center text-[var(--text-primary)] active:scale-90 transition-transform"
           >
             <span className="text-[18px] font-bold">++</span>
           </button>
@@ -138,7 +138,7 @@ export const WeightRepsModal: React.FC<WeightRepsModalProps> = ({
             <button
               key={chip}
               onClick={() => setValue(chip)}
-              className={`px-4 py-2 rounded-xl text-[11px] font-bold transition-all ${value === chip ? 'bg-[var(--accent)] text-black' : 'bg-[#1A2538] text-[#8892A4] border border-[#1E2F42]'}`}
+              className={`px-4 py-2 rounded-xl text-[11px] font-bold transition-all ${value === chip ? 'bg-[var(--accent)] text-black' : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border)]'}`}
             >
               {chip}{unit}
             </button>
@@ -147,21 +147,21 @@ export const WeightRepsModal: React.FC<WeightRepsModalProps> = ({
 
         {/* Plate Calculator */}
         {isWeight && (
-          <div className="w-full max-w-[320px] p-4 bg-[#141C28] rounded-2xl border border-[#1E2F42] text-center">
-            <div className="text-[9px] font-bold text-[#3A5060] uppercase tracking-wider mb-3">Plate Breakdown (Per Side)</div>
+          <div className="w-full max-w-[320px] p-4 bg-[var(--bg-surface)] rounded-2xl border border-[var(--border)] text-center">
+            <div className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-wider mb-3">Plate Breakdown (Per Side)</div>
             {plates ? (
               <div className="flex flex-wrap justify-center gap-2">
-                <div className="text-[10px] text-[#8892A4] w-full mb-1">
+                <div className="text-[10px] text-[var(--text-secondary)] w-full mb-1">
                   {weightUnit === 'kg' ? '20kg Bar +' : '45lb Bar +'}
                 </div>
                 {plates.map((p, i) => (
-                  <div key={i} className="px-2 py-1 bg-[#1A2538] border border-[var(--accent)]/20 rounded-md text-[10px] font-bold text-[var(--accent)]">
+                  <div key={i} className="px-2 py-1 bg-[var(--bg-elevated)] border border-[var(--accent)]/20 rounded-md text-[10px] font-bold text-[var(--accent)]">
                     {p}{weightUnit}
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="text-[10px] text-[#3A5060]">
+              <div className="text-[10px] text-[var(--text-muted)]">
                 Empty Bar ({weightUnit === 'kg' ? '20kg' : '45lb'})
               </div>
             )}

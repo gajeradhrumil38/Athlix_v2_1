@@ -15,7 +15,7 @@ const navItems: { path: string; icon: IconName; label: string }[] = [
 
 const mobileNavItems: { path: string; icon: IconName; label: string }[] = [
   { path: '/',         icon: 'Home',     label: 'Home'     },
-  { path: '/progress', icon: 'Activity', label: 'Health'   },
+  { path: '/progress', icon: 'Activity', label: 'Progress' },
   { path: '/calendar', icon: 'Calendar', label: 'Calendar' },
   { path: '/settings', icon: 'More',     label: 'More'     },
 ];
@@ -145,7 +145,7 @@ export const Layout: React.FC = () => {
           className="md:hidden fixed top-0 left-0 right-0 z-[90]"
           style={{
             paddingTop: 'env(safe-area-inset-top)',
-            background: 'rgba(10, 12, 16, 0.80)',
+            background: 'color-mix(in srgb, var(--bg-base) 82%, transparent)',
             backdropFilter: 'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
             borderBottom: '1px solid var(--border)',
@@ -229,14 +229,14 @@ export const Layout: React.FC = () => {
             style={{
               bottom: 'calc(64px + env(safe-area-inset-bottom))',
               height: 28,
-              background: 'linear-gradient(to bottom, transparent, rgba(10,12,16,0.85))',
+              background: 'linear-gradient(to bottom, transparent, color-mix(in srgb, var(--bg-base) 88%, transparent))',
             }}
           />
 
           <nav
             className="md:hidden fixed left-0 right-0 bottom-0 z-[98]"
             style={{
-              background: 'rgba(10, 12, 16, 0.90)',
+              background: 'color-mix(in srgb, var(--bg-base) 92%, transparent)',
               backdropFilter: 'blur(24px)',
               WebkitBackdropFilter: 'blur(24px)',
               borderTop: '1px solid var(--border)',

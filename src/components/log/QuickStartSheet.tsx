@@ -84,14 +84,14 @@ export const QuickStartSheet: React.FC<QuickStartSheetProps> = ({ onStartEmpty, 
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="w-full max-w-[480px] bg-[#141C28] rounded-t-[20px] p-6 pb-safe border-t border-[#1E2F42]"
+        className="w-full max-w-[480px] bg-[var(--bg-surface)] rounded-t-[20px] p-6 pb-safe border-t border-[var(--border)]"
         style={{ height: '65%' }}
       >
-        <div className="w-12 h-1 bg-[#3A5060] rounded-full mx-auto mb-6" />
+        <div className="w-12 h-1 bg-[var(--text-muted)] rounded-full mx-auto mb-6" />
         
         <div className="mb-6">
-          <h2 className="text-[14px] font-bold text-[#E2E8F0]">Start Workout</h2>
-          <p className="text-[11px] text-[#8892A4]">What are you training today?</p>
+          <h2 className="text-[14px] font-bold text-[var(--text-primary)]">Start Workout</h2>
+          <p className="text-[11px] text-[var(--text-secondary)]">What are you training today?</p>
         </div>
 
         {/* Suggested */}
@@ -110,13 +110,13 @@ export const QuickStartSheet: React.FC<QuickStartSheetProps> = ({ onStartEmpty, 
           </button>
           <button 
             onClick={onStartEmpty}
-            className="flex-1 px-4 py-3 bg-[#1A2538] border border-[#1E2F42] rounded-2xl text-left"
+            className="flex-1 px-4 py-3 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-2xl text-left"
           >
             <div className="flex items-center gap-3">
               <FitnessBadge name="legs" color="#A78BFA" size={38} />
               <div>
-                <span className="block text-[12px] font-bold text-[#E2E8F0]">Leg Day</span>
-                <span className="text-[9px] text-[#8892A4] uppercase tracking-wider">Next in split</span>
+                <span className="block text-[12px] font-bold text-[var(--text-primary)]">Leg Day</span>
+                <span className="text-[9px] text-[var(--text-secondary)] uppercase tracking-wider">Next in split</span>
               </div>
             </div>
           </button>
@@ -124,16 +124,16 @@ export const QuickStartSheet: React.FC<QuickStartSheetProps> = ({ onStartEmpty, 
 
         {/* Recent Workouts */}
         <div className="mb-8">
-          <label className="block text-[9px] font-bold uppercase tracking-[1.5px] text-[#3A5060] mb-3">Recent Workouts</label>
+          <label className="block text-[9px] font-bold uppercase tracking-[1.5px] text-[var(--text-muted)] mb-3">Recent Workouts</label>
           <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-6 px-6">
             {recentWorkouts.map((w) => (
               <button 
                 key={w.id}
                 onClick={() => handleLoadRecent(w)}
-                className="flex-shrink-0 w-[140px] p-3 bg-[#1A2538] border border-[#1E2F42] rounded-xl text-left"
+                className="flex-shrink-0 w-[140px] p-3 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl text-left"
               >
-                <div className="text-[12px] font-bold text-[#E2E8F0] truncate mb-1">{w.title}</div>
-                <div className="text-[9px] text-[#8892A4] mb-2">
+                <div className="text-[12px] font-bold text-[var(--text-primary)] truncate mb-1">{w.title}</div>
+                <div className="text-[9px] text-[var(--text-secondary)] mb-2">
                   {(() => {
                     const parsedDate = parseDateAtStartOfDay(w.date);
                     return parsedDate ? parsedDate.toLocaleDateString() : '--';
@@ -143,7 +143,7 @@ export const QuickStartSheet: React.FC<QuickStartSheetProps> = ({ onStartEmpty, 
               </button>
             ))}
             {loading && [1,2,3].map(i => (
-              <div key={i} className="flex-shrink-0 w-[140px] h-[80px] bg-[#1A2538] animate-pulse rounded-xl" />
+              <div key={i} className="flex-shrink-0 w-[140px] h-[80px] bg-[var(--bg-elevated)] animate-pulse rounded-xl" />
             ))}
           </div>
         </div>
@@ -157,7 +157,7 @@ export const QuickStartSheet: React.FC<QuickStartSheetProps> = ({ onStartEmpty, 
 
         {templates.length > 0 ? (
           <div className="space-y-2">
-            <div className="w-full py-2 text-[12px] font-bold text-[#8892A4] flex items-center justify-center gap-2">
+            <div className="w-full py-2 text-[12px] font-bold text-[var(--text-secondary)] flex items-center justify-center gap-2">
               <ClipboardList className="w-4 h-4" /> Load Template
             </div>
             <div className="flex gap-2 overflow-x-auto no-scrollbar">
@@ -165,10 +165,10 @@ export const QuickStartSheet: React.FC<QuickStartSheetProps> = ({ onStartEmpty, 
                 <button
                   key={template.id}
                   onClick={() => handleLoadTemplate(template)}
-                  className="flex-shrink-0 px-4 py-2 rounded-xl bg-[#1A2538] border border-[#1E2F42] text-left"
+                  className="flex-shrink-0 px-4 py-2 rounded-xl bg-[var(--bg-elevated)] border border-[var(--border)] text-left"
                 >
-                  <div className="text-[11px] font-bold text-[#E2E8F0]">{template.title}</div>
-                  <div className="text-[9px] text-[#8892A4]">
+                  <div className="text-[11px] font-bold text-[var(--text-primary)]">{template.title}</div>
+                  <div className="text-[9px] text-[var(--text-secondary)]">
                     {template.template_exercises?.length || 0} exercises
                   </div>
                 </button>
@@ -176,7 +176,7 @@ export const QuickStartSheet: React.FC<QuickStartSheetProps> = ({ onStartEmpty, 
             </div>
           </div>
         ) : (
-          <button className="w-full py-2 text-[12px] font-bold text-[#8892A4] flex items-center justify-center gap-2 opacity-50" disabled>
+          <button className="w-full py-2 text-[12px] font-bold text-[var(--text-secondary)] flex items-center justify-center gap-2 opacity-50" disabled>
             <ClipboardList className="w-4 h-4" /> No Templates Yet
           </button>
         )}

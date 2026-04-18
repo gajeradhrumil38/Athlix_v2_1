@@ -67,15 +67,15 @@ export const FinishSheet: React.FC<FinishSheetProps> = ({
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="w-full max-w-[480px] bg-[#0D1117] rounded-t-[24px] flex flex-col border-t border-[#1E2F42]"
+        className="w-full max-w-[480px] bg-[var(--bg-base)] rounded-t-[24px] flex flex-col border-t border-[var(--border)]"
         style={{ height: '90%' }}
       >
         {/* Header */}
-        <div className="p-4 border-b border-[#1E2F42] flex items-center justify-between">
-          <button onClick={onCancel} className="p-2 text-[#3A5060]">
+        <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
+          <button onClick={onCancel} className="p-2 text-[var(--text-muted)]">
             <X className="w-5 h-5" />
           </button>
-          <h2 className="text-[16px] font-bold text-[#E2E8F0]">Finish Workout</h2>
+          <h2 className="text-[16px] font-bold text-[var(--text-primary)]">Finish Workout</h2>
           <div className="w-10" />
         </div>
 
@@ -83,52 +83,52 @@ export const FinishSheet: React.FC<FinishSheetProps> = ({
         <div className="flex-1 overflow-y-auto p-6 space-y-8">
           {/* Stats Grid */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-[#141C28] border border-[#1E2F42] rounded-2xl">
+            <div className="p-4 bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl">
               <Clock className="w-4 h-4 text-[var(--accent)] mb-2" />
-              <div className="text-[20px] font-extrabold text-[#E2E8F0] tabular-nums">{formatTime(workout.elapsedSeconds)}</div>
-              <div className="text-[9px] text-[#8892A4] uppercase tracking-wider">Duration</div>
+              <div className="text-[20px] font-extrabold text-[var(--text-primary)] tabular-nums">{formatTime(workout.elapsedSeconds)}</div>
+              <div className="text-[9px] text-[var(--text-secondary)] uppercase tracking-wider">Duration</div>
             </div>
-            <div className="p-4 bg-[#141C28] border border-[#1E2F42] rounded-2xl">
+            <div className="p-4 bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl">
               <Weight className="w-4 h-4 text-[var(--accent)] mb-2" />
-              <div className="text-[20px] font-extrabold text-[#E2E8F0] tabular-nums">
+              <div className="text-[20px] font-extrabold text-[var(--text-primary)] tabular-nums">
                 {totalVolume.toLocaleString()}
                 {weightUnit}
               </div>
               {relativeLoad !== null && (
-                <div className="mt-1 text-[10px] font-semibold text-[#7EA8C6] tabular-nums">{relativeLoad.toFixed(2)}x BW</div>
+                <div className="mt-1 text-[10px] font-semibold text-[var(--text-secondary)] tabular-nums">{relativeLoad.toFixed(2)}x BW</div>
               )}
-              <div className="text-[9px] text-[#8892A4] uppercase tracking-wider">Total Volume</div>
+              <div className="text-[9px] text-[var(--text-secondary)] uppercase tracking-wider">Total Volume</div>
             </div>
-            <div className="p-4 bg-[#141C28] border border-[#1E2F42] rounded-2xl">
+            <div className="p-4 bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl">
               <Activity className="w-4 h-4 text-[var(--accent)] mb-2" />
-              <div className="text-[20px] font-extrabold text-[#E2E8F0] tabular-nums">{totalSets}</div>
-              <div className="text-[9px] text-[#8892A4] uppercase tracking-wider">Total Sets</div>
+              <div className="text-[20px] font-extrabold text-[var(--text-primary)] tabular-nums">{totalSets}</div>
+              <div className="text-[9px] text-[var(--text-secondary)] uppercase tracking-wider">Total Sets</div>
             </div>
-            <div className="p-4 bg-[#141C28] border border-[#1E2F42] rounded-2xl">
+            <div className="p-4 bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl">
               <Trophy className="w-4 h-4 text-[#EF9F27] mb-2" />
-              <div className="text-[20px] font-extrabold text-[#E2E8F0] tabular-nums">{prCount}</div>
-              <div className="text-[9px] text-[#8892A4] uppercase tracking-wider">New PRs</div>
+              <div className="text-[20px] font-extrabold text-[var(--text-primary)] tabular-nums">{prCount}</div>
+              <div className="text-[9px] text-[var(--text-secondary)] uppercase tracking-wider">New PRs</div>
             </div>
           </div>
 
           {/* Title & Notes */}
           <div className="space-y-4">
             <div>
-              <label className="block text-[9px] font-bold uppercase tracking-[1.5px] text-[#3A5060] mb-2">Workout Title</label>
+              <label className="block text-[9px] font-bold uppercase tracking-[1.5px] text-[var(--text-muted)] mb-2">Workout Title</label>
               <input 
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-3 bg-[#141C28] border border-[#1E2F42] rounded-xl text-[14px] text-[#E2E8F0] focus:outline-none focus:border-[var(--accent)]/50 transition-colors"
+                className="w-full px-4 py-3 bg-[var(--bg-surface)] border border-[var(--border)] rounded-xl text-[14px] text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]/50 transition-colors"
                 placeholder="Morning Workout"
               />
             </div>
             <div>
-              <label className="block text-[9px] font-bold uppercase tracking-[1.5px] text-[#3A5060] mb-2">Notes</label>
+              <label className="block text-[9px] font-bold uppercase tracking-[1.5px] text-[var(--text-muted)] mb-2">Notes</label>
               <textarea 
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full px-4 py-3 bg-[#141C28] border border-[#1E2F42] rounded-xl text-[14px] text-[#E2E8F0] focus:outline-none focus:border-[var(--accent)]/50 transition-colors h-24 resize-none"
+                className="w-full px-4 py-3 bg-[var(--bg-surface)] border border-[var(--border)] rounded-xl text-[14px] text-[var(--text-primary)] focus:outline-none focus:border-[var(--accent)]/50 transition-colors h-24 resize-none"
                 placeholder="How did it feel today?"
               />
             </div>
@@ -136,12 +136,12 @@ export const FinishSheet: React.FC<FinishSheetProps> = ({
 
           {/* Exercise Summary */}
           <div>
-            <label className="block text-[9px] font-bold uppercase tracking-[1.5px] text-[#3A5060] mb-3">Exercise Summary</label>
+            <label className="block text-[9px] font-bold uppercase tracking-[1.5px] text-[var(--text-muted)] mb-3">Exercise Summary</label>
             <div className="space-y-2">
               {(workout.exercises || []).map(ex => (
-                <div key={ex.id} className="flex items-center justify-between p-3 bg-[#141C28]/50 rounded-xl">
-                  <span className="text-[12px] font-bold text-[#E2E8F0]">{ex.name}</span>
-                  <span className="text-[10px] text-[#8892A4]">{(ex.sets || []).filter(s => s.done).length} sets</span>
+                <div key={ex.id} className="flex items-center justify-between p-3 bg-[var(--bg-surface)]/50 rounded-xl">
+                  <span className="text-[12px] font-bold text-[var(--text-primary)]">{ex.name}</span>
+                  <span className="text-[10px] text-[var(--text-secondary)]">{(ex.sets || []).filter(s => s.done).length} sets</span>
                 </div>
               ))}
             </div>
@@ -149,7 +149,7 @@ export const FinishSheet: React.FC<FinishSheetProps> = ({
         </div>
 
         {/* Action Button */}
-        <div className="p-6 border-t border-[#1E2F42] bg-[#0D1117]">
+        <div className="p-6 border-t border-[var(--border)] bg-[var(--bg-base)]">
           <button 
             disabled={saving}
             onClick={() => onConfirm(title.trim() || workout.title, notes)}

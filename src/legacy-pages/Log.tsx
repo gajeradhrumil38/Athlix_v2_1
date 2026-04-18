@@ -315,17 +315,7 @@ export const Log: React.FC = () => {
       setOpenPickerOnStart(true);
       setWorkout(nextWorkout);
       writeDraft(nextWorkout);
-      toast('Workout added', {
-        duration: 1600,
-        icon: '',
-        style: {
-          background: '#141C28',
-          color: '#E2E8F0',
-          border: '1px solid #1E2F42',
-          fontSize: '12px',
-          padding: '8px 12px',
-        },
-      });
+      toast.success('Workout saved!', { duration: 1800 });
     } catch (error: any) {
       toast.error(error.message || 'Failed to save workout.');
     } finally {
@@ -334,7 +324,7 @@ export const Log: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0D1117] text-[#E2E8F0]">
+    <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)]">
       <AnimatePresence>
         {showQuickStart && (
           <QuickStartSheet 

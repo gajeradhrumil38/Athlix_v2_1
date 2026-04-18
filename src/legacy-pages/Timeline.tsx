@@ -10,6 +10,7 @@ import { deleteWorkout, getWorkouts } from '../lib/supabaseData';
 import { parseDateAtStartOfDay } from '../lib/dates';
 import { useAuth as useAuthCtx } from '../contexts/AuthContext';
 import { convertWeight, type WeightUnit } from '../lib/units';
+import { muscleColor } from '../lib/muscleColors';
 
 /* ── Volume helper (unit-aware) ──────────────────────────── */
 const calcVolume = (exercises: any[], displayUnit: WeightUnit): number => {
@@ -25,13 +26,6 @@ const calcVolume = (exercises: any[], displayUnit: WeightUnit): number => {
   }, 0);
 };
 
-/* ── Muscle tag colour map ───────────────────────────────── */
-const MUSCLE_COLORS: Record<string, string> = {
-  Chest: 'var(--chest)', Back: 'var(--back)', Legs: 'var(--legs)',
-  Shoulders: 'var(--shoulders)', Core: 'var(--core)',
-  Biceps: 'var(--biceps)', Triceps: 'var(--triceps)',
-  Cardio: 'var(--cardio)',
-};
 
 /* ── Timeline card ───────────────────────────────────────── */
 const TimelineItem: React.FC<{
@@ -105,7 +99,7 @@ const TimelineItem: React.FC<{
                 {volume > 0 && (
                   <span className="flex items-center gap-1">
                     <BarChart2 className="w-3 h-3" />
-                    {volume % 1 === 0 ? volume.toLocaleString() : volume.toFixed(1)} {displayUnit}
+                    {Number.isInteger(volume) ? volume.toLocaleString() : volume.toFixed(1)} {displayUnit}
                   </span>
                 )}
               </div>
@@ -137,9 +131,9 @@ const TimelineItem: React.FC<{
                   key={mg}
                   className="px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide"
                   style={{
-                    color: MUSCLE_COLORS[mg] || 'var(--text-muted)',
-                    background: `color-mix(in srgb, ${MUSCLE_COLORS[mg] || 'var(--text-muted)'} 12%, transparent)`,
-                    border: `1px solid color-mix(in srgb, ${MUSCLE_COLORS[mg] || 'var(--text-muted)'} 25%, transparent)`,
+                    color: muscleColor(mg),
+                    background: `color-mix(in srgb, ${muscleColor(mg)} 12%, transparent)`,
+                    border: `1px solid color-mix(in srgb, ${muscleColor(mg)} 25%, transparent)`,
                   }}
                 >
                   {mg}
@@ -206,7 +200,7 @@ const Empty: React.FC = () => (
     </div>
     <h3 className="text-[16px] font-semibold text-[var(--text-primary)] mb-1">No workouts yet</h3>
     <p className="text-[13px] text-[var(--text-muted)] max-w-[220px]">
-      Log your first session and it'll appear here.
+      Start a workout from the home screen — it'll appear here.
     </p>
   </div>
 );

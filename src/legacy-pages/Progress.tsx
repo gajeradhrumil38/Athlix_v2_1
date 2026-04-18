@@ -33,11 +33,11 @@ import { parseDateAtStartOfDay } from '../lib/dates';
 import { convertWeight, type WeightUnit } from '../lib/units';
 
 const HEART_RATE_ZONES = [
-  { id: 'z1', name: 'Recovery', range: '50-94', color: '#5DCAA5' },
-  { id: 'z2', name: 'Easy', range: '95-124', color: 'var(--accent)' },
-  { id: 'z3', name: 'Moderate', range: '125-154', color: '#FFCC00' },
-  { id: 'z4', name: 'Hard', range: '155-174', color: '#FF9F1C' },
-  { id: 'z5', name: 'Peak', range: '175+', color: '#FF5A5F' },
+  { id: 'z1', name: 'Recovery', range: '50-94',   color: 'var(--back)'   },
+  { id: 'z2', name: 'Easy',     range: '95-124',  color: 'var(--accent)' },
+  { id: 'z3', name: 'Moderate', range: '125-154', color: 'var(--yellow)' },
+  { id: 'z4', name: 'Hard',     range: '155-174', color: 'var(--legs)'   },
+  { id: 'z5', name: 'Peak',     range: '175+',    color: 'var(--red)'    },
 ] as const;
 
 const HEART_RATE_GAP_BREAK_MS = 5000;
@@ -70,17 +70,11 @@ const getHeartRateZoneColor = (bpm: number | null) => {
   return HEART_RATE_ZONES[getHeartRateZoneIndex(bpm)].color;
 };
 
-const hexToRgba = (hex: string, alpha: number) => {
-  const normalized = hex.replace('#', '');
-  const isShort = normalized.length === 3;
-  const fullHex = isShort
-    ? normalized.split('').map((char) => `${char}${char}`).join('')
-    : normalized;
-  const intVal = Number.parseInt(fullHex, 16);
-  const r = (intVal >> 16) & 255;
-  const g = (intVal >> 8) & 255;
-  const b = intVal & 255;
-  return `rgba(${r},${g},${b},${alpha})`;
+/** Convert a color (hex or CSS var) + alpha [0-1] to a CSS color-mix() string. */
+const withAlpha = (color: string, alpha: number): string => {
+  if (alpha <= 0) return 'transparent';
+  const pct = Math.round(alpha * 100);
+  return `color-mix(in srgb, ${color} ${pct}%, transparent)`;
 };
 
 const averageHeartRateSamples = (samples: HeartRateSample[]) => {
@@ -324,11 +318,11 @@ export const Progress: React.FC = () => {
     return HEART_RATE_ZONES[selectedZoneFilter]?.color || '#59D9C6';
   }, [selectedZoneFilter]);
   const activeWaveDataKey = selectedZoneFilter === null ? 'bpm' : `z${selectedZoneFilter}`;
-  const activeWaveAreaTop = useMemo(() => hexToRgba(activeWaveColor, 0.36), [activeWaveColor]);
-  const activeWaveAreaMid = useMemo(() => hexToRgba(activeWaveColor, 0.2), [activeWaveColor]);
-  const activeWaveAreaBottom = useMemo(() => hexToRgba(activeWaveColor, 0), [activeWaveColor]);
-  const activeWaveStroke = useMemo(() => hexToRgba(activeWaveColor, 0.96), [activeWaveColor]);
-  const activeWaveGlow = useMemo(() => hexToRgba(activeWaveColor, 0.18), [activeWaveColor]);
+  const activeWaveAreaTop = useMemo(() => withAlpha(activeWaveColor, 0.36), [activeWaveColor]);
+  const activeWaveAreaMid = useMemo(() => withAlpha(activeWaveColor, 0.2), [activeWaveColor]);
+  const activeWaveAreaBottom = useMemo(() => withAlpha(activeWaveColor, 0), [activeWaveColor]);
+  const activeWaveStroke = useMemo(() => withAlpha(activeWaveColor, 0.96), [activeWaveColor]);
+  const activeWaveGlow = useMemo(() => withAlpha(activeWaveColor, 0.18), [activeWaveColor]);
   const heroWavePoints = useMemo(() => {
     const recent = hrSamples.slice(-48).map((sample) => sample.bpm);
     if (recent.length < 6) {
@@ -1628,8 +1622,8 @@ export const Progress: React.FC = () => {
                             </linearGradient>
                             <linearGradient id="liveWaveMountainGlow" x1="0" y1="0" x2="1" y2="0">
                               <stop offset="0%" stopColor={activeWaveGlow} />
-                              <stop offset="50%" stopColor={hexToRgba(activeWaveColor, 0.24)} />
-                              <stop offset="100%" stopColor={hexToRgba(activeWaveColor, 0.08)} />
+                              <stop offset="50%" stopColor={withAlpha(activeWaveColor, 0.24)} />
+                              <stop offset="100%" stopColor={withAlpha(activeWaveColor, 0.08)} />
                             </linearGradient>
                           </defs>
                           <CartesianGrid strokeDasharray="3 3" stroke="#2A3240" vertical={false} />

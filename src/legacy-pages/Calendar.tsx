@@ -33,19 +33,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { deleteWorkout, getWorkouts } from '../lib/supabaseData';
 import { convertWeight, type WeightUnit } from '../lib/units';
-
-const MUSCLE_COLORS: Record<string, string> = {
-  Chest: '#FF5A5F',
-  Back: '#2F80FF',
-  Legs: '#35D07F',
-  Shoulders: '#FF9F1C',
-  Arms: '#AF52DE',
-  Biceps: '#8B5CF6',
-  Triceps: '#C084FC',
-  Core: '#FFCC00',
-  Cardio: '#46C8FF',
-  'Full Body': '#9AA4B2',
-};
+import { muscleColor } from '../lib/muscleColors';
 
 const MUSCLE_FILTERS = [
   'All',
@@ -106,7 +94,7 @@ const getWorkoutVolume = (workout: any, targetUnit: WeightUnit = 'kg') =>
   );
 
 const getWorkoutAccent = (workout: any) =>
-  MUSCLE_COLORS[(workout.muscle_groups || [])[0]] || 'var(--accent)';
+  muscleColor((workout.muscle_groups || [])[0]);
 
 const isGenericWorkoutTitle = (title?: string | null) => {
   if (!title) return true;
@@ -458,7 +446,7 @@ export const Calendar: React.FC = () => {
               {secondaryExercises.slice(0, 6).map((exerciseName) => (
                 <span
                   key={exerciseName}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-[#D9E4EE]"
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-[var(--text-secondary)]"
                 >
                   <span className="h-1.5 w-1.5 rounded-full bg-white/65" />
                   {exerciseName}
@@ -478,11 +466,11 @@ export const Calendar: React.FC = () => {
             {workout.muscle_groups.map((muscle: string) => (
               <span
                 key={muscle}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1 text-[10px] font-medium text-[#CFD8E3]"
+                className="inline-flex items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1 text-[10px] font-medium text-[var(--text-secondary)]"
               >
                 <span
                   className="h-1.5 w-1.5 rounded-full"
-                  style={{ backgroundColor: MUSCLE_COLORS[muscle] || 'var(--accent)' }}
+                  style={{ backgroundColor: muscleColor(muscle) }}
                 />
                 {muscle}
               </span>
@@ -514,7 +502,7 @@ export const Calendar: React.FC = () => {
           onPointerCancel={handleTouchEnd}
           className={`group relative min-h-[116px] min-w-0 overflow-hidden rounded-2xl border px-2 py-2 text-left transition-all ${
             isSelected
-              ? 'border-[var(--accent)]/55 bg-[linear-gradient(180deg,rgba(18,37,50,0.98)_0%,rgba(15,24,35,1)_100%)] shadow-[0_0_0_1px_rgba(200,255,0,0.10)]'
+              ? 'border-[var(--accent)]/55 bg-[linear-gradient(180deg,var(--bg-surface)_0%,rgba(15,24,35,1)_100%)] shadow-[0_0_0_1px_rgba(200,255,0,0.10)]'
               : 'border-white/6 bg-[linear-gradient(180deg,#181818_0%,#141414_100%)] hover:border-white/12 hover:bg-white/[0.03]'
           } ${isOutsideMonth ? 'opacity-40' : ''}`}
         >
@@ -544,7 +532,7 @@ export const Calendar: React.FC = () => {
                       />
                     ))}
                     {extraWorkoutCount > 0 && (
-                      <div className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full border border-white/10 bg-white/[0.04] px-1 text-[9px] font-semibold text-[#C8D4E0]">
+                      <div className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full border border-white/10 bg-white/[0.04] px-1 text-[9px] font-semibold text-[var(--text-secondary)]">
                         +{extraWorkoutCount}
                       </div>
                     )}
@@ -747,13 +735,13 @@ export const Calendar: React.FC = () => {
                 className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                   active
                     ? 'border-white/30 bg-white text-black'
-                    : 'border-white/10 bg-transparent text-[#B2BDCB] hover:border-white/20 hover:text-white'
+                    : 'border-white/10 bg-transparent text-[var(--text-secondary)] hover:border-white/20 hover:text-white'
                 }`}
               >
                 {!isAll && (
                   <span
                     className="h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: MUSCLE_COLORS[muscle] || 'var(--accent)' }}
+                    style={{ backgroundColor: muscleColor(muscle) }}
                   />
                 )}
                 <span>{muscle}</span>

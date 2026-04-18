@@ -46,15 +46,15 @@ export const WeightRepsPicker: React.FC<WeightRepsPickerProps> = ({ type, initia
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="w-full max-w-[480px] bg-[#141C28] rounded-t-[24px] flex flex-col border-t border-[#1E2F42]"
+        className="w-full max-w-[480px] bg-[var(--bg-surface)] rounded-t-[24px] flex flex-col border-t border-[var(--border)]"
         style={{ height: '50%' }}
       >
         {/* Header */}
-        <div className="p-4 border-b border-[#1E2F42] flex items-center justify-between">
-          <button onClick={onClose} className="p-2 text-[#3A5060]">
+        <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
+          <button onClick={onClose} className="p-2 text-[var(--text-muted)]">
             <X className="w-5 h-5" />
           </button>
-          <h2 className="text-[16px] font-bold text-[#E2E8F0]">
+          <h2 className="text-[16px] font-bold text-[var(--text-primary)]">
             Set {type === 'weight' ? 'Weight' : 'Reps'}
           </h2>
           <button 
@@ -79,7 +79,7 @@ export const WeightRepsPicker: React.FC<WeightRepsPickerProps> = ({ type, initia
             {range.map((v, i) => (
               <div 
                 key={v}
-                className={`h-10 flex items-center justify-center text-[24px] font-bold tabular-nums transition-all snap-center ${value === v ? 'text-[var(--accent)] scale-125' : 'text-[#3A5060] opacity-40'}`}
+                className={`h-10 flex items-center justify-center text-[24px] font-bold tabular-nums transition-all snap-center ${value === v ? 'text-[var(--accent)] scale-125' : 'text-[var(--text-muted)] opacity-40'}`}
               >
                 {v}{type === 'weight' ? 'kg' : ''}
               </div>
@@ -87,17 +87,17 @@ export const WeightRepsPicker: React.FC<WeightRepsPickerProps> = ({ type, initia
           </div>
 
           {/* Unit Label */}
-          <div className="absolute right-12 text-[12px] font-bold text-[#3A5060] uppercase tracking-widest pointer-events-none">
+          <div className="absolute right-12 text-[12px] font-bold text-[var(--text-muted)] uppercase tracking-widest pointer-events-none">
             {type === 'weight' ? 'Kilograms' : 'Repetitions'}
           </div>
         </div>
 
         {/* Plate Calculator Toggle */}
         {type === 'weight' && (
-          <div className="p-4 border-t border-[#1E2F42] bg-[#0D1117]">
+          <div className="p-4 border-t border-[var(--border)] bg-[var(--bg-base)]">
             <button 
               onClick={() => setShowPlateCalc(!showPlateCalc)}
-              className="w-full py-3 bg-[#1A2538] border border-[#1E2F42] text-[#8892A4] rounded-xl font-bold text-[12px] flex items-center justify-center gap-2"
+              className="w-full py-3 bg-[var(--bg-elevated)] border border-[var(--border)] text-[var(--text-secondary)] rounded-xl font-bold text-[12px] flex items-center justify-center gap-2"
             >
               <Calculator className="w-4 h-4" /> Plate Calculator
             </button>
@@ -111,23 +111,23 @@ export const WeightRepsPicker: React.FC<WeightRepsPickerProps> = ({ type, initia
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
-              className="absolute inset-0 bg-[#141C28] z-10 p-6 flex flex-col"
+              className="absolute inset-0 bg-[var(--bg-surface)] z-10 p-6 flex flex-col"
             >
               <div className="flex items-center justify-between mb-8">
-                <h3 className="text-[14px] font-bold text-[#E2E8F0]">Plate Calculator</h3>
-                <button onClick={() => setShowPlateCalc(false)} className="p-2 text-[#3A5060]">
+                <h3 className="text-[14px] font-bold text-[var(--text-primary)]">Plate Calculator</h3>
+                <button onClick={() => setShowPlateCalc(false)} className="p-2 text-[var(--text-muted)]">
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
               <div className="flex-1 flex flex-col items-center justify-center">
                 <div className="text-[48px] font-extrabold text-[var(--accent)] mb-2">{value}kg</div>
-                <div className="text-[10px] text-[#8892A4] uppercase tracking-widest mb-8">Total Weight (20kg Bar)</div>
+                <div className="text-[10px] text-[var(--text-secondary)] uppercase tracking-widest mb-8">Total Weight (20kg Bar)</div>
 
                 <div className="flex gap-2 flex-wrap justify-center max-w-[300px]">
                   {/* Mock plate calculation logic */}
                   {[20, 20, 10, 5, 2.5].map((p, i) => (
-                    <div key={i} className="w-12 h-12 rounded-full border-2 border-[#1E2F42] flex items-center justify-center bg-[#1A2538] text-[12px] font-bold text-[#E2E8F0]">
+                    <div key={i} className="w-12 h-12 rounded-full border-2 border-[var(--border)] flex items-center justify-center bg-[var(--bg-elevated)] text-[12px] font-bold text-[var(--text-primary)]">
                       {p}
                     </div>
                   ))}

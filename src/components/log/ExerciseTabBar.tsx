@@ -30,7 +30,7 @@ export const ExerciseTabBar: React.FC<ExerciseTabBarProps> = ({
   }, [activeIndex]);
 
   return (
-    <div className="flex h-[52px] flex-shrink-0 items-center overflow-hidden border-b border-white/5 bg-[#0B1019]/70 px-3 backdrop-blur-xl">
+    <div className="flex h-[52px] flex-shrink-0 items-center overflow-hidden border-b border-white/5 bg-[var(--bg-base)]/70 px-3 backdrop-blur-xl">
       <div 
         ref={scrollRef}
         className="flex-1 flex items-center overflow-x-auto no-scrollbar h-full"

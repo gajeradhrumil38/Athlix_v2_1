@@ -536,7 +536,7 @@ export const Home: React.FC = () => {
     ),
     weekly_goal: (
       <div key="weekly_goal" className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-[14px] p-[10px_8px] h-full flex flex-col justify-between">
-        <h3 className="text-[9px] uppercase tracking-[1.5px] text-white/80 font-bold mb-2">WEEKLY GOAL</h3>
+        <h3 className="text-[9px] uppercase tracking-[1.5px] text-[var(--text-secondary)] font-bold mb-2">WEEKLY GOAL</h3>
         <WeeklyRing 
           trainedDays={trainedDaysCount} 
           goalDays={4} 
@@ -548,7 +548,7 @@ export const Home: React.FC = () => {
     train_next: (
       <div key="train_next" className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-[14px] p-3 h-full flex flex-col">
         <div className="flex items-center justify-between mb-3">
-          <div className="text-[10px] uppercase tracking-[0.8px] text-white/80 font-semibold">
+          <div className="text-[10px] uppercase tracking-[0.8px] text-[var(--text-secondary)] font-semibold">
             {rangeTitle}
           </div>
           <button
@@ -566,7 +566,7 @@ export const Home: React.FC = () => {
                 const pct = Math.min((ex.volume / maxVolume) * 100, 100);
                 return (
                   <div key={ex.name} className="flex flex-col gap-1">
-                    <div className="flex items-center justify-between text-[11px] text-white/80">
+                    <div className="flex items-center justify-between text-[11px] text-[var(--text-secondary)]">
                       <span className="truncate">{ex.name}</span>
                       <span className="text-[9px] text-[var(--text-secondary)]">{ex.sets} sets</span>
                     </div>
@@ -585,7 +585,7 @@ export const Home: React.FC = () => {
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center gap-2">
-              <div className="text-[11px] text-white/80">No exercises logged today.</div>
+              <div className="text-[11px] text-[var(--text-secondary)]">No exercises logged today.</div>
               <button
                 onClick={handleWorkoutEntry}
                 className="px-3 py-1.5 bg-[var(--accent)] text-black text-[10px] font-bold rounded-lg"
@@ -601,7 +601,7 @@ export const Home: React.FC = () => {
               const pct = Math.min((ex.volume / maxVolume) * 100, 100);
               return (
                 <div key={ex.name} className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between text-[11px] text-white/80">
+                  <div className="flex items-center justify-between text-[11px] text-[var(--text-secondary)]">
                     <span className="truncate">{ex.name}</span>
                     <span className="text-[9px] text-[var(--text-secondary)]">{ex.volume.toFixed(0)} {displayUnit}</span>
                   </div>
@@ -620,7 +620,7 @@ export const Home: React.FC = () => {
           </div>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center text-center gap-2">
-            <div className="text-[11px] text-white/80">No training data for this range.</div>
+            <div className="text-[11px] text-[var(--text-secondary)]">No training data for this range.</div>
             <button
               onClick={handleWorkoutEntry}
               className="px-3 py-1.5 bg-[var(--accent)] text-black text-[10px] font-bold rounded-lg"
@@ -659,7 +659,7 @@ export const Home: React.FC = () => {
     today_card: (
       <div key="today_card" className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-xl p-3 animate-card-enter" style={{ animationDelay: '300ms' }}>
         <div className="flex justify-between items-center mb-3">
-          <h3 className="text-[10px] uppercase tracking-[0.8px] text-white/80 font-semibold">TODAY'S ACTIVITIES</h3>
+          <h3 className="text-[10px] uppercase tracking-[0.8px] text-[var(--text-secondary)] font-semibold">TODAY'S ACTIVITIES</h3>
           <span className="text-[10px] text-[var(--text-secondary)]">{format(new Date(), 'MMM d')}</span>
         </div>
 
@@ -702,7 +702,7 @@ export const Home: React.FC = () => {
     week_strip: (
       <div key="week_strip" className="flex flex-col gap-2">
         <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-xl p-3 animate-card-enter" style={{ animationDelay: '270ms' }}>
-          <h3 className="text-[10px] uppercase tracking-[0.8px] text-white/80 font-semibold mb-3">MUSCLE LOAD</h3>
+          <h3 className="text-[10px] uppercase tracking-[0.8px] text-[var(--text-secondary)] font-semibold mb-3">MUSCLE LOAD</h3>
           <div className="flex flex-col gap-2.5">
             {trainedMuscleGroups.length > 0 ? (
               trainedMuscleGroups.map(m => {
@@ -734,7 +734,7 @@ export const Home: React.FC = () => {
       </div>
     ),
     ai_summary: (
-        <div key="ai_summary" className="bg-gradient-to-br from-[#0d0d1a] to-[#0a0e14] border border-[var(--purple)]/20 rounded-xl p-3 animate-card-enter" style={{ animationDelay: '360ms' }}>
+        <div key="ai_summary" className="bg-[var(--bg-surface)] border border-[var(--purple)]/25 rounded-xl p-3 animate-card-enter" style={{ animationDelay: '360ms' }}>
         <div className="flex justify-between items-center mb-2">
           <h3 className="text-[11px] text-[var(--purple)] font-medium flex items-center gap-1.5"><Sparkles className="w-3.5 h-3.5" /> Weekly AI Summary</h3>
           {new Date().getDay() === 0 && (
@@ -743,7 +743,7 @@ export const Home: React.FC = () => {
             </button>
           )}
         </div>
-        <p className="text-[11px] text-white/80 leading-[1.6]">
+        <p className="text-[11px] text-[var(--text-secondary)] leading-[1.6]">
           {trainedMuscleGroups.length > 0 
             ? `You hit ${trainedMuscleGroups.join(', ')} this week. Consistency is key. Keep pushing your limits and ensure adequate recovery for optimal growth.`
             : `You haven't logged any workouts this week. Start a session to generate insights.`}

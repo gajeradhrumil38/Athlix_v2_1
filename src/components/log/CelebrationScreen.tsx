@@ -35,7 +35,7 @@ export const CelebrationScreen: React.FC<CelebrationScreenProps> = ({ onClose })
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[200] bg-[#0D1117] flex flex-col items-center justify-center p-8 text-center"
+      className="fixed inset-0 z-[200] bg-[var(--bg-base)] flex flex-col items-center justify-center p-8 text-center"
     >
       <motion.div 
         initial={{ scale: 0.5, rotate: -20 }}
@@ -55,7 +55,7 @@ export const CelebrationScreen: React.FC<CelebrationScreenProps> = ({ onClose })
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="text-[32px] font-extrabold text-[#E2E8F0] mb-2"
+        className="text-[32px] font-extrabold text-[var(--text-primary)] mb-2"
       >
         Workout Complete!
       </motion.h1>
@@ -64,7 +64,7 @@ export const CelebrationScreen: React.FC<CelebrationScreenProps> = ({ onClose })
         initial={{ y: 20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.3 }}
-        className="text-[14px] text-[#8892A4] mb-12"
+        className="text-[14px] text-[var(--text-secondary)] mb-12"
       >
         You're one step closer to your goal. <br />
         Keep up the consistency!
@@ -75,19 +75,19 @@ export const CelebrationScreen: React.FC<CelebrationScreenProps> = ({ onClose })
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.4 }}
-          className="p-4 bg-[#141C28] border border-[#1E2F42] rounded-2xl"
+          className="p-4 bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl"
         >
           <div className="text-[20px] font-extrabold text-[var(--accent)]">3</div>
-          <div className="text-[9px] text-[#8892A4] uppercase tracking-wider">New PRs</div>
+          <div className="text-[9px] text-[var(--text-secondary)] uppercase tracking-wider">New PRs</div>
         </motion.div>
         <motion.div 
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.5 }}
-          className="p-4 bg-[#141C28] border border-[#1E2F42] rounded-2xl"
+          className="p-4 bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl"
         >
           <div className="text-[20px] font-extrabold text-[var(--accent)]">450</div>
-          <div className="text-[9px] text-[#8892A4] uppercase tracking-wider">Calories</div>
+          <div className="text-[9px] text-[var(--text-secondary)] uppercase tracking-wider">Calories</div>
         </motion.div>
       </div>
 
@@ -98,7 +98,7 @@ export const CelebrationScreen: React.FC<CelebrationScreenProps> = ({ onClose })
         >
           Back to Dashboard <ArrowRight className="w-5 h-5" />
         </button>
-        <button className="w-full py-4 bg-transparent border border-[#1E2F42] text-[#E2E8F0] rounded-xl font-bold text-[14px] flex items-center justify-center gap-2 active:scale-95 transition-transform">
+        <button className="w-full py-4 bg-transparent border border-[var(--border)] text-[var(--text-primary)] rounded-xl font-bold text-[14px] flex items-center justify-center gap-2 active:scale-95 transition-transform">
           <Share2 className="w-4 h-4" /> Share Summary
         </button>
       </div>

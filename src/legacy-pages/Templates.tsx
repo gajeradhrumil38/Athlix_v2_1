@@ -63,10 +63,8 @@ export const Templates: React.FC = () => {
 
   const handleEdit = (template: Template) => {
     setTitle(template.title);
-    setExercises(template.template_exercises.map(te => ({
-      ...te,
-      id: crypto.randomUUID() // Generate new IDs for the form
-    })));
+    // Preserve original IDs so the server can do in-place updates
+    setExercises(template.template_exercises.map(te => ({ ...te })));
     setEditTemplateId(template.id);
     setIsCreating(true);
   };
@@ -158,10 +156,13 @@ export const Templates: React.FC = () => {
   };
 
   if (loading && !isCreating) {
-    return <div className="animate-pulse space-y-4">
-      <div className="h-12 bg-white/5 rounded-xl w-1/3"></div>
-      <div className="h-32 bg-white/5 rounded-2xl"></div>
-    </div>;
+    return (
+      <div className="space-y-4 max-w-3xl mx-auto">
+        <div className="skeleton h-10 rounded-xl w-1/3" />
+        <div className="skeleton h-28 rounded-2xl" />
+        <div className="skeleton h-28 rounded-2xl" />
+      </div>
+    );
   }
 
   return (
@@ -189,7 +190,7 @@ export const Templates: React.FC = () => {
               onChange={(e) => setTitle(e.target.value)}
               className="bg-transparent border-none text-xl font-bold text-white focus:outline-none focus:ring-0 w-full"
             />
-            <button onClick={resetForm} className="p-2 text-[var(--text-secondary)] hover:text-white transition-colors">
+            <button onClick={resetForm} className="p-2 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -228,7 +229,7 @@ export const Templates: React.FC = () => {
                     placeholder="Exercise name"
                     value={exercise.name}
                     onChange={(e) => updateExercise(exercise.id, 'name', e.target.value)}
-                    className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-white focus:outline-none focus:border-[var(--accent)] text-lg font-medium"
+                    className="w-full bg-transparent border-b border-[var(--border)] px-0 py-2 text-white focus:outline-none focus:border-[var(--accent)] text-lg font-medium"
                   />
                 </div>
 
@@ -239,7 +240,7 @@ export const Templates: React.FC = () => {
                       type="number" 
                       value={exercise.default_sets}
                       onChange={(e) => updateExercise(exercise.id, 'default_sets', parseInt(e.target.value))}
-                      className="w-full bg-black border border-white/10 rounded-xl px-2 py-2 text-white text-center focus:outline-none focus:border-[var(--accent)]"
+                      className="w-full bg-black border border-[var(--border)] rounded-xl px-2 py-2 text-white text-center focus:outline-none focus:border-[var(--accent)]"
                     />
                   </div>
                   <div>
@@ -248,7 +249,7 @@ export const Templates: React.FC = () => {
                       type="number" 
                       value={exercise.default_reps}
                       onChange={(e) => updateExercise(exercise.id, 'default_reps', parseInt(e.target.value))}
-                      className="w-full bg-black border border-white/10 rounded-xl px-2 py-2 text-white text-center focus:outline-none focus:border-[var(--accent)]"
+                      className="w-full bg-black border border-[var(--border)] rounded-xl px-2 py-2 text-white text-center focus:outline-none focus:border-[var(--accent)]"
                     />
                   </div>
                   <div>
@@ -257,7 +258,7 @@ export const Templates: React.FC = () => {
                       type="number" 
                       value={exercise.default_weight}
                       onChange={(e) => updateExercise(exercise.id, 'default_weight', parseFloat(e.target.value))}
-                      className="w-full bg-black border border-white/10 rounded-xl px-2 py-2 text-white text-center focus:outline-none focus:border-[var(--accent)]"
+                      className="w-full bg-black border border-[var(--border)] rounded-xl px-2 py-2 text-white text-center focus:outline-none focus:border-[var(--accent)]"
                     />
                   </div>
                 </div>
@@ -286,7 +287,7 @@ export const Templates: React.FC = () => {
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {template.template_exercises?.slice(0, 3).map((ex: any) => (
-                      <span key={ex.id} className="px-2 py-1 bg-white/5 rounded-md text-[10px] text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1">
+                      <span key={ex.id} className="px-2 py-1 bg-[var(--bg-surface)] rounded-md text-[10px] text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1">
                         {ex.exercise_db_id && (
                           <ExerciseImage 
                             exerciseId={ex.exercise_db_id} 
@@ -298,7 +299,7 @@ export const Templates: React.FC = () => {
                       </span>
                     ))}
                     {(template.template_exercises?.length || 0) > 3 && (
-                      <span className="px-2 py-1 bg-white/5 rounded-md text-[10px] text-[var(--text-secondary)]">
+                      <span className="px-2 py-1 bg-[var(--bg-surface)] rounded-md text-[10px] text-[var(--text-secondary)]">
                         +{(template.template_exercises?.length || 0) - 3} more
                       </span>
                     )}
@@ -307,13 +308,13 @@ export const Templates: React.FC = () => {
                 <div className="flex space-x-2 sm:self-start">
                   <button 
                     onClick={() => handleEdit(template)}
-                    className="p-2 bg-white/5 text-[var(--text-secondary)] rounded-xl hover:bg-white/10 hover:text-white transition-colors"
+                    className="p-2 bg-[var(--bg-surface)] text-[var(--text-secondary)] rounded-xl hover:bg-white/10 hover:text-[var(--text-primary)] transition-colors"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button 
                     onClick={() => handleDelete(template.id)}
-                    className="p-2 bg-white/5 text-[var(--text-secondary)] rounded-xl hover:bg-red-500/20 hover:text-red-400 transition-colors"
+                    className="p-2 bg-[var(--bg-surface)] text-[var(--text-secondary)] rounded-xl hover:bg-red-500/20 hover:text-red-400 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>

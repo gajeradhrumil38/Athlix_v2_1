@@ -39,10 +39,10 @@ export const RestTimer: React.FC<RestTimerProps> = ({ duration, exerciseName, on
       animate={{ y: 0, opacity: 1 }}
       exit={{ y: 100, opacity: 0 }}
       transition={{ type: 'spring', damping: 20, stiffness: 200 }}
-      className="flex-shrink-0 mx-2.5 my-1.5 bg-[#141C28] border border-[#EF9F27]/35 rounded-xl p-2 flex items-center gap-2 shadow-lg"
+      className="flex-shrink-0 mx-2.5 my-1.5 bg-[var(--bg-surface)] border border-[#EF9F27]/35 rounded-xl p-2 flex items-center gap-2 shadow-lg"
     >
       <div className="flex flex-col items-center min-w-[40px]">
-        <span className="text-[7px] font-bold text-[#3A5060] uppercase tracking-widest leading-none mb-0.5">REST</span>
+        <span className="text-[7px] font-bold text-[var(--text-muted)] uppercase tracking-widest leading-none mb-0.5">REST</span>
         <span className="text-[16px] font-black text-[#EF9F27] tabular-nums leading-none">
           {formatTime(timeLeft)}
         </span>
@@ -53,7 +53,7 @@ export const RestTimer: React.FC<RestTimerProps> = ({ duration, exerciseName, on
           <button
             key={p}
             onClick={() => setTimeLeft(p)}
-            className={`px-2 py-1 rounded-md text-[9px] font-bold transition-all ${timeLeft === p ? 'bg-[#EF9F27]/15 text-[#EF9F27] border border-[#EF9F27]/40' : 'bg-[#1A2538] text-[#8892A4] border border-[#1E2F42]'}`}
+            className={`px-2 py-1 rounded-md text-[9px] font-bold transition-all ${timeLeft === p ? 'bg-[#EF9F27]/15 text-[#EF9F27] border border-[#EF9F27]/40' : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)] border border-[var(--border)]'}`}
           >
             {p/60}m
           </button>
@@ -62,7 +62,7 @@ export const RestTimer: React.FC<RestTimerProps> = ({ duration, exerciseName, on
 
       <button 
         onClick={onSkip}
-        className="p-2 text-[#3A5060] hover:text-[#EF9F27] transition-colors"
+        className="p-2 text-[var(--text-muted)] hover:text-[#EF9F27] transition-colors"
       >
         <SkipForward className="w-4 h-4" />
       </button>

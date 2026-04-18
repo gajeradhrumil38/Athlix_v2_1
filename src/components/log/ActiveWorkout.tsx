@@ -471,24 +471,24 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
   }, [onBackToPrevious]);
 
   return (
-    <div className="fixed inset-0 z-40 bg-[#0B1019] overflow-hidden">
-      <div className="mx-auto flex h-full w-full max-w-[920px] flex-col bg-[radial-gradient(circle_at_top,rgba(31,45,66,0.28)_0%,rgba(11,16,25,0.96)_40%,#0B1019_100%)]">
-      <div className="flex h-[68px] shrink-0 items-center justify-between border-b border-white/5 bg-[#0B1019]/74 px-4 backdrop-blur-xl">
+    <div className="fixed inset-0 z-40 bg-[var(--bg-base)] overflow-hidden">
+      <div className="mx-auto flex h-full w-full max-w-[920px] flex-col bg-[radial-gradient(circle_at_top,rgba(31,45,66,0.28)_0%,rgba(11,16,25,0.96)_40%,var(--bg-base)_100%)]">
+      <div className="flex h-[68px] shrink-0 items-center justify-between border-b border-white/5 bg-[var(--bg-base)]/74 px-4 backdrop-blur-xl">
         <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={handleBackToPrevious}
-            className="inline-flex h-9 items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-[12px] font-medium text-[#D2DEEA]"
+            className="inline-flex h-9 items-center gap-1 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-[12px] font-medium text-[var(--text-primary)]"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
           </button>
           <div>
-            <h1 className="text-[15px] font-semibold tracking-wide text-[#E2E8F0]">{workout.title}</h1>
-            <p className="text-[11px] text-[#8FA6BD]">
+            <h1 className="text-[15px] font-semibold tracking-wide text-[var(--text-primary)]">{workout.title}</h1>
+            <p className="text-[11px] text-[var(--text-secondary)]">
               {workout.exercises.length} exercise{workout.exercises.length === 1 ? '' : 's'}
             </p>
-            <label className="mt-1 inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] font-semibold text-[#9FB4C8]">
+            <label className="mt-1 inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-[10px] font-semibold text-[var(--text-secondary)]">
               <CalendarDays className="h-3.5 w-3.5" />
               <input
                 type="date"
@@ -504,7 +504,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={() => setIsPaused((prev) => !prev)}
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-[#C4D0DC]"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-[var(--text-secondary)]"
           >
             {isPaused ? <Play className="w-4 h-4 fill-current" /> : <Pause className="w-4 h-4" />}
           </button>
@@ -513,7 +513,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
               haptics.complete();
               onFinish();
             }}
-            className="h-9 rounded-full bg-[#CAD7E4] px-4 text-[12px] font-semibold text-[#0F1A27]"
+            className="h-9 rounded-full bg-[var(--accent)] px-4 text-[12px] font-bold text-black"
           >
             Finish
           </button>
@@ -566,12 +566,12 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
           >
-            <Activity className="w-12 h-12 text-[#1E2F42] mb-4" />
-            <h3 className="text-[16px] font-semibold text-[#B6C2CF] mb-2">No exercises yet</h3>
-            <p className="text-[12px] text-[#7B8FA5] mb-6">Add your first exercise to start tracking.</p>
+            <Activity className="w-12 h-12 text-[var(--border)] mb-4" />
+            <h3 className="text-[16px] font-semibold text-[var(--text-secondary)] mb-2">No exercises yet</h3>
+            <p className="text-[12px] text-[var(--text-muted)] mb-6">Add your first exercise to start tracking.</p>
             <button
               onClick={() => setShowExercisePicker(true)}
-              className="h-11 rounded-xl border border-white/15 bg-white/[0.04] px-8 text-[12px] font-semibold text-[#E3ECF5]"
+              className="h-11 rounded-xl border border-white/15 bg-white/[0.04] px-8 text-[12px] font-semibold text-[var(--text-primary)]"
             >
               + Add Exercise
             </button>
@@ -579,10 +579,10 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
         )}
       </AnimatePresence>
 
-      <div className="flex min-h-[56px] shrink-0 items-center justify-between border-t border-white/5 bg-[#0B1019]/78 px-4 py-1 pb-[max(0px,env(safe-area-inset-bottom))] backdrop-blur-xl">
+      <div className="flex min-h-[56px] shrink-0 items-center justify-between border-t border-white/5 bg-[var(--bg-base)]/78 px-4 py-1 pb-[max(0px,env(safe-area-inset-bottom))] backdrop-blur-xl">
         <button
           onClick={handleDeleteExercise}
-          className="p-2 text-[#5F738A] hover:text-[#D8E1EB] transition-colors"
+          className="p-2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
           disabled={!currentExercise}
         >
           <Trash2 className="w-4 h-4" />

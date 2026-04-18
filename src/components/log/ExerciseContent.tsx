@@ -111,19 +111,19 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = (props) => {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <div className="sticky top-0 z-20 border-b border-white/5 bg-[#0E141F]/72 px-4 pb-3 pt-3 backdrop-blur-xl">
+      <div className="sticky top-0 z-20 border-b border-white/5 bg-[var(--bg-base)]/72 px-4 pb-3 pt-3 backdrop-blur-xl">
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 className="text-[30px] sm:text-[34px] leading-none font-black tracking-tight text-white">{exercise.name}</h2>
           <button
             onClick={onSwipeRight}
-            className="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.04] px-3 text-[12px] font-medium text-[#D2DEEA]"
+            className="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-xl border border-white/10 bg-white/[0.04] px-3 text-[12px] font-medium text-[var(--text-primary)]"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
           </button>
         </div>
 
-        <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[13px] text-[#AEBECD]">
+        <div className="mb-3 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2 text-[13px] text-[var(--text-secondary)]">
           <span>Started {startedAtLabel}</span>
           <span className="mx-2 text-white/30">·</span>
           <span className="tabular-nums">Elapsed {elapsedLabel}</span>

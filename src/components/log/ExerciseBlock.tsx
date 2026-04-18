@@ -73,14 +73,14 @@ export const ExerciseBlock: React.FC<ExerciseBlockProps> = ({ exercise, onUpdate
     .reduce((acc, s) => acc + (Number(s.weight || 0) * Number(s.reps || 0)), 0);
 
   return (
-    <div className="bg-[#141C28] border border-[#1E2F42] rounded-[14px] overflow-hidden">
+    <div className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-[14px] overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-[#1E2F42]">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)]">
         <div className="flex items-center gap-2">
-          <h3 className="text-[13px] font-bold text-[#E2E8F0]">{exercise.name}</h3>
+          <h3 className="text-[13px] font-bold text-[var(--text-primary)]">{exercise.name}</h3>
           <div className="flex items-center gap-1">
             <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
-            <span className="text-[9px] text-[#8892A4] uppercase tracking-wider">{exercise.muscleGroup}</span>
+            <span className="text-[9px] text-[var(--text-secondary)] uppercase tracking-wider">{exercise.muscleGroup}</span>
           </div>
           <AnimatePresence>
             {isPR && (
@@ -96,15 +96,15 @@ export const ExerciseBlock: React.FC<ExerciseBlockProps> = ({ exercise, onUpdate
             )}
           </AnimatePresence>
         </div>
-        <button onClick={() => setShowMenu(!showMenu)} className="p-1 text-[#3A5060]">
+        <button onClick={() => setShowMenu(!showMenu)} className="p-1 text-[var(--text-muted)]">
           <MoreVertical className="w-4 h-4" />
         </button>
       </div>
 
       {/* Last Session Row */}
-      <div className="px-4 py-2 bg-[#1A2538]/50 flex items-center justify-between">
+      <div className="px-4 py-2 bg-[var(--bg-elevated)]/50 flex items-center justify-between">
         {lastSession ? (
-          <span className="text-[10px] text-[#8892A4]">
+          <span className="text-[10px] text-[var(--text-secondary)]">
             Last: {(() => {
               const parsedDate = parseDateAtStartOfDay(lastSession.workouts?.date);
               return parsedDate ? parsedDate.toLocaleDateString() : '--';
@@ -117,7 +117,7 @@ export const ExerciseBlock: React.FC<ExerciseBlockProps> = ({ exercise, onUpdate
 
         {/* Sets */}
         <div className="p-4 space-y-2">
-          <div className="flex items-center text-[9px] font-bold text-[#3A5060] uppercase tracking-[1.5px] px-2 mb-1">
+          <div className="flex items-center text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-[1.5px] px-2 mb-1">
             <span className="w-8">Set</span>
             <span className="flex-1 text-center">Weight (kg)</span>
             <span className="flex-1 text-center">Reps</span>
@@ -136,14 +136,14 @@ export const ExerciseBlock: React.FC<ExerciseBlockProps> = ({ exercise, onUpdate
       {/* Add Set Button */}
       <button 
         onClick={handleAddSet}
-        className="w-full py-3 border-t border-[#1E2F42] text-[10px] font-bold text-[var(--accent)]/60 hover:text-[var(--accent)] transition-colors flex items-center justify-center gap-2"
+        className="w-full py-3 border-t border-[var(--border)] text-[10px] font-bold text-[var(--accent)]/60 hover:text-[var(--accent)] transition-colors flex items-center justify-center gap-2"
       >
         <Plus className="w-3 h-3" /> Add Set
       </button>
 
       {/* Footer */}
-      <div className="px-4 py-2 bg-[#0D1117]/30 flex items-center justify-between border-t border-[#1E2F42]">
-        <span className="text-[9px] text-[#3A5060] uppercase tracking-wider font-bold">
+      <div className="px-4 py-2 bg-[var(--bg-base)]/30 flex items-center justify-between border-t border-[var(--border)]">
+        <span className="text-[9px] text-[var(--text-muted)] uppercase tracking-wider font-bold">
           Total: {(exercise.sets || []).filter(s => s.done).length} sets · {totalVolume.toLocaleString()}kg
         </span>
       </div>
