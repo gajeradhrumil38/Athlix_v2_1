@@ -16,7 +16,7 @@ import {
   subDays,
   subWeeks,
 } from 'date-fns';
-import { LineChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
+import { LineChart, AreaChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { Trophy, TrendingUp, Activity, Scale, ChevronDown, Heart, Bluetooth, PlugZap, Unplug, Info } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -758,16 +758,21 @@ export const Progress: React.FC = () => {
         ),
         unit: targetUnit,
       })));
-      setWeightLogs((weightData || []).map((log: any) => ({
-        ...log,
-        weight: convertWeight(
-          Number(log.weight || 0),
-          (log.unit || targetUnit) as WeightUnit,
-          targetUnit,
-          0.1,
-        ),
-        unit: targetUnit,
-      })));
+      setWeightLogs(
+        (weightData || [])
+          .map((log: any) => ({
+            ...log,
+            weight: convertWeight(
+              Number(log.weight || 0),
+              (log.unit || targetUnit) as WeightUnit,
+              targetUnit,
+              0.1,
+            ),
+            unit: targetUnit,
+          }))
+          // Sort ascending by date so the area chart reads left→right
+          .sort((a: any, b: any) => (a.date > b.date ? 1 : -1)),
+      );
       setWorkouts(workoutData || []);
 
       if (exerciseData) {
@@ -949,8 +954,8 @@ export const Progress: React.FC = () => {
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`h-14 rounded-[14px] flex flex-col items-center justify-center gap-0.5 text-[11px] font-semibold transition-all duration-200 ${
                     activeTab === tab.id
-                      ? 'bg-[#19CCF0] text-black shadow-[0_8px_24px_rgba(200,255,0,0.22)]'
-                      : 'text-[#9AA4B2] hover:text-white hover:bg-white/5'
+                      ? 'bg-[var(--accent)] text-black shadow-[0_8px_24px_var(--accent-glow)]'
+                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]'
                   }`}
                   title={tab.label}
                 >
@@ -1239,135 +1244,184 @@ export const Progress: React.FC = () => {
         )}
 
         {activeTab === 'weight' && (
-          <div className="space-y-6">
-            {/* Log Weight Input */}
-            <div className="bg-[#1A1A1A] p-6 rounded-2xl border border-white/5 flex flex-col md:flex-row items-end space-y-4 md:space-y-0 md:space-x-4">
-              <div className="flex-1 w-full">
-                <label className="block text-sm font-medium text-gray-400 mb-2">Log Today's Weight ({displayUnit})</label>
+          <div className="space-y-5 animate-fade-in">
+
+            {/* ── Log weight ──────────────────────────── */}
+            <div className="glass-card p-5">
+              <p className="text-[11px] font-bold uppercase tracking-[1.4px] text-[var(--text-muted)] mb-3">
+                Log Today's Weight
+              </p>
+              <div className="flex gap-3">
                 <input
                   type="number"
                   step="0.1"
+                  min="20"
+                  max="500"
                   value={newWeight}
                   onChange={(e) => setNewWeight(e.target.value)}
-                  placeholder="e.g. 75.5"
-                  className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[var(--accent)]"
+                  onKeyDown={(e) => e.key === 'Enter' && handleLogWeight()}
+                  placeholder={`e.g. ${weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weight : '75.0'}`}
+                  className="flex-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-[15px] font-semibold focus:outline-none focus:border-[var(--accent)] transition-colors"
                 />
+                <span className="flex items-center text-[13px] font-semibold text-[var(--text-muted)] pr-1">{displayUnit}</span>
+                <button
+                  onClick={handleLogWeight}
+                  disabled={!newWeight}
+                  className="bg-[var(--accent)] text-black px-6 py-3 rounded-xl font-bold text-[14px] hover:opacity-90 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Save
+                </button>
               </div>
-              <button
-                onClick={handleLogWeight}
-                disabled={!newWeight}
-                className="w-full md:w-auto bg-[var(--accent)] text-black px-6 py-3 rounded-xl font-bold hover:bg-[var(--accent)]/90 transition-colors disabled:opacity-50"
-              >
-                Save
-              </button>
             </div>
 
-            {/* Weight Stats */}
+            {/* ── Stats row ───────────────────────────── */}
             {weightLogs.length > 0 && (() => {
               const weights = weightLogs.map(l => l.weight);
               const current = weights[weights.length - 1];
               const lowest = Math.min(...weights);
               const highest = Math.max(...weights);
-              const average = (weights.reduce((a, b) => a + b, 0) / weights.length).toFixed(1);
+              const avg = (weights.reduce((a, b) => a + b, 0) / weights.length);
+              const change = weights.length > 1 ? current - weights[0] : null;
 
               return (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-[#1A1A1A] p-4 rounded-xl border border-white/5 text-center">
-                    <p className="text-xs text-gray-400 mb-1">Current</p>
-                    <p className="text-xl font-bold text-[var(--accent)]">{current} {displayUnit}</p>
-                  </div>
-                  <div className="bg-[#1A1A1A] p-4 rounded-xl border border-white/5 text-center">
-                    <p className="text-xs text-gray-400 mb-1">Lowest</p>
-                    <p className="text-xl font-bold text-white">{lowest} {displayUnit}</p>
-                  </div>
-                  <div className="bg-[#1A1A1A] p-4 rounded-xl border border-white/5 text-center">
-                    <p className="text-xs text-gray-400 mb-1">Highest</p>
-                    <p className="text-xl font-bold text-white">{highest} {displayUnit}</p>
-                  </div>
-                  <div className="bg-[#1A1A1A] p-4 rounded-xl border border-white/5 text-center">
-                    <p className="text-xs text-gray-400 mb-1">Average</p>
-                    <p className="text-xl font-bold text-white">{average} {displayUnit}</p>
-                  </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { label: 'Current', value: current, accent: true },
+                    { label: 'Start', value: weights[0], accent: false },
+                    { label: 'Lowest', value: lowest, accent: false },
+                    { label: 'Avg', value: avg, accent: false },
+                  ].map(({ label, value, accent }) => (
+                    <div key={label} className="glass-card p-4 text-center">
+                      <p className="text-[10px] font-semibold uppercase tracking-[1.2px] text-[var(--text-muted)] mb-1">{label}</p>
+                      <p className={`text-[18px] font-extrabold tabular-nums ${accent ? 'text-[var(--accent)]' : 'text-[var(--text-primary)]'}`}>
+                        {value.toFixed(1)}
+                      </p>
+                      <p className="text-[10px] text-[var(--text-muted)]">{displayUnit}</p>
+                    </div>
+                  ))}
+                  {change !== null && (
+                    <div className="glass-card p-4 text-center col-span-2 sm:col-span-4 flex items-center justify-center gap-2">
+                      <span className="text-[12px] text-[var(--text-muted)]">Total change</span>
+                      <span className={`text-[16px] font-bold tabular-nums ${change < 0 ? 'text-[var(--green)]' : change > 0 ? 'text-[var(--red)]' : 'text-[var(--text-secondary)]'}`}>
+                        {change > 0 ? '+' : ''}{change.toFixed(1)} {displayUnit}
+                      </span>
+                    </div>
+                  )}
                 </div>
               );
             })()}
 
-            {/* BMI Calculator */}
-            <div className="bg-[#1A1A1A] p-6 rounded-2xl border border-white/5">
-              <h2 className="text-lg font-bold text-white mb-4">BMI Calculator</h2>
-              <div className="flex flex-col md:flex-row items-end space-y-4 md:space-y-0 md:space-x-4">
-                <div className="flex-1 w-full">
-                  <label className="block text-sm font-medium text-gray-400 mb-2">Height (cm)</label>
+            {/* ── Mountain chart ───────────────────────── */}
+            {weightLogs.length > 0 ? (
+              <div className="glass-card p-5">
+                <p className="text-[11px] font-bold uppercase tracking-[1.4px] text-[var(--text-muted)] mb-4">
+                  Weight Trend
+                </p>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={weightLogs} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                      <defs>
+                        <linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%"   stopColor="#C8FF00" stopOpacity={0.35} />
+                          <stop offset="60%"  stopColor="#C8FF00" stopOpacity={0.10} />
+                          <stop offset="100%" stopColor="#C8FF00" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                        axisLine={false}
+                        tickLine={false}
+                        tickFormatter={(val) => formatStoredDate(val, 'MMM d')}
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis
+                        domain={['auto', 'auto']}
+                        tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={36}
+                        tickFormatter={(v) => `${v}`}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: 'var(--bg-elevated)',
+                          border: '1px solid var(--border)',
+                          borderRadius: '10px',
+                          color: 'var(--text-primary)',
+                          fontSize: '12px',
+                          padding: '8px 12px',
+                        }}
+                        cursor={{ stroke: 'var(--accent)', strokeWidth: 1, strokeDasharray: '4 2' }}
+                        labelFormatter={(val) => formatStoredDate(val, 'EEE, MMM d yyyy')}
+                        formatter={(value: number) => [`${value.toFixed(1)} ${displayUnit}`, 'Weight']}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="weight"
+                        stroke="var(--accent)"
+                        strokeWidth={2.5}
+                        fill="url(#weightGrad)"
+                        dot={weightLogs.length <= 20 ? { fill: 'var(--accent)', strokeWidth: 0, r: 3 } : false}
+                        activeDot={{ r: 5, fill: 'var(--accent)', stroke: 'var(--bg-base)', strokeWidth: 2 }}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="text-[10px] text-[var(--text-muted)] mt-2 text-right">
+                  {weightLogs.length} {weightLogs.length === 1 ? 'entry' : 'entries'} recorded
+                </p>
+              </div>
+            ) : (
+              <div className="glass-card flex flex-col items-center justify-center py-16 text-center">
+                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--bg-elevated)] border border-[var(--border)]">
+                  <Scale className="w-6 h-6 text-[var(--text-muted)]" />
+                </div>
+                <p className="text-[15px] font-semibold text-[var(--text-primary)] mb-1">No weight logs yet</p>
+                <p className="text-[13px] text-[var(--text-muted)]">Log your first entry above to see your trend.</p>
+              </div>
+            )}
+
+            {/* ── BMI Calculator ───────────────────────── */}
+            <div className="glass-card p-5">
+              <p className="text-[11px] font-bold uppercase tracking-[1.4px] text-[var(--text-muted)] mb-3">
+                BMI Calculator
+              </p>
+              <div className="flex gap-3 items-center">
+                <div className="flex-1">
                   <input
                     type="number"
                     value={heightCm}
                     onChange={(e) => setHeightCm(e.target.value)}
-                    placeholder="e.g. 175"
-                    className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[var(--accent)]"
+                    placeholder="Height (cm)"
+                    className="w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-[15px] focus:outline-none focus:border-[var(--accent)] transition-colors"
                   />
                 </div>
-                <div className="flex-1 w-full bg-black border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between">
-                  <span className="text-gray-400">Your BMI</span>
-                  <span className={`font-bold text-xl ${
-                    bmiValue ? (
-                      parseFloat(bmiValue) < 18.5 ? 'text-blue-400' :
-                      parseFloat(bmiValue) < 25 ? 'text-[#00FF87]' :
-                      parseFloat(bmiValue) < 30 ? 'text-yellow-400' : 'text-red-400'
-                    ) : 'text-white'
+                <div className="flex-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-4 py-3 flex items-center justify-between">
+                  <span className="text-[var(--text-muted)] text-[13px]">BMI</span>
+                  <span className={`font-bold text-[18px] tabular-nums ${
+                    bmiValue
+                      ? parseFloat(bmiValue) < 18.5 ? 'text-[var(--ring-volume)]'
+                      : parseFloat(bmiValue) < 25   ? 'text-[var(--green)]'
+                      : parseFloat(bmiValue) < 30   ? 'text-[var(--yellow)]'
+                      : 'text-[var(--red)]'
+                      : 'text-[var(--text-muted)]'
                   }`}>
                     {bmiValue || '--'}
                   </span>
                 </div>
               </div>
+              {bmiValue && (
+                <p className="mt-2 text-[11px] text-[var(--text-muted)]">
+                  {parseFloat(bmiValue) < 18.5 ? 'Underweight'
+                    : parseFloat(bmiValue) < 25 ? 'Healthy weight'
+                    : parseFloat(bmiValue) < 30 ? 'Overweight'
+                    : 'Obese'} · {bmiValue}
+                </p>
+              )}
             </div>
 
-            {/* Weight Chart */}
-            {weightLogs.length > 0 ? (
-              <div className="bg-[#1A1A1A] p-6 rounded-2xl border border-white/5">
-                <h2 className="text-lg font-bold text-white mb-4">Weight Trend</h2>
-                <div className="h-64">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={weightLogs}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
-                      <XAxis 
-                        dataKey="date" 
-                        stroke="#666" 
-                        tick={{fill: '#666'}} 
-                        axisLine={false} 
-                        tickLine={false}
-                        tickFormatter={(val) => formatStoredDate(val, 'MMM d')}
-                      />
-                      <YAxis 
-                        domain={['auto', 'auto']} 
-                        stroke="#666" 
-                        tick={{fill: '#666'}} 
-                        axisLine={false} 
-                        tickLine={false} 
-                      />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#1A1A1A', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
-                        labelFormatter={(val) => formatStoredDate(val, 'MMM d, yyyy')}
-                        formatter={(value: number) => [`${value.toFixed(1)} ${displayUnit}`, 'Weight']}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="weight" 
-                        stroke="var(--accent)" 
-                        strokeWidth={3}
-                        dot={{ fill: 'var(--accent)', strokeWidth: 2, r: 4 }}
-                        activeDot={{ r: 6, fill: '#fff' }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-12 text-gray-500 bg-[#1A1A1A] rounded-2xl border border-white/5">
-                <Scale className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                <p>No weight logs yet.</p>
-                <p className="text-sm">Log your weight to see trends.</p>
-              </div>
-            )}
           </div>
         )}
 
