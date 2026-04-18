@@ -1,61 +1,152 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
-import { Moon, Scale, Activity, LogOut, LayoutDashboard, ChevronRight, Trash2, Dumbbell } from 'lucide-react';
+import {
+  Moon, Scale, Activity, LogOut, LayoutDashboard,
+  ChevronRight, Trash2, Dumbbell, User, Save, Loader2,
+} from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { convertWeight, type WeightUnit } from '../lib/units';
+
+/* ── Reusable sub-components ───────────────────────────── */
+
+const SectionCard: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+  <section className="glass-card overflow-hidden">
+    <div className="px-5 py-3 border-b border-[var(--border)]">
+      <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+        {title}
+      </h3>
+    </div>
+    <div className="divide-y divide-[var(--border)]">{children}</div>
+  </section>
+);
+
+const Row: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
+  <div className={`flex items-center justify-between gap-4 px-5 py-4 ${className}`}>
+    {children}
+  </div>
+);
+
+const RowLabel: React.FC<{ icon: React.ReactNode; title: string; subtitle?: string }> = ({ icon, title, subtitle }) => (
+  <div className="flex items-center gap-3 min-w-0">
+    <span className="shrink-0 flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--bg-elevated)] text-[var(--text-secondary)]">
+      {icon}
+    </span>
+    <div className="min-w-0">
+      <p className="text-[14px] font-medium text-[var(--text-primary)] truncate">{title}</p>
+      {subtitle && <p className="text-[12px] text-[var(--text-muted)] truncate mt-0.5">{subtitle}</p>}
+    </div>
+  </div>
+);
+
+const Toggle: React.FC<{ on: boolean; onToggle: () => void; disabled?: boolean; label: string }> = ({
+  on, onToggle, disabled, label,
+}) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={on}
+    aria-label={label}
+    onClick={onToggle}
+    disabled={disabled}
+    className={`toggle-track ${on ? 'on' : ''} disabled:opacity-40`}
+  >
+    <span className="toggle-thumb" />
+  </button>
+);
+
+const SegmentControl: React.FC<{
+  options: string[];
+  value: string;
+  onChange: (v: string) => void;
+  disabled?: boolean;
+}> = ({ options, value, onChange, disabled }) => (
+  <div className="segment-control">
+    {options.map((opt) => (
+      <button
+        key={opt}
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange(opt)}
+        className={`${value === opt ? 'active' : ''} disabled:opacity-40`}
+      >
+        {opt}
+      </button>
+    ))}
+  </div>
+);
+
+/* ── Main Settings page ────────────────────────────────── */
 
 export const Settings: React.FC = () => {
   const { user, profile, loading, signOut, deleteAccount, updateProfile: saveProfileUpdate } = useAuth();
   const navigate = useNavigate();
   const [draftProfile, setDraftProfile] = useState<any>(null);
   const [saving, setSaving] = useState(false);
-
-  const bodyWeightKg =
-    draftProfile?.body_weight && draftProfile?.body_weight_unit
-      ? draftProfile.body_weight_unit === 'lbs'
-        ? Number(draftProfile.body_weight) * 0.45359237
-        : Number(draftProfile.body_weight)
-      : null;
-  const heightMeters =
-    draftProfile?.height_feet != null && draftProfile?.height_inches != null
-      ? ((Number(draftProfile.height_feet) * 12) + Number(draftProfile.height_inches)) * 0.0254
-      : null;
-  const bmi =
-    bodyWeightKg && heightMeters && heightMeters > 0
-      ? bodyWeightKg / (heightMeters * heightMeters)
-      : null;
+  const [nameChanged, setNameChanged] = useState(false);
+  const [metricsChanged, setMetricsChanged] = useState(false);
 
   useEffect(() => {
     setDraftProfile(profile);
+    setNameChanged(false);
+    setMetricsChanged(false);
   }, [profile]);
 
-  const updateProfile = async (field: string, value: any) => {
+  /* ── BMI ─────────────────────────────────────── */
+  const bmi = (() => {
+    const bwKg = draftProfile?.body_weight == null ? null
+      : draftProfile.body_weight_unit === 'lbs'
+        ? Number(draftProfile.body_weight) * 0.45359237
+        : Number(draftProfile.body_weight);
+    const hM = draftProfile?.height_feet != null && draftProfile?.height_inches != null
+      ? ((Number(draftProfile.height_feet) * 12) + Number(draftProfile.height_inches)) * 0.0254
+      : null;
+    return bwKg && hM && hM > 0 ? bwKg / (hM * hM) : null;
+  })();
+
+  /* ── Save helpers ────────────────────────────── */
+  const save = async (updates: Record<string, any>, successMsg: string) => {
     setSaving(true);
     try {
-      await saveProfileUpdate({ [field]: value });
-      toast.success('Settings updated');
-    } catch (error: any) {
-      toast.error('Failed to update settings');
+      await saveProfileUpdate(updates);
+      toast.success(successMsg);
+    } catch {
+      toast.error('Failed to save. Try again.');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleUnitPreferenceChange = async (nextUnit: WeightUnit) => {
-    if (!draftProfile || draftProfile.unit_preference === nextUnit) return;
-    setSaving(true);
-    try {
-      await saveProfileUpdate({ unit_preference: nextUnit });
-      toast.success(`Updated to ${nextUnit}`);
-    } catch (error: any) {
-      toast.error('Failed to update weight unit');
-    } finally {
-      setSaving(false);
-    }
+  const saveName = () => {
+    if (!nameChanged) return;
+    save({ full_name: draftProfile?.full_name }, 'Name updated');
+    setNameChanged(false);
   };
 
-  const handleDraftBodyWeightUnitChange = (nextUnit: WeightUnit) => {
+  const saveMetrics = () => {
+    if (!metricsChanged) return;
+    save(
+      {
+        body_weight: draftProfile?.body_weight ?? null,
+        body_weight_unit: draftProfile?.body_weight_unit || 'kg',
+        height_feet: draftProfile?.height_feet ?? null,
+        height_inches: draftProfile?.height_inches ?? null,
+      },
+      'Body metrics saved',
+    );
+    setMetricsChanged(false);
+  };
+
+  const handleUnitChange = (unit: string) =>
+    save({ unit_preference: unit }, `Weight unit → ${unit}`);
+
+  const handleThemeChange = (theme: string) =>
+    save({ theme_preference: theme }, `Theme → ${theme}`);
+
+  const handleToggle = (field: string, current: boolean) =>
+    save({ [field]: !current }, 'Setting updated');
+
+  const handleBodyWeightUnitChange = (nextUnit: WeightUnit) => {
     setDraftProfile((prev: any) => {
       if (!prev || prev.body_weight_unit === nextUnit) return prev;
       const nextWeight =
@@ -64,313 +155,295 @@ export const Settings: React.FC = () => {
           : convertWeight(Number(prev.body_weight), prev.body_weight_unit, nextUnit, 0.1);
       return { ...prev, body_weight: nextWeight, body_weight_unit: nextUnit };
     });
+    setMetricsChanged(true);
   };
 
+  /* ── Delete account ──────────────────────────── */
   const handleDeleteAccount = async () => {
     if (!user) return;
-
     const confirmed = window.confirm(
-      'Delete this local account and all workouts, templates, progress, and settings on this browser? This cannot be undone.',
+      'Delete your account and all data permanently? This cannot be undone.',
     );
     if (!confirmed) return;
-
     try {
       await deleteAccount();
-      toast.success('Account and local data deleted');
+      toast.success('Account deleted');
       navigate('/auth', { replace: true });
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to delete account');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete account');
     }
   };
 
-  if (loading) {
-    return <div className="animate-pulse space-y-4">
-      <div className="h-12 bg-white/5 rounded-xl w-1/3"></div>
-      <div className="h-64 bg-white/5 rounded-2xl"></div>
-    </div>;
+  /* ── Loading skeleton ────────────────────────── */
+  if (loading || !draftProfile) {
+    return (
+      <div className="max-w-lg mx-auto space-y-4 pb-10">
+        <div className="skeleton h-7 w-32 rounded-xl" />
+        <div className="skeleton h-28 rounded-2xl" />
+        <div className="skeleton h-48 rounded-2xl" />
+        <div className="skeleton h-40 rounded-2xl" />
+      </div>
+    );
   }
 
+  /* ── Avatar initial ──────────────────────────── */
+  const initial = draftProfile?.full_name?.trim().charAt(0).toUpperCase() || 'A';
+
   return (
-    <div className="space-y-6 pb-24 md:pb-8 max-w-2xl mx-auto">
-      <header>
-        <h1 className="text-2xl font-bold text-white">Settings</h1>
-      </header>
+    <div className="max-w-lg mx-auto space-y-4 pb-10 animate-fade-in">
+      <h1 className="text-[22px] font-bold text-[var(--text-primary)]">Settings</h1>
 
-      <div className="bg-[#1A1A1A] rounded-2xl border border-white/5 overflow-hidden divide-y divide-white/5">
-        {/* Profile Section */}
-        <div className="p-6">
-          <div className="flex items-center space-x-4 mb-6">
-            <div className="w-16 h-16 rounded-full bg-[#00D4FF]/10 flex items-center justify-center border border-[#00D4FF]/20 text-2xl font-bold text-[#00D4FF]">
-              {profile?.full_name?.charAt(0).toUpperCase() || 'A'}
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-white">{profile?.full_name || 'Athlete'}</h2>
-              <p className="text-sm text-gray-500">{user?.email}</p>
-            </div>
+      {/* ── Profile card ──────────────────────── */}
+      <SectionCard title="Profile">
+        {/* Avatar + info */}
+        <div className="px-5 py-5 flex items-center gap-4">
+          <div
+            className="h-14 w-14 rounded-2xl flex items-center justify-center text-[22px] font-bold shrink-0 border border-[var(--accent)]/25"
+            style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}
+          >
+            {initial}
           </div>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">Display Name</label>
-              <div className="flex space-x-2">
-                <input 
-                  type="text" 
-                  value={draftProfile?.full_name || ''}
-                  onChange={(e) => setDraftProfile({ ...draftProfile, full_name: e.target.value })}
-                  className="flex-1 bg-black border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-[#00D4FF]"
-                />
-                <button 
-                  onClick={() => updateProfile('full_name', draftProfile?.full_name)}
-                  disabled={saving}
-                  className="px-4 py-2 bg-white/5 text-white rounded-xl hover:bg-white/10 transition-colors disabled:opacity-50"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
+          <div className="min-w-0">
+            <p className="text-[16px] font-semibold text-[var(--text-primary)] truncate">
+              {draftProfile?.full_name || 'Athlete'}
+            </p>
+            <p className="text-[13px] text-[var(--text-muted)] truncate">{user?.email}</p>
           </div>
         </div>
 
-        {/* Preferences Section */}
-        <div className="p-6 space-y-6">
-          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Preferences</h3>
-          
-          <Link to="/settings/layout" className="flex items-center justify-between group">
-            <div className="flex items-center space-x-3">
-              <LayoutDashboard className="w-5 h-5 text-gray-400 group-hover:text-[#00D4FF] transition-colors" />
-              <div>
-                <p className="text-white font-medium group-hover:text-[#00D4FF] transition-colors">Dashboard Layout</p>
-                <p className="text-xs text-gray-500">Customize your home screen widgets</p>
-              </div>
-            </div>
-            <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-[#00D4FF] transition-colors" />
-          </Link>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Scale className="w-5 h-5 text-gray-400" />
-              <div>
-                <p className="text-white font-medium">Weight Unit</p>
-                <p className="text-xs text-gray-500">Choose your preferred unit</p>
-              </div>
-            </div>
-            <div className="flex bg-black rounded-lg p-1 border border-white/10">
-              <button 
-                onClick={() => handleUnitPreferenceChange('kg')}
-                className={`px-3 py-1 text-sm rounded-md transition-colors ${draftProfile?.unit_preference === 'kg' ? 'bg-white/10 text-white' : 'text-gray-500'}`}
-              >
-                kg
-              </button>
-              <button 
-                onClick={() => handleUnitPreferenceChange('lbs')}
-                className={`px-3 py-1 text-sm rounded-md transition-colors ${draftProfile?.unit_preference === 'lbs' ? 'bg-white/10 text-white' : 'text-gray-500'}`}
-              >
-                lbs
-              </button>
-            </div>
+        {/* Display name input */}
+        <div className="px-5 pb-5">
+          <label className="block text-[12px] font-medium text-[var(--text-muted)] mb-1.5">
+            Display name
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={draftProfile?.full_name || ''}
+              onChange={(e) => {
+                setDraftProfile({ ...draftProfile, full_name: e.target.value });
+                setNameChanged(true);
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && saveName()}
+              className="flex-1 h-10 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-3.5 text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]/60 transition-colors"
+              placeholder="Your name"
+            />
+            <button
+              onClick={saveName}
+              disabled={saving || !nameChanged}
+              className="h-10 px-4 rounded-xl bg-[var(--accent)] text-black text-[13px] font-bold flex items-center gap-1.5 disabled:opacity-40 transition-opacity"
+            >
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              Save
+            </button>
           </div>
+        </div>
+      </SectionCard>
 
-          <div className="space-y-3">
-            <div className="flex items-center space-x-3">
-              <Scale className="w-5 h-5 text-gray-400" />
-              <div>
-                <p className="text-white font-medium">Body Metrics</p>
-                <p className="text-xs text-gray-500">Used for body-size adjusted muscle load.</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-[1fr_auto] gap-3">
+      {/* ── Preferences ───────────────────────── */}
+      <SectionCard title="Preferences">
+        {/* Dashboard layout */}
+        <Link to="/settings/layout" className="block group">
+          <Row className="hover:bg-[var(--bg-elevated)] transition-colors cursor-pointer">
+            <RowLabel
+              icon={<LayoutDashboard className="w-4 h-4" />}
+              title="Dashboard Layout"
+              subtitle="Customize home screen widgets"
+            />
+            <ChevronRight className="w-4 h-4 text-[var(--text-muted)] group-hover:text-[var(--accent)] transition-colors shrink-0" />
+          </Row>
+        </Link>
+
+        {/* Weight unit */}
+        <Row>
+          <RowLabel
+            icon={<Scale className="w-4 h-4" />}
+            title="Weight Unit"
+            subtitle="Applies to all logging & history"
+          />
+          <SegmentControl
+            options={['kg', 'lbs']}
+            value={draftProfile?.unit_preference || 'kg'}
+            onChange={handleUnitChange}
+            disabled={saving}
+          />
+        </Row>
+
+        {/* Theme */}
+        <Row>
+          <RowLabel
+            icon={<Moon className="w-4 h-4" />}
+            title="Theme"
+            subtitle="App appearance"
+          />
+          <SegmentControl
+            options={['dark', 'darker']}
+            value={draftProfile?.theme_preference || 'dark'}
+            onChange={handleThemeChange}
+            disabled={saving}
+          />
+        </Row>
+
+        {/* Live add exercise */}
+        <Row>
+          <RowLabel
+            icon={<Dumbbell className="w-4 h-4" />}
+            title="Live Add Exercise"
+            subtitle="Add exercises mid-workout"
+          />
+          <Toggle
+            on={!!draftProfile?.start_workout_enabled}
+            onToggle={() => handleToggle('start_workout_enabled', !!draftProfile?.start_workout_enabled)}
+            disabled={saving}
+            label="Toggle live add exercise"
+          />
+        </Row>
+
+        {/* Show start sheet */}
+        <Row>
+          <RowLabel
+            icon={<Dumbbell className="w-4 h-4" />}
+            title="Start Sheet"
+            subtitle="Template picker before workout"
+          />
+          <Toggle
+            on={!!draftProfile?.show_start_sheet}
+            onToggle={() => handleToggle('show_start_sheet', !!draftProfile?.show_start_sheet)}
+            disabled={saving}
+            label="Toggle start sheet"
+          />
+        </Row>
+      </SectionCard>
+
+      {/* ── Body metrics ──────────────────────── */}
+      <SectionCard title="Body Metrics">
+        <div className="px-5 py-5 space-y-4">
+          <p className="text-[12px] text-[var(--text-muted)]">
+            Used to normalize muscle load by body size.
+            {bmi ? ` BMI: ${bmi.toFixed(1)}` : ''}
+          </p>
+
+          {/* Body weight */}
+          <div>
+            <label className="block text-[12px] font-medium text-[var(--text-muted)] mb-1.5">
+              Body weight
+            </label>
+            <div className="flex gap-2">
               <input
                 type="number"
                 min="0"
                 step="0.1"
                 value={draftProfile?.body_weight ?? ''}
-                onChange={(e) => setDraftProfile({ ...draftProfile, body_weight: e.target.value === '' ? null : Number(e.target.value) })}
-                className="bg-black border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-[#00D4FF]"
-                placeholder="Body weight"
-              />
-              <div className="flex bg-black rounded-lg p-1 border border-white/10">
-                <button
-                  onClick={() => handleDraftBodyWeightUnitChange('kg')}
-                  className={`px-3 py-1 text-sm rounded-md transition-colors ${draftProfile?.body_weight_unit === 'kg' ? 'bg-white/10 text-white' : 'text-gray-500'}`}
-                >
-                  kg
-                </button>
-                <button
-                  onClick={() => handleDraftBodyWeightUnitChange('lbs')}
-                  className={`px-3 py-1 text-sm rounded-md transition-colors ${draftProfile?.body_weight_unit === 'lbs' ? 'bg-white/10 text-white' : 'text-gray-500'}`}
-                >
-                  lbs
-                </button>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={draftProfile?.height_feet ?? ''}
-                onChange={(e) => setDraftProfile({ ...draftProfile, height_feet: e.target.value === '' ? null : Number(e.target.value) })}
-                className="bg-black border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-[#00D4FF]"
-                placeholder="Height (ft)"
-              />
-              <input
-                type="number"
-                min="0"
-                max="11"
-                step="1"
-                value={draftProfile?.height_inches ?? ''}
-                onChange={(e) => setDraftProfile({ ...draftProfile, height_inches: e.target.value === '' ? null : Number(e.target.value) })}
-                className="bg-black border border-white/10 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-[#00D4FF]"
-                placeholder="Height (in)"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-gray-500">
-                {bmi ? `BMI ${bmi.toFixed(1)}. Main load normalization uses body weight; height is stored for body-size context.` : 'Add weight and height to unlock body-size context.'}
-              </p>
-              <button
-                onClick={async () => {
-                  setSaving(true);
-                  try {
-                    await saveProfileUpdate({
-                      body_weight: draftProfile?.body_weight ?? null,
-                      body_weight_unit: draftProfile?.body_weight_unit || 'kg',
-                      height_feet: draftProfile?.height_feet ?? null,
-                      height_inches: draftProfile?.height_inches ?? null,
-                    });
-                    toast.success('Body metrics updated');
-                  } catch (error: any) {
-                    toast.error('Failed to update body metrics');
-                  } finally {
-                    setSaving(false);
-                  }
+                onChange={(e) => {
+                  setDraftProfile({ ...draftProfile, body_weight: e.target.value === '' ? null : Number(e.target.value) });
+                  setMetricsChanged(true);
                 }}
-                disabled={saving}
-                className="px-4 py-2 bg-white/5 text-white rounded-xl hover:bg-white/10 transition-colors disabled:opacity-50"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Moon className="w-5 h-5 text-gray-400" />
-              <div>
-                <p className="text-white font-medium">Theme</p>
-                <p className="text-xs text-gray-500">Dark or Darker</p>
-              </div>
-            </div>
-            <div className="flex bg-black rounded-lg p-1 border border-white/10">
-              <button 
-                onClick={() => updateProfile('theme_preference', 'dark')}
-                className={`px-3 py-1 text-sm rounded-md transition-colors ${draftProfile?.theme_preference === 'dark' ? 'bg-white/10 text-white' : 'text-gray-500'}`}
-              >
-                Dark
-              </button>
-              <button 
-                onClick={() => updateProfile('theme_preference', 'darker')}
-                className={`px-3 py-1 text-sm rounded-md transition-colors ${draftProfile?.theme_preference === 'darker' ? 'bg-white/10 text-white' : 'text-gray-500'}`}
-              >
-                Darker
-              </button>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Dumbbell className="w-5 h-5 text-gray-400" />
-              <div>
-                <p className="text-white font-medium">Allow Live Add Exercise</p>
-                <p className="text-xs text-gray-500">When on, you can add new exercises during an active workout.</p>
-              </div>
-            </div>
-            <button
-              onClick={() => updateProfile('start_workout_enabled', !draftProfile?.start_workout_enabled)}
-              disabled={saving}
-              className={`w-14 h-8 rounded-full border transition-colors relative ${
-                draftProfile?.start_workout_enabled
-                  ? 'bg-[#00D4FF]/20 border-[#00D4FF]/40'
-                  : 'bg-black border-white/10'
-              }`}
-              aria-label="Toggle start workout"
-            >
-              <span
-                className={`absolute top-1 h-6 w-6 rounded-full transition-all ${
-                  draftProfile?.start_workout_enabled
-                    ? 'left-7 bg-[#00D4FF]'
-                    : 'left-1 bg-gray-500'
-                }`}
+                className="flex-1 h-10 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-3.5 text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]/60 transition-colors"
+                placeholder="e.g. 75"
               />
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Dumbbell className="w-5 h-5 text-gray-400" />
-              <div>
-                <p className="text-white font-medium">Show Start Sheet</p>
-                <p className="text-xs text-gray-500">Optional screen before workout start.</p>
-              </div>
-            </div>
-            <button
-              onClick={() => updateProfile('show_start_sheet', !draftProfile?.show_start_sheet)}
-              disabled={saving}
-              className={`w-14 h-8 rounded-full border transition-colors relative ${
-                draftProfile?.show_start_sheet
-                  ? 'bg-[#00D4FF]/20 border-[#00D4FF]/40'
-                  : 'bg-black border-white/10'
-              }`}
-              aria-label="Toggle start sheet"
-            >
-              <span
-                className={`absolute top-1 h-6 w-6 rounded-full transition-all ${
-                  draftProfile?.show_start_sheet
-                    ? 'left-7 bg-[#00D4FF]'
-                    : 'left-1 bg-gray-500'
-                }`}
+              <SegmentControl
+                options={['kg', 'lbs']}
+                value={draftProfile?.body_weight_unit || 'kg'}
+                onChange={(v) => handleBodyWeightUnitChange(v as WeightUnit)}
               />
-            </button>
+            </div>
           </div>
-        </div>
 
-        {/* Integrations Section */}
-        <div className="p-6 space-y-6">
-          <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Integrations</h3>
-          
-          <div className="flex items-center justify-between opacity-50">
-            <div className="flex items-center space-x-3">
-              <Activity className="w-5 h-5 text-gray-400" />
-              <div>
-                <p className="text-white font-medium">Wearable Sync (Athlix(TM))</p>
-                <p className="text-xs text-gray-500">Sync recovery and strain from supported devices</p>
+          {/* Height */}
+          <div>
+            <label className="block text-[12px] font-medium text-[var(--text-muted)] mb-1.5">
+              Height
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={draftProfile?.height_feet ?? ''}
+                  onChange={(e) => {
+                    setDraftProfile({ ...draftProfile, height_feet: e.target.value === '' ? null : Number(e.target.value) });
+                    setMetricsChanged(true);
+                  }}
+                  className="w-full h-10 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-3.5 pr-9 text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]/60 transition-colors"
+                  placeholder="5"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-[var(--text-muted)] pointer-events-none">ft</span>
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="0"
+                  max="11"
+                  step="1"
+                  value={draftProfile?.height_inches ?? ''}
+                  onChange={(e) => {
+                    setDraftProfile({ ...draftProfile, height_inches: e.target.value === '' ? null : Number(e.target.value) });
+                    setMetricsChanged(true);
+                  }}
+                  className="w-full h-10 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-3.5 pr-9 text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]/60 transition-colors"
+                  placeholder="10"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] text-[var(--text-muted)] pointer-events-none">in</span>
               </div>
             </div>
-            <button disabled className="px-3 py-1.5 bg-white/5 text-xs text-gray-400 rounded-lg border border-white/10">
-              Coming Soon
-            </button>
           </div>
-        </div>
-
-        {/* Danger Zone */}
-        <div className="p-6 space-y-3">
-          <button 
-            onClick={signOut}
-            className="w-full flex items-center justify-center space-x-2 py-3 px-4 border border-red-500/20 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Sign Out</span>
-          </button>
 
           <button
-            onClick={handleDeleteAccount}
-            className="w-full flex items-center justify-center space-x-2 py-3 px-4 border border-red-600/30 rounded-xl text-red-300 hover:bg-red-600/10 transition-colors"
+            onClick={saveMetrics}
+            disabled={saving || !metricsChanged}
+            className="w-full h-10 rounded-xl bg-[var(--accent)] text-black text-[13px] font-bold flex items-center justify-center gap-2 disabled:opacity-40 transition-opacity"
           >
-            <Trash2 className="w-4 h-4" />
-            <span>Delete Account & Data</span>
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            Save Metrics
           </button>
         </div>
-      </div>
+      </SectionCard>
+
+      {/* ── Integrations ──────────────────────── */}
+      <SectionCard title="Integrations">
+        <Row className="opacity-40">
+          <RowLabel
+            icon={<Activity className="w-4 h-4" />}
+            title="Wearable Sync"
+            subtitle="Recovery & HRV from supported devices"
+          />
+          <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-[var(--bg-elevated)] text-[var(--text-muted)] border border-[var(--border)] shrink-0">
+            Soon
+          </span>
+        </Row>
+      </SectionCard>
+
+      {/* ── Account ───────────────────────────── */}
+      <SectionCard title="Account">
+        <Row>
+          <RowLabel
+            icon={<User className="w-4 h-4" />}
+            title="Email"
+            subtitle={user?.email}
+          />
+        </Row>
+        <div className="px-5 py-4 space-y-2.5">
+          <button
+            onClick={signOut}
+            className="w-full h-11 flex items-center justify-center gap-2 rounded-xl border border-[var(--border)] text-[14px] font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </button>
+          <button
+            onClick={handleDeleteAccount}
+            className="w-full h-11 flex items-center justify-center gap-2 rounded-xl border border-[var(--red)]/25 text-[14px] font-medium text-[var(--red)]/70 hover:bg-[var(--red)]/8 hover:text-[var(--red)] transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete Account & Data
+          </button>
+        </div>
+      </SectionCard>
+
+      <p className="text-center text-[11px] text-[var(--text-muted)] pb-2">
+        Athlix v2.1 · Track. Recover. Perform.
+      </p>
     </div>
   );
 };

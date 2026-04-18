@@ -62,7 +62,7 @@ export const RestTimerProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             initial={{ y: 100, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 100, opacity: 0 }}
-            className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-[#1A1A1A] border border-[#00D4FF]/30 shadow-[0_0_20px_rgba(0,212,255,0.2)] rounded-full px-4 py-2 flex items-center space-x-3 z-50"
+            className="fixed bottom-24 left-1/2 -translate-x-1/2 bg-[#1A1A1A] border border-[var(--accent)]/30 shadow-[0_0_20px_rgba(200,255,0,0.2)] rounded-full px-4 py-2 flex items-center space-x-3 z-50"
           >
             <div className="relative w-6 h-6 flex items-center justify-center">
               <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36">
@@ -70,13 +70,13 @@ export const RestTimerProvider: React.FC<{ children: React.ReactNode }> = ({ chi
                 <circle 
                   cx="18" cy="18" r="16" 
                   fill="none" 
-                  className="stroke-[#00D4FF] transition-all duration-1000 linear" 
+                  className="stroke-[var(--accent)] transition-all duration-1000 linear" 
                   strokeWidth="3" 
                   strokeDasharray="100.53" 
                   strokeDashoffset={100.53 - (timeLeft / initialTime) * 100.53}
                 />
               </svg>
-              <Timer className="w-3 h-3 text-[#00D4FF] absolute" />
+              <Timer className="w-3 h-3 text-[var(--accent)] absolute" />
             </div>
             <span className="text-white font-mono font-bold">
               {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}

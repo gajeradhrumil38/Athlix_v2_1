@@ -6,51 +6,64 @@
 
 @layer base {
   :root {
-    /* Base — deep navy dark, not pure black */
-    --bg-base:       #0D1117;
-    --bg-surface:    #141C28;
-    --bg-elevated:   #1A2538;
-    --bg-hover:      #1E2F42;
-    --border:        #1E2F42;
-    --border-subtle: #141C28;
+    /* ── Base backgrounds ─────────────────────────── */
+    --bg-base:       #0a0c10;   /* near-black app background    */
+    --bg-surface:    #121720;   /* card / sheet surface         */
+    --bg-elevated:   #1a2030;   /* elevated surface / input bg  */
+    --bg-hover:      #1e2638;   /* hover state                  */
+    --border:        #1e2638;   /* default border               */
+    --border-subtle: #121720;   /* subtle dividers              */
 
-    /* Text */
-    --text-primary:   #E2E8F0;
-    --text-secondary: #8892A4;
-    --text-muted:     #3A5060;
+    /* ── Text ────────────────────────────────────── */
+    --text-primary:   #e8edf3;
+    --text-secondary: #8692a4;
+    --text-muted:     #3a4a60;
 
-    /* Accent — same cyan you had */
-    --accent:       #00D4FF;
-    --accent-dim:   rgba(0, 212, 255, 0.12);
-    --accent-glow:  rgba(0, 212, 255, 0.3);
+    /* ── Primary accent — lime green ─────────────── */
+    --accent:       #C8FF00;
+    --accent-dim:   rgba(200, 255, 0, 0.12);
+    --accent-glow:  rgba(200, 255, 0, 0.30);
 
-    /* Metric ring colors matched to Athlix(TM) theme */
-    --ring-volume:    #4FC3F7;   /* blue  — volume */
-    --ring-recovery:  #FFD54F;   /* yellow — readiness */
-    --ring-strain:    #00D4FF;   /* cyan  — strain */
+    /* ── Metric ring colors ───────────────────────── */
+    --ring-volume:    #4FC3F7;   /* blue   — volume   */
+    --ring-recovery:  #FFD54F;   /* yellow — recovery */
+    --ring-strain:    #C8FF00;   /* lime   — strain   */
 
-    /* Muscle group colors */
+    /* ── Muscle group colors ─────────────────────── */
     --chest:      #F09595;
     --back:       #5DCAA5;
     --legs:       #EF9F27;
     --shoulders:  #AFA9EC;
-    --core:       #00D4FF;
+    --core:       #C8FF00;
     --biceps:     #85B7EB;
     --triceps:    #AFA9EC;
+    --cardio:     #C8FF00;
 
-    /* Status */
-    --green:    #66BB6A;
+    /* ── Status ───────────────────────────────────── */
+    --green:    #4ade80;
     --yellow:   #FFD54F;
-    --red:      #F06A6A;
+    --red:      #f87171;
     --pr-gold:  #FAC775;
-
-    /* Purple for AI card */
-    --purple: #AFA9EC;
+    --purple:   #a78bfa;
   }
 
   body {
     background-color: var(--bg-base);
     color: var(--text-primary);
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Smooth scrolling everywhere */
+  * {
+    scroll-behavior: smooth;
+  }
+
+  /* Better focus ring */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 }
 
@@ -58,52 +71,81 @@
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }
-  
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  
-  .hide-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
 
+  .hide-scrollbar::-webkit-scrollbar,
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
-  
+
+  .hide-scrollbar,
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Glass card helper */
+  .glass-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+  }
+
+  /* Lime text glow */
+  .text-accent-glow {
+    text-shadow: 0 0 12px rgba(200, 255, 0, 0.5);
+  }
 }
 
+/* ── Keyframe animations ─────────────────────────────── */
+
 @keyframes cardEnter {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
 }
 
 @keyframes muscleGlow {
-  0%, 100% { filter: drop-shadow(0 0 2px var(--glow-color, rgba(0, 212, 255, 0.4))); }
-  50% { filter: drop-shadow(0 0 6px var(--glow-color-strong, rgba(0, 212, 255, 0.8))); }
+  0%, 100% { filter: drop-shadow(0 0 2px rgba(200, 255, 0, 0.35)); }
+  50%       { filter: drop-shadow(0 0 7px rgba(200, 255, 0, 0.75)); }
 }
 
 @keyframes pulse-ring {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 212, 255, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 212, 255, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 212, 255, 0); }
+  0%   { transform: scale(0.95); box-shadow: 0 0 0 0   rgba(200, 255, 0, 0.60); }
+  70%  { transform: scale(1);    box-shadow: 0 0 0 10px rgba(200, 255, 0, 0);   }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0   rgba(200, 255, 0, 0);   }
 }
+
+@keyframes accentPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
+/* ── Animation utility classes ───────────────────────── */
 
 .animate-card-enter {
   animation: cardEnter 0.4s ease-out forwards;
 }
 
-.muscle-map-wrap svg path {
-  transition: fill 0.3s ease, stroke 0.3s ease;
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
 }
 
-.muscle-map-wrap svg path:hover {
-  filter: brightness(1.2);
+.animate-slide-up {
+  animation: slideUp 0.4s ease-out forwards;
 }
 
 .animate-muscle-glow {
@@ -112,4 +154,93 @@
 
 .animate-pulse-ring {
   animation: pulse-ring 2s infinite;
+}
+
+.animate-accent-pulse {
+  animation: accentPulse 1.5s ease-in-out infinite;
+}
+
+/* Skeleton shimmer */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-surface) 25%,
+    var(--bg-elevated) 50%,
+    var(--bg-surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+/* ── Muscle map styles ───────────────────────────────── */
+
+.muscle-map-wrap svg path {
+  transition: fill 0.3s ease, stroke 0.3s ease;
+}
+
+.muscle-map-wrap svg path:hover {
+  filter: brightness(1.25);
+}
+
+/* ── Toggle component ───────────────────────────────── */
+
+.toggle-track {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  transition: background 0.2s, border-color 0.2s;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.toggle-track.on {
+  background: rgba(200, 255, 0, 0.18);
+  border-color: rgba(200, 255, 0, 0.40);
+}
+
+.toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4a5568;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.toggle-track.on .toggle-thumb {
+  transform: translateX(18px);
+  background: var(--accent);
+}
+
+/* ── Segment control ────────────────────────────────── */
+
+.segment-control {
+  display: inline-flex;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.segment-control button {
+  padding: 4px 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  transition: background 0.15s, color 0.15s;
+}
+
+.segment-control button.active {
+  background: var(--accent);
+  color: #000;
+  font-weight: 600;
 }

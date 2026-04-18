@@ -433,21 +433,33 @@ export const Home: React.FC = () => {
   // --- Render Helpers ---
   if ((loading || layoutLoading) && workouts.length === 0) {
     return (
-      <div className="min-h-screen bg-[var(--bg-base)] p-3 space-y-2 animate-pulse">
-        <div className="h-11 bg-[var(--bg-surface)] rounded-xl"></div>
-        <div className="h-12 bg-[var(--bg-surface)] rounded-xl"></div>
-        <div className="h-9 bg-[var(--bg-surface)] rounded-xl"></div>
-        <div className="grid grid-cols-4 gap-1.5"><div className="h-16 bg-[var(--bg-surface)] rounded-xl"></div><div className="h-16 bg-[var(--bg-surface)] rounded-xl"></div><div className="h-16 bg-[var(--bg-surface)] rounded-xl"></div><div className="h-16 bg-[var(--bg-surface)] rounded-xl"></div></div>
-        <div className="grid grid-cols-2 gap-2"><div className="h-64 bg-[var(--bg-surface)] rounded-xl"></div><div className="h-64 bg-[var(--bg-surface)] rounded-xl"></div></div>
+      <div className="p-3 space-y-2.5">
+        <div className="skeleton h-11 rounded-xl" />
+        <div className="skeleton h-10 rounded-xl" />
+        <div className="skeleton h-8 rounded-xl" />
+        <div className="grid grid-cols-4 gap-1.5">
+          {[0,1,2,3].map(i => <div key={i} className="skeleton h-16 rounded-xl" />)}
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="skeleton h-60 rounded-xl" />
+          <div className="skeleton h-60 rounded-xl" />
+        </div>
+        <div className="skeleton h-20 rounded-xl" />
+        <div className="skeleton h-28 rounded-xl" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-[var(--bg-base)] flex flex-col items-center justify-center p-4 text-center">
-        <p className="text-[var(--text-muted)] mb-4">{error}</p>
-        <button onClick={fetchData} className="px-4 py-2 bg-[var(--accent)] text-black rounded-lg font-bold">Retry</button>
+      <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
+        <p className="text-[var(--text-secondary)] mb-4 text-[14px]">{error}</p>
+        <button
+          onClick={fetchData}
+          className="px-5 py-2.5 bg-[var(--accent)] text-black rounded-xl font-bold text-[14px] active:scale-95 transition-transform"
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -455,57 +467,59 @@ export const Home: React.FC = () => {
   const WIDGET_COMPONENTS: Record<string, React.ReactNode> = {
     date_navigator: (
       <div key="date_navigator" className="flex flex-col gap-2">
-        <header className="sticky top-0 z-50 h-[44px] bg-[var(--bg-base)] border-b border-[var(--border)] grid grid-cols-[1fr_auto_1fr] items-center px-1">
+        <header className="sticky top-0 z-40 h-[44px] bg-[var(--bg-base)]/95 border-b border-[var(--border)] grid grid-cols-[1fr_auto_1fr] items-center px-1" style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+          {/* Left: streak + today */}
           <div className="flex items-center gap-2 justify-self-start min-w-0">
-            <div className="flex items-center gap-1.5 bg-[var(--bg-surface)] px-2 py-1 rounded-full border border-[var(--border)]">
-              {streak > 7 ? (
-                <Flame className="w-3 h-3 text-[var(--pr-gold)]" />
-              ) : (
-                <Zap className="w-3 h-3 text-[var(--accent)]" />
-              )}
+            <div className="flex items-center gap-1.5 bg-[var(--bg-elevated)] px-2.5 py-1 rounded-full border border-[var(--border)]">
+              {streak > 7
+                ? <Flame className="w-3 h-3 text-[var(--pr-gold)]" />
+                : <Zap className="w-3 h-3 text-[var(--accent)]" />}
               <span className="text-[12px] font-bold text-[var(--text-primary)]">{streak}</span>
             </div>
             {!isCurrentRange && (
               <button
                 onClick={handleToday}
-                className="px-2.5 py-1 text-[10px] font-semibold rounded-full border bg-[var(--bg-elevated)] text-white/90 border-[var(--border)] hover:bg-[var(--bg-surface)] transition-colors"
+                className="px-2.5 py-1 text-[10px] font-semibold rounded-full border bg-[var(--bg-elevated)] text-[var(--text-secondary)] border-[var(--border)] hover:text-[var(--text-primary)] transition-colors"
                 aria-label="Jump to today"
               >
                 Today
               </button>
             )}
           </div>
-          
-          <div className="flex items-center gap-3 justify-self-center">
-            <button onClick={handlePrev} className="p-1 text-[var(--ring-volume)] hover:bg-[var(--bg-surface)] rounded-full transition-colors">
+
+          {/* Center: date navigator */}
+          <div className="flex items-center gap-2 justify-self-center">
+            <button onClick={handlePrev} className="p-1 text-[var(--text-muted)] hover:text-[var(--accent)] rounded-full transition-colors">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="text-[13px] font-semibold text-[var(--text-primary)] min-w-[60px] text-center" onClick={handleToday}>
+            <button onClick={handleToday} className="text-[13px] font-semibold text-[var(--text-primary)] min-w-[64px] text-center hover:text-[var(--accent)] transition-colors">
               {rangeTitle}
-            </span>
-            <button onClick={handleNext} className="p-1 text-[var(--ring-volume)] hover:bg-[var(--bg-surface)] rounded-full transition-colors">
+            </button>
+            <button onClick={handleNext} className="p-1 text-[var(--text-muted)] hover:text-[var(--accent)] rounded-full transition-colors">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
 
+          {/* Right: avatar → settings */}
           <button
             onClick={() => navigate('/settings')}
-            className="w-8 h-8 rounded-full bg-[var(--accent-dim)] flex items-center justify-center text-[var(--accent)] text-[12px] font-bold border border-[var(--accent)]/20 hover:bg-[var(--accent)]/15 transition-colors justify-self-end"
+            className="justify-self-end w-8 h-8 rounded-full bg-[var(--accent-dim)] flex items-center justify-center text-[var(--accent)] text-[12px] font-bold border border-[var(--accent)]/20 hover:bg-[var(--accent)]/20 transition-colors"
             aria-label="Open settings"
           >
-            {profile?.full_name?.charAt(0).toUpperCase() || 'A'}
+            {profile?.full_name?.trim().charAt(0).toUpperCase() || 'A'}
           </button>
         </header>
 
-        <div className="flex pt-2 px-1">
-              {['Day', 'Week', 'Month'].map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setViewMode(mode as 'Day' | 'Week' | 'Month')}
-                  className={`flex-1 text-center py-1.5 text-[12px] font-medium transition-all duration-200 ${
-                    viewMode === mode 
-                      ? 'bg-[var(--accent-dim)] text-[var(--accent)] border-b-[1.5px] border-[var(--accent)] rounded-t-md' 
-                  : 'bg-transparent text-[#cdd6e1]'
+        {/* View mode tabs */}
+        <div className="flex px-1">
+          {(['Day', 'Week', 'Month'] as const).map((mode) => (
+            <button
+              key={mode}
+              onClick={() => setViewMode(mode)}
+              className={`flex-1 text-center py-1.5 text-[12px] font-medium transition-all duration-200 ${
+                viewMode === mode
+                  ? 'text-[var(--accent)] border-b-[2px] border-[var(--accent)]'
+                  : 'text-[var(--text-muted)] border-b-[2px] border-transparent'
               }`}
             >
               {mode}
@@ -554,7 +568,7 @@ export const Home: React.FC = () => {
                   <div key={ex.name} className="flex flex-col gap-1">
                     <div className="flex items-center justify-between text-[11px] text-white/80">
                       <span className="truncate">{ex.name}</span>
-                      <span className="text-[9px] text-[#cdd6e1]">{ex.sets} sets</span>
+                      <span className="text-[9px] text-[var(--text-secondary)]">{ex.sets} sets</span>
                     </div>
                     <div className="h-1.5 w-full bg-[var(--bg-elevated)] rounded-full overflow-hidden">
                       <motion.div
@@ -589,7 +603,7 @@ export const Home: React.FC = () => {
                 <div key={ex.name} className="flex flex-col gap-1">
                   <div className="flex items-center justify-between text-[11px] text-white/80">
                     <span className="truncate">{ex.name}</span>
-                    <span className="text-[9px] text-[#cdd6e1]">{ex.volume.toFixed(0)} {displayUnit}</span>
+                    <span className="text-[9px] text-[var(--text-secondary)]">{ex.volume.toFixed(0)} {displayUnit}</span>
                   </div>
                   <div className="h-1.5 w-full bg-[var(--bg-elevated)] rounded-full overflow-hidden">
                     <motion.div
@@ -646,7 +660,7 @@ export const Home: React.FC = () => {
       <div key="today_card" className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-xl p-3 animate-card-enter" style={{ animationDelay: '300ms' }}>
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-[10px] uppercase tracking-[0.8px] text-white/80 font-semibold">TODAY'S ACTIVITIES</h3>
-          <span className="text-[10px] text-[#cdd6e1]">{format(new Date(), 'MMM d')}</span>
+          <span className="text-[10px] text-[var(--text-secondary)]">{format(new Date(), 'MMM d')}</span>
         </div>
 
         {todaysWorkout ? (
@@ -655,7 +669,7 @@ export const Home: React.FC = () => {
               <div className="w-2 h-2 rounded-full bg-[var(--green)] shadow-[0_0_8px_var(--green)]"></div>
               <div>
                 <h4 className="text-[13px] font-medium text-[var(--text-primary)]">{todaysWorkout.title || 'Workout'}</h4>
-                <p className="text-[10px] text-[#cdd6e1] flex items-center gap-1.5">
+                <p className="text-[10px] text-[var(--text-secondary)] flex items-center gap-1.5">
                   <span>{todaysWorkout.duration_minutes || 0} min</span>
                   <span className="w-0.5 h-0.5 rounded-full bg-[#cdd6e1]"></span>
                   <span>{Array.isArray(todaysWorkout.exercises) ? todaysWorkout.exercises.reduce((sum: number, ex: any) => sum + (toDisplayExerciseWeight(ex) * (ex.reps || 0) * (ex.sets || 0)), 0).toLocaleString() : 0} {displayUnit}</span>
@@ -672,7 +686,7 @@ export const Home: React.FC = () => {
               <div className="w-2 h-2 rounded-full bg-[var(--text-muted)]"></div>
               <div>
                 <h4 className="text-[13px] font-medium text-[var(--text-primary)]">Rest Day</h4>
-                <p className="text-[10px] text-[#cdd6e1]">No activity logged</p>
+                <p className="text-[10px] text-[var(--text-secondary)]">No activity logged</p>
               </div>
             </div>
             <button
@@ -698,7 +712,7 @@ export const Home: React.FC = () => {
                   <div key={m} className="flex flex-col gap-1">
                     <div className="flex justify-between text-[9px]">
                       <span className="text-[var(--text-primary)]">{m}</span>
-                      <span className="text-[#cdd6e1]">{load.toFixed(0)}%</span>
+                      <span className="text-[var(--text-secondary)]">{load.toFixed(0)}%</span>
                     </div>
                     <div className="h-1.5 w-full bg-[var(--bg-elevated)] rounded-full overflow-hidden">
                       <motion.div 
@@ -713,7 +727,7 @@ export const Home: React.FC = () => {
                 );
               })
             ) : (
-              <div className="text-[10px] text-[#cdd6e1] text-center py-2">No data yet</div>
+              <div className="text-[10px] text-[var(--text-secondary)] text-center py-2">No data yet</div>
             )}
           </div>
         </div>
@@ -741,8 +755,8 @@ export const Home: React.FC = () => {
         <div className="grid grid-cols-4 gap-[6px] opacity-50 animate-card-enter" style={{ animationDelay: '420ms' }}>
           {['Recovery', 'HRV', 'Sleep', 'Strain'].map(label => (
             <div key={label} className="bg-[var(--bg-surface)] border border-dashed border-[var(--border)] rounded-[10px] p-2 text-center">
-              <div className="text-[16px] font-bold text-[#cdd6e1]">—</div>
-              <div className="text-[9px] text-[#cdd6e1] mt-0.5">{label}</div>
+              <div className="text-[16px] font-bold text-[var(--text-secondary)]">—</div>
+              <div className="text-[9px] text-[var(--text-secondary)] mt-0.5">{label}</div>
             </div>
           ))}
         </div>

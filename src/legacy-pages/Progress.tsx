@@ -34,7 +34,7 @@ import { convertWeight, type WeightUnit } from '../lib/units';
 
 const HEART_RATE_ZONES = [
   { id: 'z1', name: 'Recovery', range: '50-94', color: '#5DCAA5' },
-  { id: 'z2', name: 'Easy', range: '95-124', color: '#00D4FF' },
+  { id: 'z2', name: 'Easy', range: '95-124', color: 'var(--accent)' },
   { id: 'z3', name: 'Moderate', range: '125-154', color: '#FFCC00' },
   { id: 'z4', name: 'Hard', range: '155-174', color: '#FF9F1C' },
   { id: 'z5', name: 'Peak', range: '175+', color: '#FF5A5F' },
@@ -276,7 +276,7 @@ export const Progress: React.FC = () => {
   const hrZone = useMemo(() => {
     if (!currentBpm) return { label: 'Waiting', color: '#9AA4B2' };
     if (currentBpm < 95) return { label: 'Recovery', color: '#5DCAA5' };
-    if (currentBpm < 125) return { label: 'Easy', color: '#00D4FF' };
+    if (currentBpm < 125) return { label: 'Easy', color: 'var(--accent)' };
     if (currentBpm < 155) return { label: 'Moderate', color: '#FFCC00' };
     if (currentBpm < 175) return { label: 'Hard', color: '#FF9F1C' };
     return { label: 'Peak', color: '#FF5A5F' };
@@ -930,7 +930,7 @@ export const Progress: React.FC = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#00D4FF]"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[var(--accent)]"></div>
       </div>
     );
   }
@@ -955,7 +955,7 @@ export const Progress: React.FC = () => {
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`h-14 rounded-[14px] flex flex-col items-center justify-center gap-0.5 text-[11px] font-semibold transition-all duration-200 ${
                     activeTab === tab.id
-                      ? 'bg-[#19CCF0] text-black shadow-[0_8px_24px_rgba(0,212,255,0.22)]'
+                      ? 'bg-[#19CCF0] text-black shadow-[0_8px_24px_rgba(200,255,0,0.22)]'
                       : 'text-[#9AA4B2] hover:text-white hover:bg-white/5'
                   }`}
                   title={tab.label}
@@ -974,7 +974,7 @@ export const Progress: React.FC = () => {
             onClick={() => setActiveTab('livehr')}
             className={`absolute left-1/2 -translate-x-1/2 bottom-0 translate-y-1/2 h-14 w-14 rounded-full border transition-all duration-200 flex items-center justify-center ${
               activeTab === 'livehr'
-                ? 'bg-[#19CCF0] border-[#67E6FF] text-black shadow-[0_10px_22px_rgba(0,212,255,0.30)]'
+                ? 'bg-[#19CCF0] border-[#67E6FF] text-black shadow-[0_10px_22px_rgba(200,255,0,0.30)]'
                 : 'bg-[linear-gradient(180deg,#151B25_0%,#101720_100%)] border-white/16 text-[#9AA4B2] hover:text-white hover:border-white/28'
             }`}
             title="Live Heart Rate"
@@ -996,13 +996,13 @@ export const Progress: React.FC = () => {
             <div className="bg-[#1A1A1A] p-6 rounded-2xl border border-white/5">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg font-bold text-white flex items-center">
-                  <Activity className="w-5 h-5 mr-2 text-[#00D4FF]" />
+                  <Activity className="w-5 h-5 mr-2 text-[var(--accent)]" />
                   Workout Frequency (30 Days)
                 </h2>
                 <div className="flex space-x-4 text-right">
                   <div>
                     <p className="text-xs text-gray-400">Current Streak</p>
-                    <p className="text-lg font-bold text-[#00D4FF]">{currentStreak} days</p>
+                    <p className="text-lg font-bold text-[var(--accent)]">{currentStreak} days</p>
                   </div>
                   <div>
                     <p className="text-xs text-gray-400">Max Streak</p>
@@ -1013,10 +1013,10 @@ export const Progress: React.FC = () => {
               <div className="flex flex-wrap gap-1.5">
                 {heatmapData.map((day, i) => {
                   let bgColor = 'bg-white/5';
-                  if (day.intensity > 0) bgColor = 'bg-[#00D4FF]/20';
-                  if (day.intensity > 1) bgColor = 'bg-[#00D4FF]/40';
-                  if (day.intensity > 2) bgColor = 'bg-[#00D4FF]/70';
-                  if (day.intensity > 3) bgColor = 'bg-[#00D4FF]';
+                  if (day.intensity > 0) bgColor = 'bg-[var(--accent)]/20';
+                  if (day.intensity > 1) bgColor = 'bg-[var(--accent)]/40';
+                  if (day.intensity > 2) bgColor = 'bg-[var(--accent)]/70';
+                  if (day.intensity > 3) bgColor = 'bg-[var(--accent)]';
 
                   return (
                     <div 
@@ -1031,10 +1031,10 @@ export const Progress: React.FC = () => {
                 <span>Less</span>
                 <div className="flex space-x-1">
                   <div className="w-3 h-3 rounded-sm bg-white/5"></div>
-                  <div className="w-3 h-3 rounded-sm bg-[#00D4FF]/20"></div>
-                  <div className="w-3 h-3 rounded-sm bg-[#00D4FF]/40"></div>
-                  <div className="w-3 h-3 rounded-sm bg-[#00D4FF]/70"></div>
-                  <div className="w-3 h-3 rounded-sm bg-[#00D4FF]"></div>
+                  <div className="w-3 h-3 rounded-sm bg-[var(--accent)]/20"></div>
+                  <div className="w-3 h-3 rounded-sm bg-[var(--accent)]/40"></div>
+                  <div className="w-3 h-3 rounded-sm bg-[var(--accent)]/70"></div>
+                  <div className="w-3 h-3 rounded-sm bg-[var(--accent)]"></div>
                 </div>
                 <span>More</span>
               </div>
@@ -1089,14 +1089,14 @@ export const Progress: React.FC = () => {
             <div className="bg-[#1A1A1A] p-6 rounded-2xl border border-white/5">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 space-y-4 md:space-y-0">
                 <h2 className="text-lg font-bold text-white flex items-center">
-                  <TrendingUp className="w-5 h-5 mr-2 text-[#00D4FF]" />
+                  <TrendingUp className="w-5 h-5 mr-2 text-[var(--accent)]" />
                   Progressive Overload
                 </h2>
                 <div className="relative w-full md:w-64">
                   <select
                     value={selectedExerciseForOverload}
                     onChange={(e) => setSelectedExerciseForOverload(e.target.value)}
-                    className="w-full bg-black border border-white/10 rounded-xl px-4 py-2 text-white appearance-none focus:outline-none focus:border-[#00D4FF]"
+                    className="w-full bg-black border border-white/10 rounded-xl px-4 py-2 text-white appearance-none focus:outline-none focus:border-[var(--accent)]"
                   >
                     {Array.from(new Set(exercises.map(ex => ex.name))).map(name => (
                       <option key={name as string} value={name as string}>{name as string}</option>
@@ -1234,7 +1234,7 @@ export const Progress: React.FC = () => {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-black text-[#00D4FF]">{pr.best_weight} <span className="text-sm text-gray-400 font-medium">{displayUnit}</span></div>
+                      <div className="text-2xl font-black text-[var(--accent)]">{pr.best_weight} <span className="text-sm text-gray-400 font-medium">{displayUnit}</span></div>
                       <div className="text-sm text-gray-400">{pr.best_reps} reps</div>
                     </div>
                   </div>
@@ -1256,13 +1256,13 @@ export const Progress: React.FC = () => {
                   value={newWeight}
                   onChange={(e) => setNewWeight(e.target.value)}
                   placeholder="e.g. 75.5"
-                  className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#00D4FF]"
+                  className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[var(--accent)]"
                 />
               </div>
               <button
                 onClick={handleLogWeight}
                 disabled={!newWeight}
-                className="w-full md:w-auto bg-[#00D4FF] text-black px-6 py-3 rounded-xl font-bold hover:bg-[#00D4FF]/90 transition-colors disabled:opacity-50"
+                className="w-full md:w-auto bg-[var(--accent)] text-black px-6 py-3 rounded-xl font-bold hover:bg-[var(--accent)]/90 transition-colors disabled:opacity-50"
               >
                 Save
               </button>
@@ -1280,7 +1280,7 @@ export const Progress: React.FC = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-[#1A1A1A] p-4 rounded-xl border border-white/5 text-center">
                     <p className="text-xs text-gray-400 mb-1">Current</p>
-                    <p className="text-xl font-bold text-[#00D4FF]">{current} {displayUnit}</p>
+                    <p className="text-xl font-bold text-[var(--accent)]">{current} {displayUnit}</p>
                   </div>
                   <div className="bg-[#1A1A1A] p-4 rounded-xl border border-white/5 text-center">
                     <p className="text-xs text-gray-400 mb-1">Lowest</p>
@@ -1309,7 +1309,7 @@ export const Progress: React.FC = () => {
                     value={heightCm}
                     onChange={(e) => setHeightCm(e.target.value)}
                     placeholder="e.g. 175"
-                    className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#00D4FF]"
+                    className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[var(--accent)]"
                   />
                 </div>
                 <div className="flex-1 w-full bg-black border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between">
@@ -1358,9 +1358,9 @@ export const Progress: React.FC = () => {
                       <Line 
                         type="monotone" 
                         dataKey="weight" 
-                        stroke="#00D4FF" 
+                        stroke="var(--accent)" 
                         strokeWidth={3}
-                        dot={{ fill: '#00D4FF', strokeWidth: 2, r: 4 }}
+                        dot={{ fill: 'var(--accent)', strokeWidth: 2, r: 4 }}
                         activeDot={{ r: 6, fill: '#fff' }}
                       />
                     </LineChart>
@@ -1383,7 +1383,7 @@ export const Progress: React.FC = () => {
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
                 <div>
                   <h2 className="text-lg font-bold text-white flex items-center">
-                    <Heart className="w-5 h-5 mr-2 text-[#00D4FF]" />
+                    <Heart className="w-5 h-5 mr-2 text-[var(--accent)]" />
                     Live Heart Rate
                   </h2>
                   <p className="text-sm text-[#97A3B6] mt-1">
@@ -1397,7 +1397,7 @@ export const Progress: React.FC = () => {
                     title={!supportsWebBluetooth && unsupportedBluetoothHint ? unsupportedBluetoothHint : undefined}
                     className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-colors disabled:cursor-not-allowed ${
                       supportsWebBluetooth
-                        ? 'bg-[#00D4FF] text-black disabled:opacity-50'
+                        ? 'bg-[var(--accent)] text-black disabled:opacity-50'
                         : 'border border-white/15 bg-white/5 text-[#98A6B8] opacity-85'
                     }`}
                   >
@@ -1427,14 +1427,14 @@ export const Progress: React.FC = () => {
                       <linearGradient id="heroWaveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                         <stop offset="0%" stopColor="rgba(93,202,165,0.2)" />
                         <stop offset="28%" stopColor="#00BCE8" />
-                        <stop offset="65%" stopColor="#00D4FF" />
+                        <stop offset="65%" stopColor="var(--accent)" />
                         <stop offset="100%" stopColor="rgba(123,210,255,0.2)" />
                       </linearGradient>
                     </defs>
                     <path d="M0 16 H100" stroke="rgba(255,255,255,0.06)" strokeDasharray="2 5" />
                     <motion.polyline
                       fill="none"
-                      stroke="rgba(0,212,255,0.26)"
+                      stroke="rgba(200,255,0,0.26)"
                       strokeWidth="4"
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -1456,17 +1456,17 @@ export const Progress: React.FC = () => {
 
                 <div className="relative h-40 w-40 flex items-center justify-center mt-1">
                   <motion.div
-                    className="absolute inset-0 rounded-full border border-[#00D4FF]/20"
+                    className="absolute inset-0 rounded-full border border-[var(--accent)]/20"
                     animate={hrConnected ? { scale: [1, 1.22], opacity: [0.45, 0] } : { scale: 1, opacity: 0.2 }}
                     transition={hrConnected ? { duration: 1.8, ease: 'easeOut', repeat: Infinity } : { duration: 0.2 }}
                   />
                   <motion.div
-                    className="absolute inset-0 rounded-full border border-[#00D4FF]/16"
+                    className="absolute inset-0 rounded-full border border-[var(--accent)]/16"
                     animate={hrConnected ? { scale: [1, 1.13], opacity: [0.35, 0] } : { scale: 1, opacity: 0.16 }}
                     transition={hrConnected ? { duration: 1.8, ease: 'easeOut', repeat: Infinity, delay: 0.55 } : { duration: 0.2 }}
                   />
                   <motion.div
-                    className="relative z-10 h-24 w-24 rounded-[26px] border border-[#00D4FF]/35 bg-[linear-gradient(180deg,rgba(0,212,255,0.16)_0%,rgba(0,212,255,0.07)_100%)] flex items-center justify-center"
+                    className="relative z-10 h-24 w-24 rounded-[26px] border border-[var(--accent)]/35 bg-[linear-gradient(180deg,rgba(200,255,0,0.16)_0%,rgba(200,255,0,0.07)_100%)] flex items-center justify-center"
                     animate={hrConnected ? { scale: [1, 1.055, 1] } : { scale: 1 }}
                     transition={hrConnected ? { duration: 0.95, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.2 }}
                   >
@@ -1476,12 +1476,12 @@ export const Progress: React.FC = () => {
                       transition={hrConnected ? { duration: 1.2, repeat: Infinity } : { duration: 0.2 }}
                       style={{
                         background:
-                          'radial-gradient(circle at 50% 44%, rgba(0,212,255,0.24) 0%, rgba(0,212,255,0.05) 48%, rgba(0,212,255,0) 76%)',
+                          'radial-gradient(circle at 50% 44%, rgba(200,255,0,0.24) 0%, rgba(200,255,0,0.05) 48%, rgba(200,255,0,0) 76%)',
                       }}
                     />
                     <Heart
-                      className={`relative z-10 w-11 h-11 ${hrConnected ? 'text-[#00D4FF]' : 'text-[#6E7E95]'}`}
-                      style={{ fill: hrConnected ? 'rgba(0,212,255,0.12)' : 'transparent' }}
+                      className={`relative z-10 w-11 h-11 ${hrConnected ? 'text-[var(--accent)]' : 'text-[#6E7E95]'}`}
+                      style={{ fill: hrConnected ? 'rgba(200,255,0,0.12)' : 'transparent' }}
                       strokeWidth={2.25}
                     />
                   </motion.div>
@@ -1518,7 +1518,7 @@ export const Progress: React.FC = () => {
                 <motion.div
                   className="h-full rounded-full"
                   style={{
-                    background: 'linear-gradient(90deg, #5DCAA5 0%, #00D4FF 35%, #FFCC00 70%, #FF5A5F 100%)',
+                    background: 'linear-gradient(90deg, #5DCAA5 0%, var(--accent) 35%, #FFCC00 70%, #FF5A5F 100%)',
                   }}
                   animate={{ width: `${hrIntensityPercent}%` }}
                   transition={{ duration: 0.2 }}
@@ -1568,7 +1568,7 @@ export const Progress: React.FC = () => {
                       onClick={jumpWaveformLive}
                       className={`h-7 px-2.5 rounded-lg border text-[10px] font-semibold ${
                         heartRateView === 'live' && waveformAtLive
-                          ? 'bg-[#00D4FF]/18 border-[#00D4FF]/45 text-[#7EE7FF]'
+                          ? 'bg-[var(--accent)]/18 border-[var(--accent)]/45 text-[#7EE7FF]'
                           : 'bg-black/30 border-white/15 text-[#AFC0D8]'
                       }`}
                       title="Jump to live"
@@ -1585,7 +1585,7 @@ export const Progress: React.FC = () => {
                       onClick={() => setHeartRateView(mode)}
                       className={`h-9 px-4 rounded-xl text-xs font-semibold uppercase tracking-[0.16em] transition-colors ${
                         heartRateView === mode
-                          ? 'bg-[#00D4FF]/18 text-[#7EE7FF] border border-[#00D4FF]/35'
+                          ? 'bg-[var(--accent)]/18 text-[#7EE7FF] border border-[var(--accent)]/35'
                           : 'text-[#9AACBF] border border-transparent hover:text-white hover:bg-white/5'
                       }`}
                     >
@@ -1764,7 +1764,7 @@ export const Progress: React.FC = () => {
                           title="Theme signal (all zones)"
                           className={`h-10 rounded-lg border text-[10px] sm:text-xs font-semibold ${useCompactZoneLabels ? '' : 'tracking-[0.1em] uppercase'} transition-colors ${
                             selectedZoneFilter === null
-                              ? 'bg-[#00D4FF]/22 border-[#00D4FF]/55 text-[#9BEAFF]'
+                              ? 'bg-[var(--accent)]/22 border-[var(--accent)]/55 text-[#9BEAFF]'
                               : 'bg-transparent border-white/10 text-[#9DB0C6] hover:text-white hover:bg-white/5'
                           }`}
                         >

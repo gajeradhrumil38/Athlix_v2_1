@@ -83,7 +83,7 @@ export const WeightRepsModal: React.FC<WeightRepsModalProps> = ({
         </div>
         <button 
           onClick={() => onConfirm(value)}
-          className="px-4 py-1.5 bg-[#00D4FF] text-black rounded-lg text-[12px] font-bold"
+          className="px-4 py-1.5 bg-[var(--accent)] text-black rounded-lg text-[12px] font-bold"
         >
           Done
         </button>
@@ -138,7 +138,7 @@ export const WeightRepsModal: React.FC<WeightRepsModalProps> = ({
             <button
               key={chip}
               onClick={() => setValue(chip)}
-              className={`px-4 py-2 rounded-xl text-[11px] font-bold transition-all ${value === chip ? 'bg-[#00D4FF] text-black' : 'bg-[#1A2538] text-[#8892A4] border border-[#1E2F42]'}`}
+              className={`px-4 py-2 rounded-xl text-[11px] font-bold transition-all ${value === chip ? 'bg-[var(--accent)] text-black' : 'bg-[#1A2538] text-[#8892A4] border border-[#1E2F42]'}`}
             >
               {chip}{unit}
             </button>
@@ -155,7 +155,7 @@ export const WeightRepsModal: React.FC<WeightRepsModalProps> = ({
                   {weightUnit === 'kg' ? '20kg Bar +' : '45lb Bar +'}
                 </div>
                 {plates.map((p, i) => (
-                  <div key={i} className="px-2 py-1 bg-[#1A2538] border border-[#00D4FF]/20 rounded-md text-[10px] font-bold text-[#00D4FF]">
+                  <div key={i} className="px-2 py-1 bg-[#1A2538] border border-[var(--accent)]/20 rounded-md text-[10px] font-bold text-[var(--accent)]">
                     {p}{weightUnit}
                   </div>
                 ))}
@@ -173,7 +173,7 @@ export const WeightRepsModal: React.FC<WeightRepsModalProps> = ({
       <div className="p-6">
         <button 
           onClick={() => onConfirm(value)}
-          className="w-full py-4 bg-[#00D4FF] text-black rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 active:scale-95 transition-transform"
+          className="w-full py-4 bg-[var(--accent)] text-black rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 active:scale-95 transition-transform"
         >
           Confirm {value}{unit} <Check className="w-5 h-5" />
         </button>

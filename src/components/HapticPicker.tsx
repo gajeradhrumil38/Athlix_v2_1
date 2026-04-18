@@ -67,7 +67,7 @@ export const HapticPicker: React.FC<HapticPickerProps> = ({
     >
       {/* Selection Highlight */}
       <div 
-        className="absolute left-0 right-0 pointer-events-none border-y border-[#00D4FF]/30 bg-[#00D4FF]/5 shadow-[0_0_15px_rgba(0,212,255,0.2)] transition-all duration-200"
+        className="absolute left-0 right-0 pointer-events-none border-y border-[var(--accent)]/30 bg-[var(--accent)]/5 shadow-[0_0_15px_rgba(200,255,0,0.2)] transition-all duration-200"
         style={{ 
           top: paddingHeight, 
           height: itemHeight,
@@ -92,7 +92,7 @@ export const HapticPicker: React.FC<HapticPickerProps> = ({
             <div
               key={item}
               className={`flex items-center justify-center snap-center transition-all duration-200 ${
-                isSelected ? 'text-[#00D4FF] font-bold text-xl' : 'text-gray-500 text-base'
+                isSelected ? 'text-[var(--accent)] font-bold text-xl' : 'text-gray-500 text-base'
               }`}
               style={{ 
                 height: itemHeight,

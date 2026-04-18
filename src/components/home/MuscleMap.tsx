@@ -20,7 +20,7 @@ const INTENSITY_COLORS = [
   '#1A3A52',   // 1 session  — very dim blue
   '#0E6080',   // 2 sessions — medium
   '#00A8CC',   // 3 sessions — bright teal
-  '#00D4FF',   // 4+ sessions — full accent glow
+  'var(--accent)',   // 4+ sessions — full accent glow
 ]
 
 type MuscleEntry = MuscleData[string]
@@ -81,7 +81,7 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({
     <div style={{ background: 'linear-gradient(160deg, rgba(14,24,36,0.95) 0%, rgba(10,18,28,0.98) 65%, rgba(8,12,18,1) 100%)', borderRadius: 14,
       border: '0.5px solid var(--border)', padding: '10px 8px', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
 
-      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 30% 0%, rgba(0,212,255,0.12), transparent 55%)', pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 30% 0%, rgba(200,255,0,0.12), transparent 55%)', pointerEvents: 'none' }} />
 
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between',
@@ -101,12 +101,12 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({
                 fontSize: 9, fontWeight: 700, border: 'none',
                 cursor: 'pointer',
                 background: view === v
-                  ? 'rgba(0,212,255,0.18)' : 'transparent',
+                  ? 'rgba(200,255,0,0.18)' : 'transparent',
                 color: view === v
                   ? 'var(--accent)' : '#cdd6e1',
                 outline: view === v
-                  ? '0.5px solid rgba(0,212,255,0.4)' : 'none',
-                boxShadow: view === v ? '0 0 10px rgba(0,212,255,0.25)' : 'none',
+                  ? '0.5px solid rgba(200,255,0,0.4)' : 'none',
+                boxShadow: view === v ? '0 0 10px rgba(200,255,0,0.25)' : 'none',
               }}>
               {v.charAt(0).toUpperCase() + v.slice(1)}
             </button>
@@ -140,7 +140,7 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({
           const maxLoad = Math.max(...(Object.values(muscleData) as MuscleEntry[]).map((entry) => entry.relativeLoad || entry.load || 0), 0)
           const color = INTENSITY_COLORS[
             Math.max(loadToIntensity(d?.relativeLoad || d?.load || 0, maxLoad), 1) - 1
-          ] || '#00D4FF'
+          ] || 'var(--accent)'
           return (
             <div style={{
               position: 'absolute',

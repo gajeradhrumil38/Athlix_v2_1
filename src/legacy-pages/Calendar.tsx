@@ -106,7 +106,7 @@ const getWorkoutVolume = (workout: any, targetUnit: WeightUnit = 'kg') =>
   );
 
 const getWorkoutAccent = (workout: any) =>
-  MUSCLE_COLORS[(workout.muscle_groups || [])[0]] || '#00D4FF';
+  MUSCLE_COLORS[(workout.muscle_groups || [])[0]] || 'var(--accent)';
 
 const isGenericWorkoutTitle = (title?: string | null) => {
   if (!title) return true;
@@ -413,7 +413,7 @@ export const Calendar: React.FC = () => {
               </button>
               <Link
                 to="/timeline"
-                className="rounded-full border border-[#00D4FF]/25 bg-[#00D4FF]/10 px-3 py-1.5 text-[11px] font-semibold text-[#72DFFF] transition-colors hover:bg-[#00D4FF]/15"
+                className="rounded-full border border-[var(--accent)]/25 bg-[var(--accent)]/10 px-3 py-1.5 text-[11px] font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/15"
               >
                 Details
               </Link>
@@ -436,9 +436,9 @@ export const Calendar: React.FC = () => {
                 )}
               </div>
             </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-[#A8B4C4]">
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-[var(--text-secondary)]">
               <span className="inline-flex items-center gap-1">
-                <Clock3 className="h-3.5 w-3.5 text-[#72DFFF]" />
+                <Clock3 className="h-3.5 w-3.5 text-[var(--accent)]" />
                 {workout.duration_minutes || 0} min
               </span>
               <span className="h-1 w-1 rounded-full bg-white/20" />
@@ -482,7 +482,7 @@ export const Calendar: React.FC = () => {
               >
                 <span
                   className="h-1.5 w-1.5 rounded-full"
-                  style={{ backgroundColor: MUSCLE_COLORS[muscle] || '#00D4FF' }}
+                  style={{ backgroundColor: MUSCLE_COLORS[muscle] || 'var(--accent)' }}
                 />
                 {muscle}
               </span>
@@ -514,7 +514,7 @@ export const Calendar: React.FC = () => {
           onPointerCancel={handleTouchEnd}
           className={`group relative min-h-[116px] min-w-0 overflow-hidden rounded-2xl border px-2 py-2 text-left transition-all ${
             isSelected
-              ? 'border-[#00D4FF]/55 bg-[linear-gradient(180deg,rgba(18,37,50,0.98)_0%,rgba(15,24,35,1)_100%)] shadow-[0_0_0_1px_rgba(0,212,255,0.10)]'
+              ? 'border-[var(--accent)]/55 bg-[linear-gradient(180deg,rgba(18,37,50,0.98)_0%,rgba(15,24,35,1)_100%)] shadow-[0_0_0_1px_rgba(200,255,0,0.10)]'
               : 'border-white/6 bg-[linear-gradient(180deg,#181818_0%,#141414_100%)] hover:border-white/12 hover:bg-white/[0.03]'
           } ${isOutsideMonth ? 'opacity-40' : ''}`}
         >
@@ -523,9 +523,9 @@ export const Calendar: React.FC = () => {
               <div
                 className={`flex h-10 w-10 items-center justify-center rounded-full text-[16px] font-semibold ${
                   isToday
-                    ? 'bg-[#00D4FF] text-black'
+                    ? 'bg-[var(--accent)] text-black'
                     : isSelected
-                      ? 'border border-[#00D4FF]/35 bg-[#00D4FF]/10 text-white'
+                      ? 'border border-[var(--accent)]/35 bg-[var(--accent)]/10 text-white'
                       : 'text-white'
                 }`}
               >
@@ -550,7 +550,7 @@ export const Calendar: React.FC = () => {
                     )}
                 </div>
               ) : (
-                <div className="flex h-7 items-center justify-center rounded-lg border border-dashed border-white/8 bg-black/10 px-2 text-center text-[10px] font-medium text-[#647284]">
+                <div className="flex h-7 items-center justify-center rounded-lg border border-dashed border-white/8 bg-black/10 px-2 text-center text-[10px] font-medium text-[var(--text-muted)]">
                   Rest
                 </div>
               )}
@@ -570,7 +570,7 @@ export const Calendar: React.FC = () => {
         onPointerCancel={handleTouchEnd}
         className={`group min-h-[132px] rounded-2xl border p-3 text-left transition-all ${
           isSelected
-            ? 'border-[#00D4FF]/45 bg-[linear-gradient(180deg,rgba(18,37,50,0.96)_0%,rgba(16,25,35,1)_100%)] shadow-[0_0_0_1px_rgba(0,212,255,0.08)]'
+            ? 'border-[var(--accent)]/45 bg-[linear-gradient(180deg,rgba(18,37,50,0.96)_0%,rgba(16,25,35,1)_100%)] shadow-[0_0_0_1px_rgba(200,255,0,0.08)]'
             : 'border-white/6 bg-[linear-gradient(180deg,#181818_0%,#141414_100%)] hover:border-white/12 hover:bg-white/[0.03]'
         } ${isOutsideMonth ? 'opacity-45' : ''} ${compact ? 'min-h-[116px]' : ''}`}
       >
@@ -582,7 +582,7 @@ export const Calendar: React.FC = () => {
               </div>
               <div
                 className={`mt-1 flex h-9 w-9 items-center justify-center rounded-full text-[16px] font-semibold ${
-                  isToday ? 'bg-[#00D4FF] text-black' : isSelected ? 'bg-white/8 text-white' : 'text-white'
+                  isToday ? 'bg-[var(--accent)] text-black' : isSelected ? 'bg-white/8 text-white' : 'text-white'
                 }`}
               >
                 {format(day, 'd')}
@@ -619,7 +619,7 @@ export const Calendar: React.FC = () => {
                 </div>
             </div>
           ) : (
-            <div className="mt-auto rounded-xl border border-dashed border-white/8 bg-black/10 px-3 py-3 text-center text-[11px] text-[#647284]">
+            <div className="mt-auto rounded-xl border border-dashed border-white/8 bg-black/10 px-3 py-3 text-center text-[11px] text-[var(--text-muted)]">
               {isToday ? 'Nothing logged yet' : 'Rest'}
             </div>
           )}
@@ -642,7 +642,7 @@ export const Calendar: React.FC = () => {
         >
           <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#00D4FF]/20 bg-[#00D4FF]/8 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#72DFFF]">
+              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[var(--accent)]/20 bg-[var(--accent)]/8 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--accent)]">
                 <Sparkles className="h-3.5 w-3.5" />
                 {title}
               </div>
@@ -676,14 +676,14 @@ export const Calendar: React.FC = () => {
             <div className="space-y-3">{selectedDayWorkouts.map((workout) => renderWorkoutCard(workout, true))}</div>
           ) : (
             <div className="rounded-2xl border border-dashed border-white/8 bg-black/10 px-6 py-10 text-center">
-              <Zap className="mx-auto mb-4 h-10 w-10 text-[#00D4FF]/55" />
+              <Zap className="mx-auto mb-4 h-10 w-10 text-[var(--accent)]/55" />
               <div className="mb-2 text-[18px] font-semibold text-white">No workouts on this day</div>
               <div className="mb-5 text-[13px] text-[#95A3B4]">
                 Start a session here and this day will fill in with volume, time, and muscle data.
               </div>
               <Link
                 to={`/log?date=${format(selectedDate, 'yyyy-MM-dd')}`}
-                className="inline-flex items-center justify-center rounded-full bg-[#00D4FF] px-5 py-2.5 text-[12px] font-bold text-black transition-colors hover:bg-[#27DCFF]"
+                className="inline-flex items-center justify-center rounded-full bg-[var(--accent)] px-5 py-2.5 text-[12px] font-bold text-black transition-colors hover:bg-[var(--accent)]"
               >
                 Log a Workout
               </Link>
@@ -707,7 +707,7 @@ export const Calendar: React.FC = () => {
             {!isCurrentRange && (
               <button
                 onClick={handleToday}
-                className="rounded-full border border-[#00D4FF]/22 bg-[#00D4FF]/10 px-4 py-2 text-[12px] font-semibold text-[#72DFFF] transition-colors hover:bg-[#00D4FF]/16"
+                className="rounded-full border border-[var(--accent)]/22 bg-[var(--accent)]/10 px-4 py-2 text-[12px] font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/16"
               >
                 Jump To Today
               </button>
@@ -724,8 +724,8 @@ export const Calendar: React.FC = () => {
                   onClick={() => handleViewModeChange(mode.id as ViewMode)}
                   className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors md:flex-none ${
                     viewMode === mode.id
-                      ? 'bg-[#00D4FF] text-black'
-                      : 'text-[#A7B2C2] hover:bg-white/5 hover:text-white'
+                      ? 'bg-[var(--accent)] text-black'
+                      : 'text-[var(--text-secondary)] hover:bg-white/5 hover:text-white'
                   }`}
                 >
                   <mode.icon className="h-4 w-4" />
@@ -753,7 +753,7 @@ export const Calendar: React.FC = () => {
                 {!isAll && (
                   <span
                     className="h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: MUSCLE_COLORS[muscle] || '#00D4FF' }}
+                    style={{ backgroundColor: MUSCLE_COLORS[muscle] || 'var(--accent)' }}
                   />
                 )}
                 <span>{muscle}</span>
@@ -771,7 +771,7 @@ export const Calendar: React.FC = () => {
             className={`rounded-full p-2 transition-colors ${
               viewMode === 'today'
                 ? 'opacity-0 pointer-events-none'
-                : 'text-[#A8B4C4] hover:bg-white/5 hover:text-white'
+                : 'text-[var(--text-secondary)] hover:bg-white/5 hover:text-white'
             }`}
           >
             <ChevronLeft className="h-5 w-5" />
@@ -788,7 +788,7 @@ export const Calendar: React.FC = () => {
             className={`rounded-full p-2 transition-colors ${
               viewMode === 'today'
                 ? 'opacity-0 pointer-events-none'
-                : 'text-[#A8B4C4] hover:bg-white/5 hover:text-white'
+                : 'text-[var(--text-secondary)] hover:bg-white/5 hover:text-white'
             }`}
           >
             <ChevronRight className="h-5 w-5" />
@@ -858,7 +858,7 @@ export const Calendar: React.FC = () => {
                   </div>
                   <Link
                     to={`/log?date=${format(currentDate, 'yyyy-MM-dd')}`}
-                    className="rounded-full border border-[#00D4FF]/25 bg-[#00D4FF]/10 px-4 py-2 text-[11px] font-semibold text-[#72DFFF] transition-colors hover:bg-[#00D4FF]/15"
+                    className="rounded-full border border-[var(--accent)]/25 bg-[var(--accent)]/10 px-4 py-2 text-[11px] font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/15"
                   >
                     Log More
                   </Link>
@@ -867,14 +867,14 @@ export const Calendar: React.FC = () => {
               </div>
             ) : (
               <div className="rounded-2xl border border-dashed border-white/8 bg-black/10 px-6 py-12 text-center">
-                <Dumbbell className="mx-auto mb-4 h-12 w-12 text-[#647284]" />
+                <Dumbbell className="mx-auto mb-4 h-12 w-12 text-[var(--text-muted)]" />
                 <div className="mb-2 text-[18px] font-semibold text-white">Nothing logged today</div>
                 <div className="mb-5 text-[13px] text-[#95A3B4]">
                   This view is locked to today, so you can quickly check today&apos;s session the same way you do on Home.
                 </div>
                 <Link
                   to={`/log?date=${format(currentDate, 'yyyy-MM-dd')}`}
-                  className="inline-flex items-center justify-center rounded-full bg-[#00D4FF] px-5 py-2.5 text-[12px] font-bold text-black transition-colors hover:bg-[#27DCFF]"
+                  className="inline-flex items-center justify-center rounded-full bg-[var(--accent)] px-5 py-2.5 text-[12px] font-bold text-black transition-colors hover:bg-[var(--accent)]"
                 >
                   Log Today&apos;s Workout
                 </Link>

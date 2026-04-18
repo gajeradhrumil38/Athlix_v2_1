@@ -77,7 +77,7 @@ export const CelebrationScreen: React.FC<CelebrationScreenProps> = ({ onClose })
           transition={{ delay: 0.4 }}
           className="p-4 bg-[#141C28] border border-[#1E2F42] rounded-2xl"
         >
-          <div className="text-[20px] font-extrabold text-[#00D4FF]">3</div>
+          <div className="text-[20px] font-extrabold text-[var(--accent)]">3</div>
           <div className="text-[9px] text-[#8892A4] uppercase tracking-wider">New PRs</div>
         </motion.div>
         <motion.div 
@@ -86,7 +86,7 @@ export const CelebrationScreen: React.FC<CelebrationScreenProps> = ({ onClose })
           transition={{ delay: 0.5 }}
           className="p-4 bg-[#141C28] border border-[#1E2F42] rounded-2xl"
         >
-          <div className="text-[20px] font-extrabold text-[#00D4FF]">450</div>
+          <div className="text-[20px] font-extrabold text-[var(--accent)]">450</div>
           <div className="text-[9px] text-[#8892A4] uppercase tracking-wider">Calories</div>
         </motion.div>
       </div>
@@ -94,7 +94,7 @@ export const CelebrationScreen: React.FC<CelebrationScreenProps> = ({ onClose })
       <div className="space-y-4 w-full max-w-[320px]">
         <button 
           onClick={onClose}
-          className="w-full py-4 bg-[#00D4FF] text-black rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 active:scale-95 transition-transform"
+          className="w-full py-4 bg-[var(--accent)] text-black rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 active:scale-95 transition-transform"
         >
           Back to Dashboard <ArrowRight className="w-5 h-5" />
         </button>

@@ -98,13 +98,13 @@ export const QuickStartSheet: React.FC<QuickStartSheetProps> = ({ onStartEmpty, 
         <div className="flex gap-2 mb-8">
           <button 
             onClick={onStartEmpty}
-            className="flex-1 px-4 py-3 bg-[#00D4FF]/10 border border-[#00D4FF]/25 rounded-2xl text-left shadow-[0_0_30px_rgba(0,212,255,0.08)]"
+            className="flex-1 px-4 py-3 bg-[var(--accent)]/10 border border-[var(--accent)]/25 rounded-2xl text-left shadow-[0_0_30px_rgba(200,255,0,0.08)]"
           >
             <div className="flex items-center gap-3">
-              <FitnessBadge name="push" color="#00D4FF" size={38} />
+              <FitnessBadge name="push" color="var(--accent)" size={38} />
               <div>
-                <span className="block text-[12px] font-bold text-[#00D4FF]">Push Day</span>
-                <span className="text-[9px] text-[#00D4FF]/60 uppercase tracking-wider">Suggested</span>
+                <span className="block text-[12px] font-bold text-[var(--accent)]">Push Day</span>
+                <span className="text-[9px] text-[var(--accent)]/60 uppercase tracking-wider">Suggested</span>
               </div>
             </div>
           </button>
@@ -139,7 +139,7 @@ export const QuickStartSheet: React.FC<QuickStartSheetProps> = ({ onStartEmpty, 
                     return parsedDate ? parsedDate.toLocaleDateString() : '--';
                   })()}
                 </div>
-                <div className="text-[9px] font-bold text-[#00D4FF] uppercase tracking-wider">{w.exercises?.length || 0} Exercises</div>
+                <div className="text-[9px] font-bold text-[var(--accent)] uppercase tracking-wider">{w.exercises?.length || 0} Exercises</div>
               </button>
             ))}
             {loading && [1,2,3].map(i => (
@@ -150,7 +150,7 @@ export const QuickStartSheet: React.FC<QuickStartSheetProps> = ({ onStartEmpty, 
 
         <button 
           onClick={onStartEmpty}
-          className="w-full py-4 bg-[#00D4FF] text-black rounded-xl font-bold text-[14px] flex items-center justify-center gap-2 mb-4"
+          className="w-full py-4 bg-[var(--accent)] text-black rounded-xl font-bold text-[14px] flex items-center justify-center gap-2 mb-4"
         >
           Start Empty Workout <ArrowRight className="w-4 h-4" />
         </button>

@@ -17,7 +17,7 @@ interface ExerciseImageProps {
 export const MUSCLE_COLORS: Record<string, string> = {
   Chest: '#C45A7A', Back: '#1A9A80', Shoulders: '#0094B3',
   Biceps: '#5A9E3A', Triceps: '#4A7A2A', Legs: '#2A6090',
-  Core: '#00D4FF', Cardio: '#4FC3F7', Other: '#3A5060'
+  Core: 'var(--accent)', Cardio: '#4FC3F7', Other: '#3A5060'
 }
 
 const SIZE_MAP = {

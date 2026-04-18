@@ -253,8 +253,8 @@ export const DashboardLayoutEditor: React.FC = () => {
         <div
           className="mx-3 mb-2 px-3 py-2 rounded-xl flex items-center justify-between"
           style={{
-            background: 'rgba(0,212,255,.08)',
-            border: '0.5px solid rgba(0,212,255,.25)'
+            background: 'rgba(200,255,0,.08)',
+            border: '0.5px solid rgba(200,255,0,.25)'
           }}
         >
           <span

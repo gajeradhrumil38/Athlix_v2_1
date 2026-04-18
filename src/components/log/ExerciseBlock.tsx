@@ -79,7 +79,7 @@ export const ExerciseBlock: React.FC<ExerciseBlockProps> = ({ exercise, onUpdate
         <div className="flex items-center gap-2">
           <h3 className="text-[13px] font-bold text-[#E2E8F0]">{exercise.name}</h3>
           <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#00D4FF]" />
+            <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
             <span className="text-[9px] text-[#8892A4] uppercase tracking-wider">{exercise.muscleGroup}</span>
           </div>
           <AnimatePresence>
@@ -111,7 +111,7 @@ export const ExerciseBlock: React.FC<ExerciseBlockProps> = ({ exercise, onUpdate
             })()} · {lastSession.reps} reps @ {lastSession.weight}kg
           </span>
         ) : (
-          <span className="text-[10px] text-[#00D4FF] inline-flex items-center gap-1"><Sparkles className="w-3 h-3" /> First time - set your benchmark</span>
+          <span className="text-[10px] text-[var(--accent)] inline-flex items-center gap-1"><Sparkles className="w-3 h-3" /> First time - set your benchmark</span>
         )}
       </div>
 
@@ -136,7 +136,7 @@ export const ExerciseBlock: React.FC<ExerciseBlockProps> = ({ exercise, onUpdate
       {/* Add Set Button */}
       <button 
         onClick={handleAddSet}
-        className="w-full py-3 border-t border-[#1E2F42] text-[10px] font-bold text-[#00D4FF]/60 hover:text-[#00D4FF] transition-colors flex items-center justify-center gap-2"
+        className="w-full py-3 border-t border-[#1E2F42] text-[10px] font-bold text-[var(--accent)]/60 hover:text-[var(--accent)] transition-colors flex items-center justify-center gap-2"
       >
         <Plus className="w-3 h-3" /> Add Set
       </button>

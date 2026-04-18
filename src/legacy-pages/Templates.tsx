@@ -171,7 +171,7 @@ export const Templates: React.FC = () => {
         {!isCreating && (
           <button 
             onClick={() => setIsCreating(true)}
-            className="flex items-center space-x-2 bg-[#00D4FF] text-black px-4 py-2 rounded-xl font-medium hover:bg-[#00D4FF]/90 transition-colors"
+            className="flex items-center space-x-2 bg-[var(--accent)] text-black px-4 py-2 rounded-xl font-medium hover:bg-[var(--accent)]/90 transition-colors"
           >
             <Plus className="w-4 h-4" />
             <span>New Template</span>
@@ -181,7 +181,7 @@ export const Templates: React.FC = () => {
 
       {isCreating ? (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <div className="flex justify-between items-center bg-[#1A1A1A] p-4 rounded-2xl border border-white/5">
+          <div className="flex justify-between items-center bg-[var(--bg-surface)] p-4 rounded-2xl border border-[var(--border)]">
             <input 
               type="text" 
               placeholder="Template Title (e.g. Push Day)"
@@ -189,7 +189,7 @@ export const Templates: React.FC = () => {
               onChange={(e) => setTitle(e.target.value)}
               className="bg-transparent border-none text-xl font-bold text-white focus:outline-none focus:ring-0 w-full"
             />
-            <button onClick={resetForm} className="p-2 text-gray-500 hover:text-white transition-colors">
+            <button onClick={resetForm} className="p-2 text-[var(--text-secondary)] hover:text-white transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -199,7 +199,7 @@ export const Templates: React.FC = () => {
               <h2 className="text-lg font-semibold text-white">Default Exercises</h2>
               <button 
                 onClick={addExercise}
-                className="text-sm text-[#00D4FF] flex items-center space-x-1 hover:underline"
+                className="text-sm text-[var(--accent)] flex items-center space-x-1 hover:underline"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Exercise</span>
@@ -207,10 +207,10 @@ export const Templates: React.FC = () => {
             </div>
 
             {exercises.map((exercise, index) => (
-              <div key={exercise.id} className="bg-[#1A1A1A] p-4 rounded-2xl border border-white/5 relative">
+              <div key={exercise.id} className="bg-[var(--bg-surface)] p-4 rounded-2xl border border-[var(--border)] relative">
                 <button 
                   onClick={() => removeExercise(exercise.id)}
-                  className="absolute top-4 right-4 text-gray-500 hover:text-red-400 transition-colors"
+                  className="absolute top-4 right-4 text-[var(--text-secondary)] hover:text-red-400 transition-colors"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -228,36 +228,36 @@ export const Templates: React.FC = () => {
                     placeholder="Exercise name"
                     value={exercise.name}
                     onChange={(e) => updateExercise(exercise.id, 'name', e.target.value)}
-                    className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-white focus:outline-none focus:border-[#00D4FF] text-lg font-medium"
+                    className="w-full bg-transparent border-b border-white/10 px-0 py-2 text-white focus:outline-none focus:border-[var(--accent)] text-lg font-medium"
                   />
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1 text-center">Sets</label>
+                    <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 text-center">Sets</label>
                     <input 
                       type="number" 
                       value={exercise.default_sets}
                       onChange={(e) => updateExercise(exercise.id, 'default_sets', parseInt(e.target.value))}
-                      className="w-full bg-black border border-white/10 rounded-xl px-2 py-2 text-white text-center focus:outline-none focus:border-[#00D4FF]"
+                      className="w-full bg-black border border-white/10 rounded-xl px-2 py-2 text-white text-center focus:outline-none focus:border-[var(--accent)]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1 text-center">Reps</label>
+                    <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 text-center">Reps</label>
                     <input 
                       type="number" 
                       value={exercise.default_reps}
                       onChange={(e) => updateExercise(exercise.id, 'default_reps', parseInt(e.target.value))}
-                      className="w-full bg-black border border-white/10 rounded-xl px-2 py-2 text-white text-center focus:outline-none focus:border-[#00D4FF]"
+                      className="w-full bg-black border border-white/10 rounded-xl px-2 py-2 text-white text-center focus:outline-none focus:border-[var(--accent)]"
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1 text-center">Weight</label>
+                    <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1 text-center">Weight</label>
                     <input 
                       type="number" 
                       value={exercise.default_weight}
                       onChange={(e) => updateExercise(exercise.id, 'default_weight', parseFloat(e.target.value))}
-                      className="w-full bg-black border border-white/10 rounded-xl px-2 py-2 text-white text-center focus:outline-none focus:border-[#00D4FF]"
+                      className="w-full bg-black border border-white/10 rounded-xl px-2 py-2 text-white text-center focus:outline-none focus:border-[var(--accent)]"
                     />
                   </div>
                 </div>
@@ -268,7 +268,7 @@ export const Templates: React.FC = () => {
           <button 
             onClick={handleSave}
             disabled={loading}
-            className="w-full flex justify-center items-center space-x-2 py-3 px-4 rounded-xl shadow-sm text-sm font-medium text-black bg-[#00D4FF] hover:bg-[#00D4FF]/90 focus:outline-none disabled:opacity-50 transition-colors"
+            className="w-full flex justify-center items-center space-x-2 py-3 px-4 rounded-xl shadow-sm text-sm font-medium text-black bg-[var(--accent)] hover:bg-[var(--accent)]/90 focus:outline-none disabled:opacity-50 transition-colors"
           >
             <Save className="w-4 h-4" />
             <span>{loading ? 'Saving...' : 'Save Template'}</span>
@@ -278,15 +278,15 @@ export const Templates: React.FC = () => {
         <div className="space-y-4">
           {templates.length > 0 ? (
             templates.map((template) => (
-              <div key={template.id} className="bg-[#1A1A1A] p-5 rounded-2xl border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div key={template.id} className="bg-[var(--bg-surface)] p-5 rounded-2xl border border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-semibold text-white">{template.title}</h3>
-                  <p className="text-sm text-gray-400 mt-1">
+                  <p className="text-sm text-[var(--text-secondary)] mt-1">
                     {template.template_exercises?.length || 0} exercises
                   </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {template.template_exercises?.slice(0, 3).map((ex: any) => (
-                      <span key={ex.id} className="px-2 py-1 bg-white/5 rounded-md text-[10px] text-gray-300 uppercase tracking-wider flex items-center gap-1">
+                      <span key={ex.id} className="px-2 py-1 bg-white/5 rounded-md text-[10px] text-[var(--text-secondary)] uppercase tracking-wider flex items-center gap-1">
                         {ex.exercise_db_id && (
                           <ExerciseImage 
                             exerciseId={ex.exercise_db_id} 
@@ -298,7 +298,7 @@ export const Templates: React.FC = () => {
                       </span>
                     ))}
                     {(template.template_exercises?.length || 0) > 3 && (
-                      <span className="px-2 py-1 bg-white/5 rounded-md text-[10px] text-gray-300">
+                      <span className="px-2 py-1 bg-white/5 rounded-md text-[10px] text-[var(--text-secondary)]">
                         +{(template.template_exercises?.length || 0) - 3} more
                       </span>
                     )}
@@ -307,13 +307,13 @@ export const Templates: React.FC = () => {
                 <div className="flex space-x-2 sm:self-start">
                   <button 
                     onClick={() => handleEdit(template)}
-                    className="p-2 bg-white/5 text-gray-300 rounded-xl hover:bg-white/10 hover:text-white transition-colors"
+                    className="p-2 bg-white/5 text-[var(--text-secondary)] rounded-xl hover:bg-white/10 hover:text-white transition-colors"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button 
                     onClick={() => handleDelete(template.id)}
-                    className="p-2 bg-white/5 text-gray-300 rounded-xl hover:bg-red-500/20 hover:text-red-400 transition-colors"
+                    className="p-2 bg-white/5 text-[var(--text-secondary)] rounded-xl hover:bg-red-500/20 hover:text-red-400 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -321,8 +321,8 @@ export const Templates: React.FC = () => {
               </div>
             ))
           ) : (
-            <div className="bg-[#1A1A1A] p-8 rounded-2xl border border-white/5 text-center">
-              <p className="text-gray-400 text-sm">No templates yet. Create one to speed up your logging!</p>
+            <div className="bg-[var(--bg-surface)] p-8 rounded-2xl border border-[var(--border)] text-center">
+              <p className="text-[var(--text-secondary)] text-sm">No templates yet. Create one to speed up your logging!</p>
             </div>
           )}
         </div>

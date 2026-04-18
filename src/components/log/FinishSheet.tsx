@@ -84,12 +84,12 @@ export const FinishSheet: React.FC<FinishSheetProps> = ({
           {/* Stats Grid */}
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 bg-[#141C28] border border-[#1E2F42] rounded-2xl">
-              <Clock className="w-4 h-4 text-[#00D4FF] mb-2" />
+              <Clock className="w-4 h-4 text-[var(--accent)] mb-2" />
               <div className="text-[20px] font-extrabold text-[#E2E8F0] tabular-nums">{formatTime(workout.elapsedSeconds)}</div>
               <div className="text-[9px] text-[#8892A4] uppercase tracking-wider">Duration</div>
             </div>
             <div className="p-4 bg-[#141C28] border border-[#1E2F42] rounded-2xl">
-              <Weight className="w-4 h-4 text-[#00D4FF] mb-2" />
+              <Weight className="w-4 h-4 text-[var(--accent)] mb-2" />
               <div className="text-[20px] font-extrabold text-[#E2E8F0] tabular-nums">
                 {totalVolume.toLocaleString()}
                 {weightUnit}
@@ -100,7 +100,7 @@ export const FinishSheet: React.FC<FinishSheetProps> = ({
               <div className="text-[9px] text-[#8892A4] uppercase tracking-wider">Total Volume</div>
             </div>
             <div className="p-4 bg-[#141C28] border border-[#1E2F42] rounded-2xl">
-              <Activity className="w-4 h-4 text-[#00D4FF] mb-2" />
+              <Activity className="w-4 h-4 text-[var(--accent)] mb-2" />
               <div className="text-[20px] font-extrabold text-[#E2E8F0] tabular-nums">{totalSets}</div>
               <div className="text-[9px] text-[#8892A4] uppercase tracking-wider">Total Sets</div>
             </div>
@@ -119,7 +119,7 @@ export const FinishSheet: React.FC<FinishSheetProps> = ({
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-4 py-3 bg-[#141C28] border border-[#1E2F42] rounded-xl text-[14px] text-[#E2E8F0] focus:outline-none focus:border-[#00D4FF]/50 transition-colors"
+                className="w-full px-4 py-3 bg-[#141C28] border border-[#1E2F42] rounded-xl text-[14px] text-[#E2E8F0] focus:outline-none focus:border-[var(--accent)]/50 transition-colors"
                 placeholder="Morning Workout"
               />
             </div>
@@ -128,7 +128,7 @@ export const FinishSheet: React.FC<FinishSheetProps> = ({
               <textarea 
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="w-full px-4 py-3 bg-[#141C28] border border-[#1E2F42] rounded-xl text-[14px] text-[#E2E8F0] focus:outline-none focus:border-[#00D4FF]/50 transition-colors h-24 resize-none"
+                className="w-full px-4 py-3 bg-[#141C28] border border-[#1E2F42] rounded-xl text-[14px] text-[#E2E8F0] focus:outline-none focus:border-[var(--accent)]/50 transition-colors h-24 resize-none"
                 placeholder="How did it feel today?"
               />
             </div>
@@ -153,7 +153,7 @@ export const FinishSheet: React.FC<FinishSheetProps> = ({
           <button 
             disabled={saving}
             onClick={() => onConfirm(title.trim() || workout.title, notes)}
-            className="w-full py-4 bg-[#00D4FF] text-black rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full py-4 bg-[var(--accent)] text-black rounded-xl font-bold text-[16px] flex items-center justify-center gap-2 active:scale-95 transition-transform disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {saving ? 'Saving...' : 'Save Workout'} <Check className="w-5 h-5" />
           </button>

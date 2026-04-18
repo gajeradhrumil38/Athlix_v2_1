@@ -131,7 +131,7 @@ export const TrainNext: React.FC<TrainNextProps> = ({
           ? 'Never trained — start building your chest and shoulders'
           : `Last push session ${overdueDays} day${overdueDays !== 1 ? 's' : ''} ago`,
         priority: isPriority ? 'PRIORITY' : 'RECOMMENDED',
-        priorityColor: isPriority ? '#F09595' : '#00D4FF',
+        priorityColor: isPriority ? '#F09595' : 'var(--accent)',
       })
     }
 
@@ -154,7 +154,7 @@ export const TrainNext: React.FC<TrainNextProps> = ({
             ? 'Never trained — essential for posture and balance'
             : `Last pull session ${overdueDays} day${overdueDays !== 1 ? 's' : ''} ago`,
         priority: isImbalanced || isPriority ? 'PRIORITY' : 'RECOMMENDED',
-        priorityColor: isImbalanced ? '#EF9F27' : isPriority ? '#5DCAA5' : '#00D4FF',
+        priorityColor: isImbalanced ? '#EF9F27' : isPriority ? '#5DCAA5' : 'var(--accent)',
       })
     }
 
@@ -182,7 +182,7 @@ export const TrainNext: React.FC<TrainNextProps> = ({
         muscles: ['Core'],
         reason: 'Core supports every other lift — train it frequently',
         priority: 'OPTIONAL',
-        priorityColor: '#00D4FF',
+        priorityColor: 'var(--accent)',
       })
     }
 
@@ -200,7 +200,7 @@ export const TrainNext: React.FC<TrainNextProps> = ({
   const muscleColor: Record<string, string> = {
     Chest: '#C45A7A', Back: '#1A9A80', Shoulders: '#0094B3',
     Biceps: '#5A9E3A', Triceps: '#4A7A2A', Legs: '#2A6090',
-    Core: '#00D4FF', Glutes: '#8A3A10', Hamstrings: '#2A5080',
+    Core: 'var(--accent)', Glutes: '#8A3A10', Hamstrings: '#2A5080',
   }
 
   if (loading) {

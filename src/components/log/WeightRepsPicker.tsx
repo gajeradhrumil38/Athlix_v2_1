@@ -59,7 +59,7 @@ export const WeightRepsPicker: React.FC<WeightRepsPickerProps> = ({ type, initia
           </h2>
           <button 
             onClick={() => onSelect(value)}
-            className="p-2 text-[#00D4FF] font-bold text-[14px]"
+            className="p-2 text-[var(--accent)] font-bold text-[14px]"
           >
             Done
           </button>
@@ -68,7 +68,7 @@ export const WeightRepsPicker: React.FC<WeightRepsPickerProps> = ({ type, initia
         {/* Picker Area */}
         <div className="flex-1 flex items-center justify-center relative overflow-hidden">
           {/* Selection Indicator */}
-          <div className="absolute inset-x-0 h-10 border-y border-[#00D4FF]/20 bg-[#00D4FF]/5 pointer-events-none" />
+          <div className="absolute inset-x-0 h-10 border-y border-[var(--accent)]/20 bg-[var(--accent)]/5 pointer-events-none" />
           
           <div 
             ref={scrollRef}
@@ -79,7 +79,7 @@ export const WeightRepsPicker: React.FC<WeightRepsPickerProps> = ({ type, initia
             {range.map((v, i) => (
               <div 
                 key={v}
-                className={`h-10 flex items-center justify-center text-[24px] font-bold tabular-nums transition-all snap-center ${value === v ? 'text-[#00D4FF] scale-125' : 'text-[#3A5060] opacity-40'}`}
+                className={`h-10 flex items-center justify-center text-[24px] font-bold tabular-nums transition-all snap-center ${value === v ? 'text-[var(--accent)] scale-125' : 'text-[#3A5060] opacity-40'}`}
               >
                 {v}{type === 'weight' ? 'kg' : ''}
               </div>
@@ -121,7 +121,7 @@ export const WeightRepsPicker: React.FC<WeightRepsPickerProps> = ({ type, initia
               </div>
 
               <div className="flex-1 flex flex-col items-center justify-center">
-                <div className="text-[48px] font-extrabold text-[#00D4FF] mb-2">{value}kg</div>
+                <div className="text-[48px] font-extrabold text-[var(--accent)] mb-2">{value}kg</div>
                 <div className="text-[10px] text-[#8892A4] uppercase tracking-widest mb-8">Total Weight (20kg Bar)</div>
 
                 <div className="flex gap-2 flex-wrap justify-center max-w-[300px]">
@@ -136,7 +136,7 @@ export const WeightRepsPicker: React.FC<WeightRepsPickerProps> = ({ type, initia
 
               <button 
                 onClick={() => setShowPlateCalc(false)}
-                className="w-full py-4 bg-[#00D4FF] text-black rounded-xl font-bold text-[14px]"
+                className="w-full py-4 bg-[var(--accent)] text-black rounded-xl font-bold text-[14px]"
               >
                 Got it
               </button>

@@ -27,7 +27,7 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({ volumeData }) => {
   return (
     <div className="relative w-full aspect-[1/2] max-w-[200px] mx-auto">
       {/* Base Outline */}
-      <svg viewBox="0 0 100 160" className="w-full h-full drop-shadow-[0_0_10px_rgba(0,212,255,0.2)]">
+      <svg viewBox="0 0 100 160" className="w-full h-full drop-shadow-[0_0_10px_rgba(200,255,0,0.2)]">
         {/* Head */}
         <circle cx="50" cy="15" r="10" fill="none" stroke="#333" strokeWidth="1" />
         {/* Torso Outline */}
@@ -42,7 +42,7 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({ volumeData }) => {
           <motion.path
             key={muscle}
             d={path}
-            fill="#00D4FF"
+            fill="var(--accent)"
             initial={{ opacity: 0.1 }}
             animate={{ opacity: getOpacity(muscle) }}
             transition={{ duration: 1 }}
