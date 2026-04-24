@@ -404,7 +404,13 @@ const EXERCISE_MUSCLE_PATTERNS: ExercisePatternProfile[] = [
     secondaryRegions: ['Triceps', 'Core', 'Legs'],
   },
   {
-    patterns: [/treadmill/i, /elliptical/i, /stair ?master/i, /stepmill/i, /\brun\b/i, /\bwalk\b/i, /\bjog\b/i, /sprint/i],
+    patterns: [/stair ?master/i, /stair ?climber/i, /stepmill/i, /step mill/i, /stair ?stepper/i],
+    targets: [target('gluteal', 0.88), target('quadriceps', 0.82), target('hamstring', 0.55), target('calves', 0.48), target('adductors', 0.22), target('abs', 0.16)],
+    primaryRegions: ['Cardio', 'Legs'],
+    secondaryRegions: ['Core'],
+  },
+  {
+    patterns: [/treadmill/i, /elliptical/i, /\brun\b/i, /\bwalk\b/i, /\bjog\b/i, /sprint/i],
     targets: [target('quadriceps', 0.45), target('calves', 0.45), target('hamstring', 0.25), target('gluteal', 0.18)],
     primaryRegions: ['Cardio', 'Legs'],
   },

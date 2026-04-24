@@ -74,14 +74,17 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({
   } | null>(null)
 
   // Convert Supabase data to bodyData array for the package
+  // Use sets as a fallback metric so cardio exercises with weight=0 still light up
+  const getMetric = (entry: MuscleEntry) => entry.relativeLoad || entry.load || entry.sets || 0
+
   const bodyData = useMemo((): ExtendedBodyPart[] => {
     const parts: ExtendedBodyPart[] = []
     const muscleEntries = Object.values(muscleData) as MuscleEntry[]
-    const maxLoad = Math.max(...muscleEntries.map((entry) => entry.relativeLoad || entry.load || 0), 0)
+    const maxLoad = Math.max(...muscleEntries.map(getMetric), 0)
 
     ;(Object.entries(muscleData) as Array<[string, MuscleEntry]>).forEach(([slug, data]) => {
       if (!VALID_SLUGS.has(slug as Slug)) return
-      const intensity = loadToIntensity(data.relativeLoad || data.load, maxLoad)
+      const intensity = loadToIntensity(getMetric(data), maxLoad)
       if (intensity === 0) return
 
       parts.push({ slug: slug as Slug, intensity, color: slugColor(slug, intensity) })
@@ -105,9 +108,18 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({
     setTimeout(() => setTooltip(null), 2200)
   }
 
-  const trainedGroups = (Object.entries(muscleData) as Array<[string, MuscleEntry]>)
-    .filter(([, d]) => (d.relativeLoad || d.load) > 0)
-    .sort((a, b) => (b[1].relativeLoad || b[1].load) - (a[1].relativeLoad || a[1].load))
+  const maxMetric = useMemo(
+    () => Math.max(...(Object.values(muscleData) as MuscleEntry[]).map(getMetric), 0),
+    [muscleData]
+  )
+
+  const trainedGroups = useMemo(
+    () =>
+      (Object.entries(muscleData) as Array<[string, MuscleEntry]>)
+        .filter(([, d]) => getMetric(d) > 0)
+        .sort((a, b) => getMetric(b[1]) - getMetric(a[1])),
+    [muscleData]
+  )
 
   return (
     <div style={{ background: 'linear-gradient(160deg, rgba(14,24,36,0.95) 0%, rgba(10,18,28,0.98) 65%, rgba(8,12,18,1) 100%)', borderRadius: 14,
@@ -196,7 +208,7 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({
                   <div style={{ height: 3, background: '#1E2F42',
                     borderRadius: 2, marginTop: 6, overflow: 'hidden' }}>
                     <div style={{
-                      width: `${Math.min(100, maxLoad > 0 ? (((d.relativeLoad || d.load) / maxLoad) * 100) : 0)}%`,
+                      width: `${Math.min(100, maxMetric > 0 ? (getMetric(d) / maxMetric) * 100 : 0)}%`,
                       height: '100%', background: color, borderRadius: 2
                     }}/>
                   </div>
@@ -224,7 +236,7 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({
               style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               <div style={{ width: 7, height: 7, borderRadius: 2, background: slugBaseHex(group) }}/>
               <span style={{ fontSize: 9, color: '#8892A4' }}>
-                {getMuscleSlugLabel(group)} {(d.relativeLoad || d.load).toFixed(1)}
+                {getMuscleSlugLabel(group)} {getMetric(d).toFixed(1)}
               </span>
             </div>
           ))
