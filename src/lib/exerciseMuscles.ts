@@ -8,7 +8,8 @@ export type MuscleRegion =
   | 'Triceps'
   | 'Legs'
   | 'Core'
-  | 'Cardio';
+  | 'Cardio'
+  | 'Yoga';
 
 export type MuscleSlug = Extract<
   Slug,
@@ -152,14 +153,16 @@ const buildProfile = (
 };
 
 const FALLBACK_TARGETS_BY_GROUP: Record<MuscleRegion, ExerciseMuscleTarget[]> = {
-  Chest: [target('chest', 1), target('deltoids', 0.28), target('triceps', 0.22)],
-  Back: [target('upper-back', 0.8), target('trapezius', 0.45), target('lower-back', 0.35), target('biceps', 0.2)],
+  Chest:     [target('chest', 1), target('deltoids', 0.28), target('triceps', 0.22)],
+  Back:      [target('upper-back', 0.8), target('trapezius', 0.45), target('lower-back', 0.35), target('biceps', 0.2)],
   Shoulders: [target('deltoids', 1), target('trapezius', 0.18)],
-  Biceps: [target('biceps', 1)],
-  Triceps: [target('triceps', 1)],
-  Legs: [target('quadriceps', 0.8), target('gluteal', 0.55), target('hamstring', 0.45), target('adductors', 0.22), target('calves', 0.15)],
-  Core: [target('abs', 0.82), target('obliques', 0.42)],
-  Cardio: [target('quadriceps', 0.45), target('calves', 0.42), target('hamstring', 0.22), target('gluteal', 0.18)],
+  Biceps:    [target('biceps', 1)],
+  Triceps:   [target('triceps', 1)],
+  Legs:      [target('quadriceps', 0.8), target('gluteal', 0.55), target('hamstring', 0.45), target('adductors', 0.22), target('calves', 0.15)],
+  Core:      [target('abs', 0.82), target('obliques', 0.42)],
+  Cardio:    [target('quadriceps', 0.45), target('calves', 0.42), target('hamstring', 0.22), target('gluteal', 0.18)],
+  // Yoga targets flexibility + isometric strength across the whole body
+  Yoga:      [target('lower-back', 0.45), target('hamstring', 0.45), target('abs', 0.38), target('deltoids', 0.3), target('adductors', 0.28), target('gluteal', 0.22)],
 };
 
 const EXERCISE_MUSCLE_PATTERNS: ExercisePatternProfile[] = [
@@ -409,8 +412,77 @@ const EXERCISE_MUSCLE_PATTERNS: ExercisePatternProfile[] = [
     primaryRegions: ['Cardio', 'Legs'],
     secondaryRegions: ['Core'],
   },
+  // ── Yoga ──────────────────────────────────────────────────────────────────
   {
-    patterns: [/treadmill/i, /elliptical/i, /\brun\b/i, /\bwalk\b/i, /\bjog\b/i, /sprint/i],
+    // Downward Dog / Adho Mukha Svanasana — shoulders, hamstrings, calves, back
+    patterns: [/downward.?dog/i, /adho mukha/i],
+    targets: [target('deltoids', 0.62), target('hamstring', 0.58), target('calves', 0.42), target('upper-back', 0.35), target('abs', 0.2)],
+    primaryRegions: ['Yoga', 'Shoulders'],
+    secondaryRegions: ['Legs', 'Back'],
+  },
+  {
+    // Warrior I / II / III — quads, glutes, adductors, core
+    patterns: [/warrior\s*(pose|i{1,3}|one|two|three)?/i, /virabhadrasana/i],
+    targets: [target('quadriceps', 0.72), target('gluteal', 0.55), target('adductors', 0.42), target('abs', 0.28), target('deltoids', 0.22)],
+    primaryRegions: ['Yoga', 'Legs'],
+    secondaryRegions: ['Core', 'Shoulders'],
+  },
+  {
+    // Pigeon / Hip Openers — hip flexors, adductors, glutes
+    patterns: [/pigeon\s*pose/i, /eka pada/i, /lizard\s*pose/i, /hip\s*open/i],
+    targets: [target('adductors', 0.88), target('gluteal', 0.65), target('lower-back', 0.3)],
+    primaryRegions: ['Yoga', 'Legs'],
+  },
+  {
+    // Bridge / Wheel — glutes, lower back, hamstrings, chest
+    patterns: [/bridge\s*pose/i, /wheel\s*pose/i, /urdhva dhanurasana/i, /setu bandha/i],
+    targets: [target('gluteal', 0.78), target('hamstring', 0.5), target('lower-back', 0.45), target('chest', 0.25)],
+    primaryRegions: ['Yoga', 'Legs'],
+    secondaryRegions: ['Back'],
+  },
+  {
+    // Cobra / Upward Dog — lower back, chest, deltoids
+    patterns: [/cobra\s*pose/i, /upward.?dog/i, /bhujangasana/i, /urdhva mukha/i],
+    targets: [target('lower-back', 0.78), target('chest', 0.42), target('deltoids', 0.35), target('abs', 0.15)],
+    primaryRegions: ['Yoga', 'Back'],
+    secondaryRegions: ['Chest', 'Shoulders'],
+  },
+  {
+    // Boat Pose / Navasana — abs, hip flexors
+    patterns: [/boat\s*pose/i, /navasana/i],
+    targets: [target('abs', 0.92), target('adductors', 0.35), target('quadriceps', 0.28)],
+    primaryRegions: ['Yoga', 'Core'],
+  },
+  {
+    // Child's Pose — lower back, glutes, adductors (restorative)
+    patterns: [/child'?s?\s*pose/i, /balasana/i],
+    targets: [target('lower-back', 0.72), target('gluteal', 0.35), target('adductors', 0.3)],
+    primaryRegions: ['Yoga', 'Back'],
+  },
+  {
+    // Camel Pose — chest, lower back, deltoids
+    patterns: [/camel\s*pose/i, /ustrasana/i],
+    targets: [target('chest', 0.55), target('lower-back', 0.62), target('deltoids', 0.38)],
+    primaryRegions: ['Yoga', 'Chest'],
+    secondaryRegions: ['Back', 'Shoulders'],
+  },
+  {
+    // Sun Salutation — full body sequence
+    patterns: [/sun\s*salutation/i, /surya namaskar/i],
+    targets: [target('deltoids', 0.42), target('hamstring', 0.42), target('abs', 0.38), target('lower-back', 0.35), target('quadriceps', 0.32), target('chest', 0.28)],
+    primaryRegions: ['Yoga'],
+    secondaryRegions: ['Core', 'Legs', 'Shoulders'],
+  },
+  {
+    // General yoga / vinyasa / meditation / stretching
+    patterns: [/\byoga\b/i, /\bvinyasa\b/i, /\basana\b/i, /\bmeditation\b/i, /\bstretching?\b/i, /\bflexibility\b/i, /\bmobility\b/i],
+    targets: [target('lower-back', 0.45), target('hamstring', 0.45), target('abs', 0.38), target('deltoids', 0.3), target('adductors', 0.28), target('gluteal', 0.22)],
+    primaryRegions: ['Yoga', 'Core'],
+    secondaryRegions: ['Back', 'Legs'],
+  },
+  // ── Running / treadmill ───────────────────────────────────────────────────
+  {
+    patterns: [/treadmill/i, /elliptical/i, /\brun(ning)?\b/i, /\bwalk(ing)?\b/i, /\bjog(ging)?\b/i, /sprint/i],
     targets: [target('quadriceps', 0.45), target('calves', 0.45), target('hamstring', 0.25), target('gluteal', 0.18)],
     primaryRegions: ['Cardio', 'Legs'],
   },

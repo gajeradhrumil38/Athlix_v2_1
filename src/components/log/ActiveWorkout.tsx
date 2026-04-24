@@ -116,6 +116,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
   const [dialPicker, setDialPicker] = useState<DialPickerState | null>(null);
   const [hiddenPrefillExerciseIds, setHiddenPrefillExerciseIds] = useState<string[]>([]);
   const autoOpenedPickerForStartRef = useRef<number | null>(null);
+  const addExerciseInFlightRef = useRef(false);
   const dateInputRef = useRef<HTMLInputElement>(null);
 
   const createSetId = () =>
@@ -286,73 +287,88 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
 
   const handleAddExercise = useCallback(
     async (exerciseOption: any) => {
-      const existingIndex = workout.exercises.findIndex(
-        (entry) => entry.name.toLowerCase() === exerciseOption.name.toLowerCase(),
-      );
+      if (addExerciseInFlightRef.current) return;
+      addExerciseInFlightRef.current = true;
 
-      if (existingIndex !== -1) {
-        setActiveIndex(existingIndex);
-        setShowExercisePicker(false);
-        return;
-      }
+      try {
+        const normalizedName = String(exerciseOption.name || '').trim().toLowerCase();
+        const existingIndex = workout.exercises.findIndex(
+          (entry) => entry.name.trim().toLowerCase() === normalizedName,
+        );
 
-      let summary = exerciseOption.lastSession;
-      if (!summary && user) {
-        try {
-          const response = await getLastExerciseSession(user.id, exerciseOption.name);
-          summary = response?.lastSession;
-        } catch {
-          // ignore lookup failure and continue with defaults
+        if (existingIndex !== -1) {
+          setActiveIndex(existingIndex);
+          setViewMode('detail');
+          haptics.tick();
+          return;
         }
-      }
 
-      const inputType = resolveExerciseInputType(exerciseOption.name);
-      const defaults = getDefaultSetValues(inputType);
-      const totalSets = Math.max(1, Math.min(20, Number(summary?.sets || 1)));
-      const seedWeight = Number(summary?.weight ?? defaults.weight);
-      const seedReps = Number(summary?.reps ?? defaults.reps);
+        let summary = exerciseOption.lastSession;
+        if (!summary && user) {
+          try {
+            const response = await getLastExerciseSession(user.id, exerciseOption.name);
+            summary = response?.lastSession;
+          } catch {
+            // ignore lookup failure and continue with defaults
+          }
+        }
 
-      const nextExercise: ExerciseEntry = {
-        id: createSetId(),
-        name: exerciseOption.name,
-        muscleGroup: exerciseOption.muscleGroup,
-        exercise_db_id: exerciseOption.exercise_db_id,
-        sets: Array.from({ length: totalSets }, () => ({
+        const inputType = resolveExerciseInputType(exerciseOption.name);
+        const defaults = getDefaultSetValues(inputType);
+        const totalSets = Math.max(1, Math.min(20, Number(summary?.sets || 1)));
+        const seedWeight = Number(summary?.weight ?? defaults.weight);
+        const seedReps = Number(summary?.reps ?? defaults.reps);
+
+        const nextExercise: ExerciseEntry = {
           id: createSetId(),
-          weight: seedWeight,
-          reps: seedReps,
-          done: false,
-        })),
-        lastSession: summary
-          ? {
-              date: summary.date,
-              sets: summary.sets,
-              reps: summary.reps,
-              weight: summary.weight,
-              totalVolume: summary.totalVolume,
-            }
-          : undefined,
-      };
-
-      setWorkout((prev) => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          exercises: [...prev.exercises, nextExercise],
+          name: exerciseOption.name,
+          muscleGroup: exerciseOption.muscleGroup,
+          exercise_db_id: exerciseOption.exercise_db_id,
+          sets: Array.from({ length: totalSets }, () => ({
+            id: createSetId(),
+            weight: seedWeight,
+            reps: seedReps,
+            done: false,
+          })),
+          lastSession: summary
+            ? {
+                date: summary.date,
+                sets: summary.sets,
+                reps: summary.reps,
+                weight: summary.weight,
+                totalVolume: summary.totalVolume,
+              }
+            : undefined,
         };
-      });
 
-      if (summary) {
-        setHiddenPrefillExerciseIds((prev) => prev.filter((entry) => entry !== nextExercise.id));
+        const nextIndex = workout.exercises.length;
+        setWorkout((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            exercises: [...prev.exercises, nextExercise],
+          };
+        });
+
+        if (summary) {
+          setHiddenPrefillExerciseIds((prev) => prev.filter((entry) => entry !== nextExercise.id));
+        }
+
+        setActiveIndex(nextIndex);
+        setViewMode('detail');
+        haptics.tick();
+      } finally {
+        setShowExercisePicker(false);
+        addExerciseInFlightRef.current = false;
       }
-
-      setActiveIndex(workout.exercises.length);
-      setViewMode('detail');
-      setShowExercisePicker(false);
-      haptics.tick();
     },
     [setWorkout, user, workout.exercises],
   );
+
+  useEffect(() => {
+    if (showExercisePicker) return;
+    addExerciseInFlightRef.current = false;
+  }, [showExercisePicker]);
 
   const handleClearPrefill = () => {
     const exercise = workout.exercises[activeIndex];

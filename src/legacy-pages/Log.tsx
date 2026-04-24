@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { saveWorkout, getWorkouts, type LocalExercise } from '../lib/supabaseData';
+import { resolveExerciseInputType } from '../lib/exerciseTypes';
 import { QuickStartSheet } from '../components/log/QuickStartSheet';
 import { ActiveWorkout } from '../components/log/ActiveWorkout';
 import { FinishSheet } from '../components/log/FinishSheet';
@@ -135,7 +136,6 @@ export const Log: React.FC = () => {
   const { user, profile, updateProfile } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const allowLiveAddExercise = Boolean(profile?.start_workout_enabled);
   const showStartSheet = Boolean(profile?.show_start_sheet);
   const searchParams = new URLSearchParams(location.search);
   const forceAddExercise = searchParams.get('add') === '1';
@@ -146,6 +146,7 @@ export const Log: React.FC = () => {
   const [openPickerOnStart, setOpenPickerOnStart] = useState(false);
   const [showFinish, setShowFinish] = useState(false);
   const [saving, setSaving] = useState(false);
+  const saveInFlightRef = useRef(false);
   const [weightUnit, setWeightUnit] = useState<'kg' | 'lbs'>((profile?.unit_preference || 'kg') as 'kg' | 'lbs');
   const [distanceUnit, setDistanceUnit] = useState<'km' | 'mi'>(() => {
     if (typeof window === 'undefined') return 'km';
@@ -337,7 +338,7 @@ export const Log: React.FC = () => {
   }, [navigate]);
 
   const handleSave = async (title: string, notes: string) => {
-    if (!workout || !user) return;
+    if (!workout || !user || saveInFlightRef.current) return;
 
     const completedExercises = workout.exercises
       .map((exercise, exerciseIndex) => {
@@ -359,6 +360,7 @@ export const Log: React.FC = () => {
     const elapsedFromTime = Math.max(0, Math.round((endDate.getTime() - startDate.getTime()) / 1000));
     const finalElapsedSeconds = elapsedFromTime > 0 ? elapsedFromTime : finalWorkout.elapsedSeconds;
 
+    saveInFlightRef.current = true;
     setSaving(true);
 
     try {
@@ -372,25 +374,46 @@ export const Log: React.FC = () => {
           muscle_group: exercise.muscleGroup,
           exercise_db_id: exercise.exercise_db_id || null,
           order_index: exerciseIndex,
-          completed_sets: completedSets.map((set) => ({
-            reps: Number(set.reps || 0),
-            weight: Number(set.weight || 0),
-            unit: weightUnit,
-          })),
+          completed_sets: completedSets.map((set) => {
+            const inputType = resolveExerciseInputType(exercise.name);
+            const rawReps = Math.max(0, Math.round(Number(set.reps || 0)));
+            const rawWeight = Math.max(0, Number(set.weight || 0));
+            const needsRepFloor =
+              inputType === 'distance_time' ||
+              inputType === 'time_only' ||
+              inputType === 'distance_only' ||
+              inputType === 'calories_time';
+
+            // DB function currently skips rows where reps <= 0.
+            // For cardio/time-style exercises, we normalize reps to at least 1
+            // when the primary value is logged so those sets are persisted.
+            const normalizedReps = needsRepFloor && rawWeight > 0 && rawReps === 0 ? 1 : rawReps;
+
+            return {
+              reps: normalizedReps,
+              weight: rawWeight,
+              unit: weightUnit,
+            };
+          }),
         })),
       });
 
       clearDraft();
-      const nextWorkout = createWorkoutState([], undefined, forcedWorkoutDate);
       setShowFinish(false);
       setShowQuickStart(false);
-      setOpenPickerOnStart(true);
-      setWorkout(nextWorkout);
-      writeDraft(nextWorkout);
+      setOpenPickerOnStart(false);
       toast.success('Workout saved!', { duration: 1800 });
+      navigate('/', {
+        replace: true,
+        state: {
+          scrollTo: 'muscle_map',
+          requestId: Date.now(),
+        },
+      });
     } catch (error: any) {
       toast.error(error.message || 'Failed to save workout.');
     } finally {
+      saveInFlightRef.current = false;
       setSaving(false);
     }
   };
@@ -414,7 +437,7 @@ export const Log: React.FC = () => {
           onBackToPrevious={handleBackToPrevious}
           bodyWeight={profile?.body_weight ?? null}
           bodyWeightUnit={(profile?.body_weight_unit || 'kg') as 'kg' | 'lbs'}
-          allowLiveAddExercise={allowLiveAddExercise || !!forcedWorkoutDate}
+          allowLiveAddExercise
           openExercisePickerOnStart={openPickerOnStart}
           weightUnit={weightUnit}
           distanceUnit={distanceUnit}
@@ -431,7 +454,8 @@ export const Log: React.FC = () => {
             bodyWeight={profile?.body_weight ?? null}
             bodyWeightUnit={(profile?.body_weight_unit || 'kg') as 'kg' | 'lbs'}
             onConfirm={handleSave}
-            onCancel={() => setShowFinish(false)}
+            onAddMore={() => { if (!saving) setShowFinish(false); }}
+            onCancel={() => { if (!saving) setShowFinish(false); }}
             saving={saving}
           />
         )}

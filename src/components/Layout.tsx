@@ -258,9 +258,8 @@ export const Layout: React.FC = () => {
                 >
                   {({ isActive }) => (
                     <>
-                      {/* Active pill behind icon */}
                       {isActive && (
-                        <span className="absolute top-2.5 w-8 h-8 rounded-xl bg-[var(--accent-dim)] border border-[var(--accent)]/20" />
+                        <span className="pointer-events-none absolute left-1/2 bottom-2 h-2.5 w-11 -translate-x-1/2 rounded-full bg-[var(--accent)]/28 blur-[10px]" />
                       )}
                       <span className="relative z-10">
                         <AppIcon name={item.icon} size="md" />

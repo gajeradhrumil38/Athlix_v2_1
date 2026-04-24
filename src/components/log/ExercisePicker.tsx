@@ -24,15 +24,20 @@ interface ExercisePickerProps {
 }
 
 const MUSCLE_GROUPS = [
-  { name: 'Chest', previewExerciseId: 'ot_benchpress' },
-  { name: 'Back', previewExerciseId: 'ot_tbarrow' },
-  { name: 'Shoulders', previewExerciseId: 'ot_arnoldpress' },
-  { name: 'Biceps', previewExerciseId: 'ot_bicepscurl' },
-  { name: 'Triceps', previewExerciseId: 'ot_tricepskickback' },
-  { name: 'Legs', previewExerciseId: 'ot_legpressx' },
-  { name: 'Core', previewExerciseId: 'ot_crunches' },
-  { name: 'Cardio', previewExerciseId: '' },
+  { name: 'Chest',     previewExerciseId: 'ot_benchpress',      cssVar: '--chest'     },
+  { name: 'Back',      previewExerciseId: 'ot_tbarrow',          cssVar: '--back'      },
+  { name: 'Shoulders', previewExerciseId: 'ot_arnoldpress',      cssVar: '--shoulders' },
+  { name: 'Biceps',    previewExerciseId: 'ot_bicepscurl',       cssVar: '--biceps'    },
+  { name: 'Triceps',   previewExerciseId: 'ot_tricepskickback',  cssVar: '--triceps'   },
+  { name: 'Legs',      previewExerciseId: 'ot_legpressx',        cssVar: '--legs'      },
+  { name: 'Core',      previewExerciseId: 'ot_crunches',         cssVar: '--core'      },
+  { name: 'Cardio',    previewExerciseId: '',                    cssVar: '--cardio'    },
+  { name: 'Yoga',      previewExerciseId: '',                    cssVar: '--purple'    },
 ];
+
+const MUSCLE_CSS_VAR: Record<string, string> = Object.fromEntries(
+  MUSCLE_GROUPS.map((g) => [g.name, g.cssVar]),
+);
 
 export const ExercisePicker: React.FC<ExercisePickerProps> = ({ onSelect, onClose, recentExercises }) => {
   const { user } = useAuth();
@@ -123,122 +128,207 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({ onSelect, onClos
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
       <motion.div
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        className="absolute inset-0 mx-auto w-full max-w-[860px] bg-[#0F1623] flex flex-col border-x border-white/10"
+        className="absolute inset-0 mx-auto w-full max-w-[860px] flex flex-col border-x"
+        style={{ background: 'var(--bg-base)', borderColor: 'var(--border)' }}
       >
-        <div className="flex items-center justify-between border-b border-white/10 px-4 pb-2 pt-[calc(env(safe-area-inset-top)+10px)]">
+        {/* ── Header ──────────────────────────────────────────── */}
+        <div
+          className="flex items-center justify-between px-4 pb-3"
+          style={{
+            paddingTop: 'calc(env(safe-area-inset-top) + 12px)',
+            borderBottom: '1px solid var(--border)',
+          }}
+        >
           <button
             onClick={handleBack}
-            className="h-9 rounded-lg border border-white/10 bg-[#1A2433] px-3 text-[12px] font-medium text-[#D1DCE7] inline-flex items-center gap-1"
+            className="inline-flex h-9 items-center gap-1.5 rounded-xl px-3 text-[12px] font-medium transition-colors"
+            style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-3.5 h-3.5" />
             {isNestedView ? 'Back' : 'Close'}
           </button>
-          <h2 className="text-[16px] font-semibold text-[#E7EEF6] tracking-tight">Add Exercise</h2>
+
+          <h2 className="text-[15px] font-semibold tracking-tight" style={{ color: 'var(--text-primary)' }}>
+            Add Exercise
+          </h2>
+
           <button
             onClick={onClose}
-            className="h-9 w-9 rounded-lg border border-white/10 bg-[#1A2433] text-[#9CB1C7] inline-flex items-center justify-center"
-            aria-label="Close add exercise"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl transition-colors"
+            style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
+            aria-label="Close"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="px-4 pt-3 pb-2 border-b border-white/5">
+        {/* ── Search + Tabs ────────────────────────────────────── */}
+        <div className="px-4 pt-3 pb-2.5" style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+          {/* Search field */}
           <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#687E95]" />
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4"
+              style={{ color: 'var(--text-muted)' }}
+            />
             <input
               type="text"
               placeholder="Search exercises"
               value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                if (event.target.value) setActiveTab('search');
+              onChange={(e) => {
+                setSearch(e.target.value);
+                if (e.target.value) setActiveTab('search');
               }}
-              className="w-full h-11 rounded-xl bg-[#161F2C] border border-white/10 pl-10 pr-4 text-[14px] text-white placeholder-[#6F8398] focus:outline-none focus:border-[#3D5067] transition-colors"
+              className="w-full h-11 rounded-xl pl-10 pr-4 text-[14px] transition-colors focus:outline-none"
+              style={{
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border)',
+                color: 'var(--text-primary)',
+              }}
             />
           </div>
 
-          <div className="flex gap-2">
+          {/* Tabs */}
+          <div
+            className="flex gap-1.5 rounded-xl p-1"
+            style={{ background: 'var(--bg-elevated)' }}
+          >
             {[
-              { id: 'recent', label: 'Recent', icon: History },
-              { id: 'muscle', label: 'Muscle', icon: LayoutGrid },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id as 'recent' | 'muscle');
-                  setSearch('');
-                  setSelectedMuscle(null);
-                }}
-                className={`flex-1 h-10 rounded-xl border text-[12px] font-medium flex items-center justify-center gap-2 transition-colors ${
-                  activeTab === tab.id
-                    ? 'bg-[#212E40] border-[#3D5067] text-white'
-                    : 'bg-[#161F2C] border-white/10 text-[#9CB1C7]'
-                }`}
-              >
-                <tab.icon className="w-3.5 h-3.5" />
-                {tab.label}
-              </button>
-            ))}
+              { id: 'recent', label: 'Recent',  Icon: History    },
+              { id: 'muscle', label: 'Muscle',  Icon: LayoutGrid },
+            ].map(({ id, label, Icon }) => {
+              const isActive = activeTab === id && !search;
+              return (
+                <button
+                  key={id}
+                  onClick={() => {
+                    setActiveTab(id as 'recent' | 'muscle');
+                    setSearch('');
+                    setSelectedMuscle(null);
+                  }}
+                  className="flex-1 h-8 rounded-lg text-[12px] font-semibold flex items-center justify-center gap-1.5 transition-all"
+                  style={
+                    isActive
+                      ? { background: 'var(--accent)', color: '#000' }
+                      : { background: 'transparent', color: 'var(--text-secondary)' }
+                  }
+                >
+                  <Icon className="w-3 h-3" />
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4 pb-[calc(env(safe-area-inset-bottom)+24px)] no-scrollbar">
+        {/* ── Content ─────────────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+24px)]">
+
+          {/* Recent tab */}
           {activeTab === 'recent' && !search && (
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               {(recentExercises.length > 0 ? recentExercises : recentLibraryExercises).map((exercise) => (
                 <ExerciseRow key={exercise.id} exercise={exercise} onSelect={handleSelect} />
               ))}
               {recentExercises.length === 0 && recentLibraryExercises.length === 0 && (
-                <div className="text-center py-12 text-[#7D90A6] text-[13px]">No recent exercises</div>
+                <div
+                  className="flex flex-col items-center justify-center gap-2 py-16 text-center"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  <History className="w-8 h-8 opacity-40" />
+                  <p className="text-[13px] font-medium">No recent exercises</p>
+                  <p className="text-[11px] opacity-60">Exercises you log will appear here</p>
+                </div>
               )}
             </div>
           )}
 
+          {/* Muscle grid */}
           {activeTab === 'muscle' && !search && !selectedMuscle && (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
               {MUSCLE_GROUPS.map((muscle) => (
                 <button
                   key={muscle.name}
                   onClick={() => setSelectedMuscle(muscle.name)}
-                  className="h-24 rounded-2xl border border-white/10 bg-[#161F2C] flex flex-col items-center justify-center gap-2 active:scale-[0.98]"
+                  className="relative h-[88px] rounded-2xl flex flex-col items-center justify-center gap-2 overflow-hidden active:scale-[0.97] transition-transform"
+                  style={{
+                    background: 'var(--bg-surface)',
+                    border: '1px solid var(--border)',
+                  }}
                 >
+                  {/* Accent glow blob */}
+                  <div
+                    className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-16 h-10 rounded-full blur-xl opacity-30"
+                    style={{ background: `var(${muscle.cssVar})` }}
+                  />
                   <ExerciseImage
                     exerciseId={muscle.previewExerciseId}
                     exerciseName={muscle.name}
                     muscleGroup={muscle.name}
                     size="sm"
                   />
-                  <span className="text-[11px] font-semibold text-[#E3EBF4] uppercase tracking-wide">{muscle.name}</span>
+                  <span
+                    className="relative z-10 text-[11px] font-bold uppercase tracking-[0.1em]"
+                    style={{ color: `var(${muscle.cssVar})` }}
+                  >
+                    {muscle.name}
+                  </span>
                 </button>
               ))}
             </div>
           )}
 
-          {(selectedMuscle || activeTab === 'search') && (
-            <div className="space-y-2">
-              {selectedMuscle && (
-                <button
-                  onClick={() => setSelectedMuscle(null)}
-                  className="text-[12px] font-medium text-[#C1CFDC] inline-flex items-center gap-1 mb-1"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  Back to muscle groups
-                </button>
-              )}
+          {/* Muscle drill-down list */}
+          {selectedMuscle && !search && (
+            <div className="flex flex-col gap-2">
+              {/* Breadcrumb */}
+              <button
+                onClick={() => setSelectedMuscle(null)}
+                className="inline-flex items-center gap-1.5 mb-1 text-[12px] font-medium"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+                All muscle groups
+              </button>
+
+              {/* Group label pill */}
+              <div
+                className="self-start mb-1 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.12em]"
+                style={{
+                  background: `color-mix(in srgb, var(${MUSCLE_CSS_VAR[selectedMuscle] ?? '--text-muted'}) 12%, transparent)`,
+                  color: `var(${MUSCLE_CSS_VAR[selectedMuscle] ?? '--text-muted'})`,
+                  border: `1px solid color-mix(in srgb, var(${MUSCLE_CSS_VAR[selectedMuscle] ?? '--text-muted'}) 25%, transparent)`,
+                }}
+              >
+                {selectedMuscle}
+              </div>
 
               {filteredExercises.map((exercise) => (
                 <ExerciseRow key={exercise.id} exercise={exercise} onSelect={handleSelect} />
               ))}
-
               {filteredExercises.length === 0 && (
-                <div className="text-center py-12 text-[#7D90A6] text-[13px]">No exercises found</div>
+                <div className="py-12 text-center text-[13px]" style={{ color: 'var(--text-muted)' }}>
+                  No exercises found
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Search results */}
+          {search && (
+            <div className="flex flex-col gap-2">
+              {filteredExercises.map((exercise) => (
+                <ExerciseRow key={exercise.id} exercise={exercise} onSelect={handleSelect} />
+              ))}
+              {filteredExercises.length === 0 && (
+                <div className="py-12 text-center text-[13px]" style={{ color: 'var(--text-muted)' }}>
+                  No results for "{search}"
+                </div>
               )}
             </div>
           )}
@@ -248,12 +338,23 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({ onSelect, onClos
   );
 };
 
-const ExerciseRow: React.FC<{ exercise: Exercise; onSelect: (exercise: Exercise) => void }> = ({ exercise, onSelect }) => {
+const ExerciseRow: React.FC<{ exercise: Exercise; onSelect: (exercise: Exercise) => void }> = ({
+  exercise,
+  onSelect,
+}) => {
+  const cssVar = MUSCLE_CSS_VAR[exercise.muscleGroup];
+
   return (
     <button
       onClick={() => onSelect(exercise)}
-      className="w-full min-h-[66px] rounded-2xl border border-white/10 bg-[#161F2C] px-3 py-3 flex items-center gap-3 text-left active:scale-[0.995] transition-transform"
+      className="w-full rounded-xl flex items-center gap-3 px-3 py-2.5 text-left active:scale-[0.99] transition-transform"
+      style={{
+        background: 'var(--bg-surface)',
+        border: '1px solid var(--border)',
+        minHeight: 60,
+      }}
     >
+      {/* Exercise image / avatar */}
       <ExerciseImage
         exerciseId={exercise.exercise_db_id || ''}
         exerciseName={exercise.name}
@@ -261,21 +362,36 @@ const ExerciseRow: React.FC<{ exercise: Exercise; onSelect: (exercise: Exercise)
         size="sm"
       />
 
+      {/* Name + group */}
       <div className="flex-1 min-w-0">
-        <div className="text-[14px] font-semibold text-[#EDF4FB] truncate">{exercise.name}</div>
-        <div className="text-[11px] text-[#8DA1B6]">{exercise.muscleGroup}</div>
+        <div className="text-[14px] font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+          {exercise.name}
+        </div>
+        <div
+          className="mt-0.5 text-[11px] font-medium"
+          style={{ color: cssVar ? `var(${cssVar})` : 'var(--text-secondary)' }}
+        >
+          {exercise.muscleGroup}
+        </div>
       </div>
 
+      {/* Last session (desktop) */}
       {exercise.lastSession && (
-        <div className="hidden sm:flex flex-col items-end pr-1">
-          <span className="text-[11px] text-[#B4C4D4] tabular-nums">
+        <div className="hidden sm:flex flex-col items-end shrink-0 pr-1">
+          <span className="text-[11px] tabular-nums" style={{ color: 'var(--text-secondary)' }}>
             {exercise.lastSession.weight}kg × {exercise.lastSession.reps}
           </span>
-          <span className="text-[10px] text-[#7489A0]">{exercise.lastSession.date}</span>
+          <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+            {exercise.lastSession.date}
+          </span>
         </div>
       )}
 
-      <div className="h-8 w-8 rounded-lg border border-white/10 bg-[#202C3C] text-[#D9E4EF] flex items-center justify-center">
+      {/* Add button */}
+      <div
+        className="h-8 w-8 rounded-lg flex items-center justify-center shrink-0 transition-colors"
+        style={{ background: 'var(--accent-dim)', color: 'var(--accent)' }}
+      >
         <Plus className="w-4 h-4" />
       </div>
     </button>

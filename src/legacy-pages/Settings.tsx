@@ -289,14 +289,11 @@ export const Settings: React.FC = () => {
           <RowLabel
             icon={<Dumbbell className="w-4 h-4" />}
             title="Live Add Exercise"
-            subtitle="Add exercises mid-workout"
+            subtitle="Always available during workouts"
           />
-          <Toggle
-            on={!!draftProfile?.start_workout_enabled}
-            onToggle={() => handleToggle('start_workout_enabled', !!draftProfile?.start_workout_enabled)}
-            disabled={saving}
-            label="Toggle live add exercise"
-          />
+          <span className="inline-flex h-6 items-center rounded-full border border-[var(--accent)]/25 bg-[var(--accent)]/10 px-2.5 text-[11px] font-semibold text-[var(--accent)]">
+            Always On
+          </span>
         </Row>
 
         {/* Show start sheet */}

@@ -12,6 +12,7 @@ interface FinishSheetProps {
   bodyWeightUnit?: WeightUnit;
   onConfirm: (title: string, notes: string) => void;
   onCancel: () => void;
+  onAddMore?: () => void;
   saving?: boolean;
 }
 
@@ -22,6 +23,7 @@ export const FinishSheet: React.FC<FinishSheetProps> = ({
   bodyWeightUnit = 'kg',
   onConfirm,
   onCancel,
+  onAddMore,
   saving = false,
 }) => {
   const [title, setTitle] = useState(workout.title);
@@ -72,7 +74,7 @@ export const FinishSheet: React.FC<FinishSheetProps> = ({
       >
         {/* Header */}
         <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
-          <button onClick={onCancel} className="p-2 text-[var(--text-muted)]">
+          <button onClick={onCancel} disabled={saving} className="p-2 text-[var(--text-muted)] disabled:opacity-40">
             <X className="w-5 h-5" />
           </button>
           <h2 className="text-[16px] font-bold text-[var(--text-primary)]">Finish Workout</h2>
@@ -150,6 +152,16 @@ export const FinishSheet: React.FC<FinishSheetProps> = ({
 
         {/* Action Button */}
         <div className="p-6 border-t border-[var(--border)] bg-[var(--bg-base)]">
+          {onAddMore && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={onAddMore}
+              className="mb-3 w-full py-3.5 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] text-[var(--text-primary)] font-semibold text-[14px] disabled:opacity-50"
+            >
+              Add More Exercise
+            </button>
+          )}
           <button 
             disabled={saving}
             onClick={() => onConfirm(title.trim() || workout.title, notes)}

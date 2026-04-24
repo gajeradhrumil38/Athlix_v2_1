@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Trophy, ArrowRight, Flame, Zap, AlertTriangle, Scale, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -6,7 +6,7 @@ import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format, isSameDay, is
 import { MuscleMap, MuscleData } from '../components/home/MuscleMap';
 import { WeeklyRing } from '../components/home/WeeklyRing';
 import { ThreeRingHero } from '../components/home/ThreeRingHero';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
 import { getBodyWeightLogs, getPersonalRecords, getWorkouts } from '../lib/supabaseData';
 import { parseDateAtStartOfDay } from '../lib/dates';
@@ -93,8 +93,10 @@ const BACK_VIEW_SLUGS = new Set([
 export const Home: React.FC = () => {
   const { user, profile } = useAuth();
   const displayUnit = profile?.unit_preference || 'kg';
+  const location = useLocation();
   const navigate = useNavigate();
   const { visibleWidgets, loading: layoutLoading } = useDashboardLayout();
+  const muscleMapRef = useRef<HTMLDivElement | null>(null);
   
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'Day' | 'Week' | 'Month'>('Day');
@@ -208,6 +210,27 @@ export const Home: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    const navState = location.state as { scrollTo?: string } | null;
+    if (navState?.scrollTo !== 'muscle_map') return;
+    if (loading || layoutLoading) return;
+
+    if (!visibleWidgets.includes('muscle_map')) {
+      navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+      return;
+    }
+
+    const target = muscleMapRef.current;
+    if (!target) return;
+
+    const timer = window.setTimeout(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+    }, 120);
+
+    return () => window.clearTimeout(timer);
+  }, [layoutLoading, loading, location.pathname, location.search, location.state, navigate, visibleWidgets]);
 
   // --- Computed Data ---
   const streak = useMemo(() => calculateStreak(allWorkouts), [allWorkouts]);
@@ -531,7 +554,7 @@ export const Home: React.FC = () => {
     ),
     quick_stats: <div key="quick_stats"><ThreeRingHero volume={volumeScore} recovery={recoveryScore} strain={strainScore} /></div>,
     muscle_map: (
-      <div key="muscle_map" className="flex flex-col h-full">
+      <div key="muscle_map" ref={muscleMapRef} className="flex flex-col h-full">
         <MuscleMap muscleData={muscleMapData} view={muscleView} onViewChange={setMuscleView} title={muscleMapTitle} />
       </div>
     ),
