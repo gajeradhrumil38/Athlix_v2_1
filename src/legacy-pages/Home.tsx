@@ -427,8 +427,9 @@ export const Home: React.FC = () => {
 
   const handleToday = useCallback(() => setCurrentDate(new Date()), []);
   const handleWorkoutEntry = useCallback(() => {
-    navigate('/log');
-  }, [navigate]);
+    const dateStr = format(currentDate, 'yyyy-MM-dd');
+    navigate(`/log?date=${encodeURIComponent(dateStr)}`);
+  }, [navigate, currentDate]);
 
   // --- Render Helpers ---
   if ((loading || layoutLoading) && workouts.length === 0) {

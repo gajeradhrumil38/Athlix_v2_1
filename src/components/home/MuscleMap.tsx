@@ -15,13 +15,45 @@ interface MuscleMapProps {
 
 const VALID_SLUGS = new Set<Slug>(Object.keys(MUSCLE_SLUG_LABELS) as MuscleSlug[])
 
-// Intensity scale 1-4 maps to these Athlix accent colors
-const INTENSITY_COLORS = [
-  '#1A3A52',   // 1 session  — very dim blue
-  '#0E6080',   // 2 sessions — medium
-  '#00A8CC',   // 3 sessions — bright teal
-  'var(--accent)',   // 4+ sessions — full accent glow
-]
+// Athlix design-system muscle group colors (hex, matches index.css tokens)
+const SLUG_HEX: Record<string, string> = {
+  chest:         '#F09595',  // --chest
+  biceps:        '#85B7EB',  // --biceps
+  triceps:       '#AFA9EC',  // --triceps
+  deltoids:      '#AFA9EC',  // --shoulders
+  abs:           '#ff7a59',  // --core
+  obliques:      '#ff7a59',  // --core
+  'upper-back':  '#5DCAA5',  // --back
+  'lower-back':  '#5DCAA5',  // --back
+  trapezius:     '#5DCAA5',  // --back
+  quadriceps:    '#EF9F27',  // --legs
+  hamstring:     '#EF9F27',  // --legs
+  calves:        '#EF9F27',  // --legs
+  gluteal:       '#EF9F27',  // --legs
+  adductors:     '#EF9F27',  // --legs
+  tibialis:      '#EF9F27',  // --legs
+  forearm:       '#85B7EB',  // --biceps
+  neck:          '#AFA9EC',  // --shoulders
+}
+const SLUG_HEX_FALLBACK = '#8692a4'
+
+// Opacity per intensity level (1-4)
+const INTENSITY_ALPHA = [0.45, 0.65, 0.85, 1.0]
+
+/** Convert 6-digit hex + alpha → rgba string safe for SVG fill */
+const hexAlpha = (hex: string, alpha: number): string => {
+  const r = parseInt(hex.slice(1, 3), 16)
+  const g = parseInt(hex.slice(3, 5), 16)
+  const b = parseInt(hex.slice(5, 7), 16)
+  return `rgba(${r},${g},${b},${alpha})`
+}
+
+/** Resolve fill color for a slug at a given intensity */
+const slugColor = (slug: string, intensity: number): string =>
+  hexAlpha(SLUG_HEX[slug] ?? SLUG_HEX_FALLBACK, INTENSITY_ALPHA[Math.min(intensity, 4) - 1] ?? 1)
+
+/** Base hex for a slug (full opacity, used for legend dots / tooltips) */
+const slugBaseHex = (slug: string): string => SLUG_HEX[slug] ?? SLUG_HEX_FALLBACK
 
 type MuscleEntry = MuscleData[string]
 
@@ -52,7 +84,7 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({
       const intensity = loadToIntensity(data.relativeLoad || data.load, maxLoad)
       if (intensity === 0) return
 
-      parts.push({ slug: slug as Slug, intensity })
+      parts.push({ slug: slug as Slug, intensity, color: slugColor(slug, intensity) })
     })
     return parts
   }, [muscleData])
@@ -123,7 +155,6 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({
           side={view}
           gender="male"
           scale={0.92}
-          colors={INTENSITY_COLORS}
           defaultFill="#1A2538"
           border="#1E2F42"
           defaultStroke="#1E2F42"
@@ -137,10 +168,7 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({
         {tooltip && (() => {
           const muscleSlug = tooltip.slug
           const d = muscleData[muscleSlug]
-          const maxLoad = Math.max(...(Object.values(muscleData) as MuscleEntry[]).map((entry) => entry.relativeLoad || entry.load || 0), 0)
-          const color = INTENSITY_COLORS[
-            Math.max(loadToIntensity(d?.relativeLoad || d?.load || 0, maxLoad), 1) - 1
-          ] || 'var(--accent)'
+          const color = slugBaseHex(muscleSlug)
           return (
             <div style={{
               position: 'absolute',
@@ -194,18 +222,7 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({
           trainedGroups.map(([group, d]) => (
             <div key={group}
               style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <div style={{
-                width: 7, height: 7, borderRadius: 2,
-                background: INTENSITY_COLORS[
-                  Math.max(
-                    loadToIntensity(
-                      d.relativeLoad || d.load,
-                      Math.max(...(Object.values(muscleData) as MuscleEntry[]).map((entry) => entry.relativeLoad || entry.load || 0), 0),
-                    ),
-                    1,
-                  ) - 1
-                ],
-              }}/>
+              <div style={{ width: 7, height: 7, borderRadius: 2, background: slugBaseHex(group) }}/>
               <span style={{ fontSize: 9, color: '#8892A4' }}>
                 {getMuscleSlugLabel(group)} {(d.relativeLoad || d.load).toFixed(1)}
               </span>
