@@ -1,6 +1,6 @@
 import { DEFAULT_LAYOUT } from '../config/widgets';
 import { getExerciseMuscleProfile } from './exerciseMuscles';
-import { convertWeight, type WeightUnit } from './units';
+import { convertWeight, isWeightUnit, type WeightUnit } from './units';
 import {
   OPENTRAINING_ASSETS_BY_ID,
   OPENTRAINING_EXERCISES,
@@ -43,6 +43,8 @@ export interface LocalWorkout {
   created_at: string;
 }
 
+export type ExerciseSetUnit = 'kg' | 'lbs' | 'km' | 'mi';
+
 export interface LocalExercise {
   id: string;
   workout_id: string;
@@ -51,7 +53,7 @@ export interface LocalExercise {
   sets: number;
   reps: number;
   weight: number;
-  unit: 'kg' | 'lbs';
+  unit: ExerciseSetUnit;
   order_index: number;
   exercise_db_id?: string | null;
 }
@@ -572,7 +574,8 @@ export const updateProfile = async (userId: string, updates: Partial<LocalProfil
 
     db.exercises = db.exercises.map((exercise) => {
       if (!userWorkoutIds.has(exercise.workout_id)) return exercise;
-      const sourceUnit = (exercise.unit || existingProfile.unit_preference) as WeightUnit;
+      const sourceUnit = exercise.unit || existingProfile.unit_preference;
+      if (!isWeightUnit(sourceUnit)) return exercise;
       return {
         ...exercise,
         weight: convertWeight(Number(exercise.weight || 0), sourceUnit, targetUnit),
@@ -700,7 +703,7 @@ export const saveWorkout = async (
       name: string;
       muscle_group?: string;
       exercise_db_id?: string | null;
-      completed_sets: Array<{ reps: number; weight: number; unit?: 'kg' | 'lbs' }>;
+      completed_sets: Array<{ reps: number; weight: number; unit?: ExerciseSetUnit }>;
     }>;
   },
 ) => {

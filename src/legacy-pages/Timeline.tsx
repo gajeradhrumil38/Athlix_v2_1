@@ -9,16 +9,17 @@ import { ExerciseImage } from '../components/shared/ExerciseImage';
 import { deleteWorkout, getWorkouts } from '../lib/supabaseData';
 import { parseDateAtStartOfDay } from '../lib/dates';
 import { useAuth as useAuthCtx } from '../contexts/AuthContext';
-import { convertWeight, type WeightUnit } from '../lib/units';
+import { convertWeight, isWeightUnit, type WeightUnit } from '../lib/units';
 import { muscleColor } from '../lib/muscleColors';
 
 /* ── Volume helper (unit-aware) ──────────────────────────── */
 const calcVolume = (exercises: any[], displayUnit: WeightUnit): number => {
   if (!exercises?.length) return 0;
   return exercises.reduce((total, ex) => {
+    if (ex.unit && !isWeightUnit(ex.unit)) return total;
     const w = convertWeight(
       Number(ex.weight || 0),
-      (ex.unit || displayUnit) as WeightUnit,
+      (isWeightUnit(ex.unit) ? ex.unit : displayUnit),
       displayUnit,
       0.1,
     );
@@ -153,12 +154,16 @@ const TimelineItem: React.FC<{
             )}
             <div className="mt-3 space-y-2">
               {sortedExercises.map((ex: any) => {
-                const w = convertWeight(
-                  Number(ex.weight || 0),
-                  (ex.unit || displayUnit) as WeightUnit,
-                  displayUnit,
-                  0.1,
-                );
+                const isWeightBased = !ex.unit || isWeightUnit(ex.unit);
+                const w = isWeightBased
+                  ? convertWeight(
+                      Number(ex.weight || 0),
+                      isWeightUnit(ex.unit) ? ex.unit : displayUnit,
+                      displayUnit,
+                      0.1,
+                    )
+                  : Number(ex.weight || 0);
+                const unitLabel = isWeightBased ? displayUnit : String(ex.unit || '');
                 return (
                   <div key={ex.id} className="flex items-center justify-between gap-3 py-1">
                     <div className="flex items-center gap-2.5 min-w-0">
@@ -170,7 +175,7 @@ const TimelineItem: React.FC<{
                       </span>
                     </div>
                     <span className="text-[12px] text-[var(--text-secondary)] shrink-0 font-mono">
-                      {ex.sets}×{ex.reps} @ {w}{displayUnit}
+                      {ex.sets}×{ex.reps} @ {w}{unitLabel}
                     </span>
                   </div>
                 );

@@ -1,5 +1,8 @@
 export type WeightUnit = 'kg' | 'lbs';
 
+export const isWeightUnit = (value: unknown): value is WeightUnit =>
+  value === 'kg' || value === 'lbs';
+
 const KG_TO_LBS = 2.2046226218;
 
 const roundToStep = (value: number, step: number) => {

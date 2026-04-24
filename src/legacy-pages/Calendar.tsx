@@ -32,7 +32,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { deleteWorkout, getWorkouts } from '../lib/supabaseData';
-import { convertWeight, type WeightUnit } from '../lib/units';
+import { convertWeight, isWeightUnit, type WeightUnit } from '../lib/units';
 import { muscleColor } from '../lib/muscleColors';
 
 const MUSCLE_FILTERS = [
@@ -82,14 +82,16 @@ const getWorkoutVolume = (workout: any, targetUnit: WeightUnit = 'kg') =>
   (workout.exercises || []).reduce(
     (sum: number, exercise: any) =>
       sum +
-      convertWeight(
-        Number(exercise.weight || 0),
-        (exercise.unit || targetUnit) as WeightUnit,
-        targetUnit,
-        0.1,
-      ) *
-        Number(exercise.reps || 0) *
-        Number(exercise.sets || 0),
+      (exercise.unit && !isWeightUnit(exercise.unit)
+        ? 0
+        : convertWeight(
+            Number(exercise.weight || 0),
+            isWeightUnit(exercise.unit) ? exercise.unit : targetUnit,
+            targetUnit,
+            0.1,
+          ) *
+          Number(exercise.reps || 0) *
+          Number(exercise.sets || 0)),
     0,
   );
 

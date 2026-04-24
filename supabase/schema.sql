@@ -39,7 +39,7 @@ CREATE TABLE public.exercises (
   sets INTEGER NOT NULL,
   reps INTEGER NOT NULL,
   weight FLOAT NOT NULL,
-  unit TEXT DEFAULT 'kg' CHECK (unit IN ('kg', 'lbs')),
+  unit TEXT DEFAULT 'kg' CHECK (unit IN ('kg', 'lbs', 'km', 'mi')),
   order_index INTEGER NOT NULL,
   exercise_db_id TEXT
 );
@@ -510,6 +510,7 @@ DECLARE
   v_exercise_db_id TEXT;
   v_reps INTEGER;
   v_weight DOUBLE PRECISION;
+  v_unit TEXT;
 BEGIN
   IF v_user_id IS NULL THEN
     RAISE EXCEPTION 'Authentication required';
@@ -567,8 +568,13 @@ BEGIN
     LOOP
       v_reps := GREATEST(COALESCE((v_set->>'reps')::INTEGER, 0), 0);
       v_weight := GREATEST(COALESCE((v_set->>'weight')::DOUBLE PRECISION, 0), 0);
+      v_unit := lower(COALESCE(NULLIF(v_set->>'unit', ''), 'kg'));
 
-      IF v_reps <= 0 THEN
+      IF v_unit NOT IN ('kg', 'lbs', 'km', 'mi') THEN
+        v_unit := 'kg';
+      END IF;
+
+      IF v_reps <= 0 AND v_weight <= 0 THEN
         CONTINUE;
       END IF;
 
@@ -590,7 +596,7 @@ BEGIN
         1,
         v_reps,
         v_weight,
-        COALESCE(NULLIF(v_set->>'unit', ''), 'kg'),
+        v_unit,
         v_order_index,
         v_exercise_db_id
       );

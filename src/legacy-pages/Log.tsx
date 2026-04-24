@@ -248,6 +248,24 @@ export const Log: React.FC = () => {
           if (cancelled) return;
           const saved = results[0] as (typeof results[0] & { exercises?: LocalExercise[] }) | undefined;
           const savedRows = saved?.exercises || [];
+          const savedDistanceRow = [...savedRows]
+            .sort((a, b) => a.order_index - b.order_index)
+            .find((ex) => {
+              const type = resolveExerciseInputType(ex.name);
+              return (
+                (type === 'distance_time' || type === 'distance_only') &&
+                (ex.unit === 'km' || ex.unit === 'mi')
+              );
+            });
+
+          if (savedDistanceRow?.unit === 'km' || savedDistanceRow?.unit === 'mi') {
+            setDistanceUnit(savedDistanceRow.unit);
+            try {
+              localStorage.setItem('athlix_distance_unit', savedDistanceRow.unit);
+            } catch {
+              // ignore storage failures
+            }
+          }
 
           // Group individual set-rows (one LocalExercise = one set) back into ExerciseEntry[]
           const map = new Map<string, ExerciseEntry>();
@@ -369,34 +387,26 @@ export const Log: React.FC = () => {
         date: formatLocalDate(startDate),
         duration_minutes: Math.max(1, Math.round(finalElapsedSeconds / 60)),
         notes: notes || null,
-        exercises: completedExercises.map(({ exercise, completedSets, exerciseIndex }) => ({
-          name: exercise.name,
-          muscle_group: exercise.muscleGroup,
-          exercise_db_id: exercise.exercise_db_id || null,
-          order_index: exerciseIndex,
-          completed_sets: completedSets.map((set) => {
-            const inputType = resolveExerciseInputType(exercise.name);
-            const rawReps = Math.max(0, Math.round(Number(set.reps || 0)));
-            const rawWeight = Math.max(0, Number(set.weight || 0));
-            const needsRepFloor =
-              inputType === 'distance_time' ||
-              inputType === 'time_only' ||
-              inputType === 'distance_only' ||
-              inputType === 'calories_time';
+          exercises: completedExercises.map(({ exercise, completedSets, exerciseIndex }) => ({
+            name: exercise.name,
+            muscle_group: exercise.muscleGroup,
+            exercise_db_id: exercise.exercise_db_id || null,
+            order_index: exerciseIndex,
+            completed_sets: completedSets.map((set) => {
+              const inputType = resolveExerciseInputType(exercise.name);
+              const rawReps = Math.max(0, Math.round(Number(set.reps || 0)));
+              const rawWeight = Math.max(0, Number(set.weight || 0));
+              const isDistanceType =
+                inputType === 'distance_time' || inputType === 'distance_only';
 
-            // DB function currently skips rows where reps <= 0.
-            // For cardio/time-style exercises, we normalize reps to at least 1
-            // when the primary value is logged so those sets are persisted.
-            const normalizedReps = needsRepFloor && rawWeight > 0 && rawReps === 0 ? 1 : rawReps;
-
-            return {
-              reps: normalizedReps,
-              weight: rawWeight,
-              unit: weightUnit,
-            };
-          }),
-        })),
-      });
+              return {
+                reps: rawReps,
+                weight: rawWeight,
+                unit: isDistanceType ? distanceUnit : weightUnit,
+              };
+            }),
+          })),
+        });
 
       clearDraft();
       setShowFinish(false);

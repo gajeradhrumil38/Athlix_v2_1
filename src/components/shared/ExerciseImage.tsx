@@ -4,6 +4,7 @@ import {
   OPENTRAINING_ID_BY_NAME,
   normalizeExerciseName,
 } from '../../data/opentrainingCatalog'
+import { ENABLE_EXERCISE_SVG } from '../../config/media'
 
 interface ExerciseImageProps {
   exerciseId: string
@@ -57,14 +58,16 @@ export const ExerciseImage: React.FC<ExerciseImageProps> = ({
   const remoteUrl = !openTrainingAsset && exerciseId
     ? `${BASE}${exerciseId}/${frameIndex}.jpg`
     : ''
-  const imgUrl = svgUrl || remoteUrl
+  const imgUrl = ENABLE_EXERCISE_SVG
+    ? (svgUrl || rasterUrl || remoteUrl)
+    : (rasterUrl || remoteUrl)
   const color = MUSCLE_COLORS[muscleGroup] || MUSCLE_COLORS.Other
   const { container, fontSize } = SIZE_MAP[size]
 
   useEffect(() => {
     setLoaded(false)
     setError(false)
-  }, [exerciseId, exerciseName, frameIndex, svgUrl, remoteUrl])
+  }, [exerciseId, exerciseName, frameIndex, svgUrl, rasterUrl, remoteUrl])
 
   const handleTap = () => {
     if (showToggle) {

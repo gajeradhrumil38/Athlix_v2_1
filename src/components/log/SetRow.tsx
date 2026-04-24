@@ -28,14 +28,14 @@ const ValueBox: React.FC<{
       onClick={onTap}
       className={`relative flex h-[82px] w-full flex-col items-center justify-center gap-[3px] overflow-hidden rounded-2xl border text-center transition-all active:scale-[0.97] ${
         isDone
-          ? 'border-white/10 bg-white/[0.04]'
-          : 'border-white/[0.08] bg-[rgba(12,20,34,0.72)]'
+          ? 'border-[var(--accent)]/22 bg-[var(--accent)]/8'
+          : 'border-[var(--border)] bg-[var(--bg-elevated)]'
       }`}
     >
       {/* top shimmer line */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/[0.12] to-transparent" />
-      <div className="tabular-nums text-[36px] leading-none font-black text-[#EAF1F8]">{field.displayValue}</div>
-      <div className="text-[10px] font-bold tracking-[0.16em] uppercase text-[#506070]">{field.label}</div>
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+      <div className="tabular-nums text-[36px] leading-none font-black text-[var(--text-primary)]">{field.displayValue}</div>
+      <div className="text-[10px] font-bold tracking-[0.16em] uppercase text-[var(--text-muted)]">{field.label}</div>
     </button>
   );
 };
@@ -52,14 +52,14 @@ export const SetRow: React.FC<SetRowProps> = ({
     <div
       className={`relative overflow-hidden rounded-2xl border transition-all duration-200 ${
         set.done
-          ? 'border-[#2E4E68]/60 bg-[rgba(22,42,62,0.55)]'
-          : 'border-white/[0.07] bg-[rgba(13,20,33,0.80)]'
+          ? 'border-[var(--accent)]/22 bg-[var(--accent)]/6'
+          : 'border-[var(--border)] bg-[var(--bg-surface)]'
       }`}
     >
       {/* left accent bar */}
       <div
         className={`absolute left-0 top-0 bottom-0 w-[3px] transition-colors duration-200 ${
-          set.done ? 'bg-[#3A7CA8]' : 'bg-[#1E3448]'
+          set.done ? 'bg-[var(--accent)]' : 'bg-[var(--border)]'
         }`}
       />
 
@@ -69,14 +69,14 @@ export const SetRow: React.FC<SetRowProps> = ({
           <div
             className={`rounded-md px-2 py-[3px] text-[10px] font-bold tracking-[0.14em] uppercase transition-colors duration-200 ${
               set.done
-                ? 'bg-[#1E3D55] text-[#6AADD4]'
-                : 'bg-white/[0.05] text-[#607585]'
+                ? 'border border-[var(--accent)]/25 bg-[var(--accent-dim)] text-[var(--accent)]'
+                : 'bg-[var(--bg-elevated)] text-[var(--text-secondary)]'
             }`}
           >
             Set {index}
           </div>
           {set.done && (
-            <span className="text-[10px] font-semibold tracking-[0.08em] text-[#4A7FA0] uppercase">
+            <span className="text-[10px] font-semibold tracking-[0.08em] text-[var(--accent)]/90 uppercase">
               Done
             </span>
           )}
@@ -87,8 +87,8 @@ export const SetRow: React.FC<SetRowProps> = ({
           aria-label={set.done ? `Mark set ${index} incomplete` : `Mark set ${index} complete`}
           className={`h-[46px] w-[46px] rounded-full border flex items-center justify-center transition-all duration-200 active:scale-95 ${
             set.done
-              ? 'border-[#3A7CA8]/70 bg-[#1E3D55] text-[#6AADD4]'
-              : 'border-white/[0.12] bg-white/[0.04] text-white/30'
+              ? 'border-[var(--accent)]/40 bg-[var(--accent-dim)] text-[var(--accent)]'
+              : 'border-[var(--border)] bg-[var(--bg-elevated)] text-[var(--text-muted)]'
           }`}
         >
           <Check className="w-5 h-5" />

@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { Search, X, Plus, History, LayoutGrid, ChevronLeft } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getExerciseLibraryByGroup, getRecentExerciseOptions, searchExerciseLibrary } from '../../lib/supabaseData';
-import { ExerciseImage } from '../shared/ExerciseImage';
 
 interface Exercise {
   id: string;
@@ -38,6 +37,26 @@ const MUSCLE_GROUPS = [
 const MUSCLE_CSS_VAR: Record<string, string> = Object.fromEntries(
   MUSCLE_GROUPS.map((g) => [g.name, g.cssVar]),
 );
+
+const InitialBadge: React.FC<{ label: string; colorVar?: string; size?: 'sm' | 'md' }> = ({
+  label,
+  colorVar = '--text-secondary',
+  size = 'sm',
+}) => {
+  const isSmall = size === 'sm';
+  return (
+    <div
+      className={`${isSmall ? 'h-10 w-10 rounded-[12px] text-[15px]' : 'h-11 w-11 rounded-[13px] text-[16px]'} flex items-center justify-center border font-bold uppercase shrink-0`}
+      style={{
+        background: `color-mix(in srgb, var(${colorVar}) 12%, var(--bg-elevated))`,
+        borderColor: `color-mix(in srgb, var(${colorVar}) 26%, transparent)`,
+        color: `var(${colorVar})`,
+      }}
+    >
+      {label.charAt(0)}
+    </div>
+  );
+};
 
 export const ExercisePicker: React.FC<ExercisePickerProps> = ({ onSelect, onClose, recentExercises }) => {
   const { user } = useAuth();
@@ -261,17 +280,7 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({ onSelect, onClos
                     border: '1px solid var(--border)',
                   }}
                 >
-                  {/* Accent glow blob */}
-                  <div
-                    className="absolute -bottom-3 left-1/2 -translate-x-1/2 w-16 h-10 rounded-full blur-xl opacity-30"
-                    style={{ background: `var(${muscle.cssVar})` }}
-                  />
-                  <ExerciseImage
-                    exerciseId={muscle.previewExerciseId}
-                    exerciseName={muscle.name}
-                    muscleGroup={muscle.name}
-                    size="sm"
-                  />
+                  <InitialBadge label={muscle.name} colorVar={muscle.cssVar} size="md" />
                   <span
                     className="relative z-10 text-[11px] font-bold uppercase tracking-[0.1em]"
                     style={{ color: `var(${muscle.cssVar})` }}
@@ -355,10 +364,9 @@ const ExerciseRow: React.FC<{ exercise: Exercise; onSelect: (exercise: Exercise)
       }}
     >
       {/* Exercise image / avatar */}
-      <ExerciseImage
-        exerciseId={exercise.exercise_db_id || ''}
-        exerciseName={exercise.name}
-        muscleGroup={exercise.muscleGroup}
+      <InitialBadge
+        label={exercise.name}
+        colorVar={MUSCLE_CSS_VAR[exercise.muscleGroup] || '--text-secondary'}
         size="sm"
       />
 

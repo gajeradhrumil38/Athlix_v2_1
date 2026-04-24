@@ -31,7 +31,7 @@ import {
   logBodyWeight,
 } from '../lib/supabaseData';
 import { parseDateAtStartOfDay } from '../lib/dates';
-import { convertWeight, type WeightUnit } from '../lib/units';
+import { convertWeight, isWeightUnit, type WeightUnit } from '../lib/units';
 
 const HEART_RATE_ZONES = [
   { id: 'z1', name: 'Recovery', range: '50-94',   color: 'var(--back)'   },
@@ -781,13 +781,19 @@ export const Progress: React.FC = () => {
         setExercises(
           exerciseData.map((exercise: any) => ({
             ...exercise,
-            weight: convertWeight(
-              Number(exercise.weight || 0),
-              (exercise.unit || targetUnit) as WeightUnit,
-              targetUnit,
-              0.1,
-            ),
-            unit: targetUnit,
+            weight:
+              !exercise.unit || isWeightUnit(exercise.unit)
+                ? convertWeight(
+                    Number(exercise.weight || 0),
+                    isWeightUnit(exercise.unit) ? exercise.unit : targetUnit,
+                    targetUnit,
+                    0.1,
+                  )
+                : Number(exercise.weight || 0),
+            unit:
+              !exercise.unit || isWeightUnit(exercise.unit)
+                ? targetUnit
+                : exercise.unit,
           })),
         );
         // Set default selected exercise for overload

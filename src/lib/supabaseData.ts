@@ -8,12 +8,13 @@ import {
 import { getExerciseMuscleProfile } from './exerciseMuscles';
 import * as localData from './localData';
 import { hasSupabaseConfig, supabase } from './supabase';
-import { convertWeight, type WeightUnit } from './units';
+import { convertWeight, isWeightUnit, type WeightUnit } from './units';
 
 export type LocalUser = localData.LocalUser;
 export type LocalProfile = localData.LocalProfile;
 export type LocalWorkout = localData.LocalWorkout;
 export type LocalExercise = localData.LocalExercise;
+export type ExerciseSetUnit = localData.ExerciseSetUnit;
 export type LocalTemplate = localData.LocalTemplate;
 export type LocalTemplateExercise = localData.LocalTemplateExercise;
 export type LocalBodyWeightLog = localData.LocalBodyWeightLog;
@@ -531,14 +532,17 @@ const convertAllUserDataUnits = async (
         .in('workout_id', Array.from(validWorkoutIds));
       if (exercisesError) throw normalizeError(exercisesError, 'Failed to load exercises for conversion.');
 
-      const nextExercises = (exercises || []).map((exercise: any) => {
-        const rowUnit = (exercise.unit || sourceUnit) as WeightUnit;
-        return {
-          id: exercise.id,
-          weight: convertWeight(Number(exercise.weight || 0), rowUnit, targetUnit),
-          unit: targetUnit,
-        };
-      });
+      const nextExercises = (exercises || [])
+        .map((exercise: any) => {
+          const rowUnit = exercise.unit || sourceUnit;
+          if (!isWeightUnit(rowUnit)) return null;
+          return {
+            id: exercise.id,
+            weight: convertWeight(Number(exercise.weight || 0), rowUnit, targetUnit),
+            unit: targetUnit,
+          };
+        })
+        .filter(Boolean) as Array<{ id: string; weight: number; unit: WeightUnit }>;
 
       for (const row of chunk(nextExercises, 250)) {
         for (const item of row) {
@@ -1175,7 +1179,7 @@ export const saveWorkout = async (
       name: string;
       muscle_group?: string;
       exercise_db_id?: string | null;
-      completed_sets: Array<{ reps: number; weight: number; unit?: 'kg' | 'lbs' }>;
+      completed_sets: Array<{ reps: number; weight: number; unit?: ExerciseSetUnit }>;
     }>;
   },
 ) => {

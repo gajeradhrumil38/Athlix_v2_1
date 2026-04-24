@@ -11,7 +11,7 @@ import { useDashboardLayout } from '../hooks/useDashboardLayout';
 import { getBodyWeightLogs, getPersonalRecords, getWorkouts } from '../lib/supabaseData';
 import { parseDateAtStartOfDay } from '../lib/dates';
 import { getExerciseMuscleProfile, getMuscleSlugLabel, PRIMARY_LOAD_WEIGHT, SECONDARY_LOAD_WEIGHT } from '../lib/exerciseMuscles';
-import { convertWeight, type WeightUnit } from '../lib/units';
+import { convertWeight, isWeightUnit, type WeightUnit } from '../lib/units';
 
 // --- Utility Functions ---
 const calculateStreak = (workouts: { date: string }[]) => {
@@ -118,9 +118,10 @@ export const Home: React.FC = () => {
   const targetWeightUnit = displayUnit as WeightUnit;
 
   const toDisplayExerciseWeight = useCallback((exercise: any) => {
+    if (exercise.unit && !isWeightUnit(exercise.unit)) return 0;
     return convertWeight(
       Number(exercise.weight || 0),
-      (exercise.unit || targetWeightUnit) as WeightUnit,
+      isWeightUnit(exercise.unit) ? exercise.unit : targetWeightUnit,
       targetWeightUnit,
       0.1,
     );
