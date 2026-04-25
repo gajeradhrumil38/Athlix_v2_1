@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Search, X, Plus, History, LayoutGrid, ChevronLeft } from 'lucide-react';
+import { Search, X, Plus, History, LayoutGrid, ChevronLeft, Layers } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { getExerciseLibraryByGroup, getRecentExerciseOptions, searchExerciseLibrary } from '../../lib/supabaseData';
+import { getExerciseLibraryByGroup, getRecentExerciseOptions, getTemplates, searchExerciseLibrary } from '../../lib/supabaseData';
 
 interface Exercise {
   id: string;
@@ -16,10 +16,17 @@ interface Exercise {
   };
 }
 
+interface Template {
+  id: string;
+  title: string;
+  template_exercises: Array<{ name: string; muscle_group?: string | null; exercise_db_id?: string | null }>;
+}
+
 interface ExercisePickerProps {
   onSelect: (exercise: Exercise) => void;
   onClose: () => void;
   recentExercises: Exercise[];
+  onLoadTemplate?: (exercises: Exercise[]) => void;
 }
 
 const MUSCLE_GROUPS = [
@@ -58,13 +65,15 @@ const InitialBadge: React.FC<{ label: string; colorVar?: string; size?: 'sm' | '
   );
 };
 
-export const ExercisePicker: React.FC<ExercisePickerProps> = ({ onSelect, onClose, recentExercises }) => {
+export const ExercisePicker: React.FC<ExercisePickerProps> = ({ onSelect, onClose, recentExercises, onLoadTemplate }) => {
   const { user } = useAuth();
   const [search, setSearch] = useState('');
-  const [activeTab, setActiveTab] = useState<'recent' | 'muscle' | 'search'>('recent');
+  const [activeTab, setActiveTab] = useState<'recent' | 'muscle' | 'templates' | 'search'>('recent');
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
   const [libraryExercises, setLibraryExercises] = useState<Exercise[]>([]);
   const [recentLibraryExercises, setRecentLibraryExercises] = useState<Exercise[]>([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
 
   useEffect(() => {
     const loadRecent = async () => {
@@ -124,6 +133,15 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({ onSelect, onClos
 
     void loadList();
   }, [user, search, selectedMuscle]);
+
+  useEffect(() => {
+    if (activeTab !== 'templates' || !user || templates.length > 0) return;
+    setTemplatesLoading(true);
+    getTemplates(user.id)
+      .then((data) => setTemplates((data as Template[]) || []))
+      .catch(() => setTemplates([]))
+      .finally(() => setTemplatesLoading(false));
+  }, [activeTab, user, templates.length]);
 
   const filteredExercises = useMemo(() => libraryExercises, [libraryExercises]);
   const isNestedView = Boolean(search.trim()) || Boolean(selectedMuscle);
@@ -218,15 +236,16 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({ onSelect, onClos
             style={{ background: 'var(--bg-elevated)' }}
           >
             {[
-              { id: 'recent', label: 'Recent',  Icon: History    },
-              { id: 'muscle', label: 'Muscle',  Icon: LayoutGrid },
+              { id: 'recent',    label: 'Recent',    Icon: History    },
+              { id: 'muscle',    label: 'Muscle',    Icon: LayoutGrid },
+              { id: 'templates', label: 'Templates', Icon: Layers     },
             ].map(({ id, label, Icon }) => {
               const isActive = activeTab === id && !search;
               return (
                 <button
                   key={id}
                   onClick={() => {
-                    setActiveTab(id as 'recent' | 'muscle');
+                    setActiveTab(id as 'recent' | 'muscle' | 'templates');
                     setSearch('');
                     setSelectedMuscle(null);
                   }}
@@ -339,6 +358,73 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({ onSelect, onClos
                   No results for "{search}"
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Templates tab */}
+          {activeTab === 'templates' && !search && (
+            <div className="flex flex-col gap-2">
+              {templatesLoading && (
+                <div className="py-12 text-center text-[13px]" style={{ color: 'var(--text-muted)' }}>
+                  Loading templates…
+                </div>
+              )}
+              {!templatesLoading && templates.length === 0 && (
+                <div className="flex flex-col items-center justify-center gap-2 py-16 text-center" style={{ color: 'var(--text-muted)' }}>
+                  <Layers className="w-8 h-8 opacity-40" />
+                  <p className="text-[13px] font-medium">No templates yet</p>
+                  <p className="text-[11px] opacity-60">Create templates in the Templates tab to load them here</p>
+                </div>
+              )}
+              {!templatesLoading && templates.map((tmpl) => {
+                const previewNames = tmpl.template_exercises.slice(0, 3).map((e) => e.name);
+                const extra = tmpl.template_exercises.length - previewNames.length;
+                return (
+                  <div
+                    key={tmpl.id}
+                    className="rounded-xl px-3.5 py-3 flex items-center gap-3"
+                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+                  >
+                    {/* Icon */}
+                    <div
+                      className="h-9 w-9 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ background: 'rgba(200,255,0,0.08)', border: '1px solid rgba(200,255,0,0.14)' }}
+                    >
+                      <Layers className="w-4 h-4" style={{ color: 'var(--accent)' }} />
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[13px] font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                        {tmpl.title}
+                      </div>
+                      <div className="mt-0.5 text-[11px] truncate" style={{ color: 'var(--text-muted)' }}>
+                        {previewNames.join(' · ')}{extra > 0 ? ` +${extra}` : ''}
+                      </div>
+                    </div>
+
+                    {/* Load button */}
+                    {onLoadTemplate && (
+                      <button
+                        onClick={() => {
+                          const exercises: Exercise[] = tmpl.template_exercises.map((te, i) => ({
+                            id: `${te.name}-${i}`,
+                            name: te.name,
+                            muscleGroup: te.muscle_group || 'Other',
+                            exercise_db_id: te.exercise_db_id || undefined,
+                          }));
+                          onLoadTemplate(exercises);
+                          onClose();
+                        }}
+                        className="shrink-0 h-7 rounded-lg px-3 text-[11px] font-bold transition-opacity active:opacity-70"
+                        style={{ background: 'rgba(200,255,0,0.12)', color: 'var(--accent)', border: '1px solid rgba(200,255,0,0.18)' }}
+                      >
+                        Load
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>

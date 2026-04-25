@@ -688,6 +688,9 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
             onSelect={(exercise) => { void handleAddExercise(exercise); }}
             onClose={() => setShowExercisePicker(false)}
             recentExercises={[]}
+            onLoadTemplate={(exercises) => {
+              exercises.forEach((ex) => { void handleAddExercise(ex); });
+            }}
           />
         )}
       </AnimatePresence>
