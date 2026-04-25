@@ -355,7 +355,7 @@ export const Calendar: React.FC = () => {
     }
   };
 
-  const renderWorkoutCard = (workout: any, compact = false) => {
+  const renderWorkoutCard = (workout: any, _compact = false) => {
     const volume = getWorkoutVolume(workout, displayUnit as WeightUnit);
     const exerciseCount = getWorkoutExerciseCount(workout);
     const accent = getWorkoutAccent(workout);
@@ -374,111 +374,106 @@ export const Calendar: React.FC = () => {
     return (
       <div
         key={workout.id}
-        className={`group relative overflow-hidden rounded-2xl border border-white/8 bg-[linear-gradient(180deg,#151F2D_0%,#111923_100%)] ${
-          compact ? 'p-4' : 'p-5'
-        }`}
+        className="relative overflow-hidden rounded-2xl border border-white/[0.07]"
+        style={{ background: 'var(--bg-surface)' }}
       >
+        {/* Accent bar */}
         <div
-          className="absolute inset-y-0 left-0 w-1.5"
+          className="absolute inset-y-0 left-0 w-[3px] rounded-l-2xl"
           style={{ backgroundColor: accent }}
         />
-        <div className="ml-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-1">
-                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: accent }} />
-                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-white">
-                  {mainMuscle || 'Workout'}
-                </span>
-              </div>
+
+        <div className="pl-4 pr-3 py-3.5">
+          {/* Top row: muscle tag + actions */}
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <div
+              className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em]"
+              style={{
+                background: `color-mix(in srgb, ${accent} 14%, transparent)`,
+                color: accent,
+                border: `1px solid color-mix(in srgb, ${accent} 24%, transparent)`,
+              }}
+            >
+              <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accent }} />
+              {mainMuscle || 'Workout'}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={() => handleDeleteWorkout(workout.id, workout.title)}
-                className="rounded-full p-2 text-red-400 transition-colors hover:bg-red-500/10"
-                aria-label={`Delete ${workout.title}`}
+                className="w-7 h-7 flex items-center justify-center rounded-lg transition-colors"
+                style={{ background: 'rgba(255,59,48,0.08)', color: 'rgba(255,80,65,0.85)' }}
+                aria-label="Delete workout"
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-3.5 w-3.5" />
               </button>
               <Link
                 to="/timeline"
-                className="rounded-full border border-[var(--accent)]/25 bg-[var(--accent)]/10 px-3 py-1.5 text-[11px] font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/15"
+                className="inline-flex h-7 items-center rounded-lg px-3 text-[11px] font-semibold transition-colors"
+                style={{
+                  background: 'rgba(200,255,0,0.1)',
+                  color: 'var(--accent)',
+                  border: '1px solid rgba(200,255,0,0.15)',
+                }}
               >
                 Details
               </Link>
             </div>
           </div>
 
-          <div
-            className="mt-1 rounded-[20px] border px-4 py-3"
-            style={{
-              borderColor: `${accent}2f`,
-              background: `linear-gradient(180deg, ${accent}14 0%, rgba(255,255,255,0.02) 100%)`,
-              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.02), 0 12px 30px ${accent}10`,
-            }}
-          >
-            <div className="min-w-0">
-              <div className="min-w-0">
-                <h4 className="truncate text-[22px] font-bold leading-tight text-white">{primaryExercise}</h4>
-                {customSessionLabel && (
-                  <div className="mt-1 text-[11px] font-medium text-[#9FB0C3]">{customSessionLabel}</div>
-                )}
-              </div>
-            </div>
-            <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-[var(--text-secondary)]">
-              <span className="inline-flex items-center gap-1">
-                <Clock3 className="h-3.5 w-3.5 text-[var(--accent)]" />
-                {workout.duration_minutes || 0} min
-              </span>
-              <span className="h-1 w-1 rounded-full bg-white/20" />
-              <span>{exerciseCount} exercises</span>
-              <span className="h-1 w-1 rounded-full bg-white/20" />
-              <span>{volume.toLocaleString()} {displayUnit}</span>
-            </div>
-          </div>
-        </div>
+          {/* Exercise name */}
+          <p className="text-[18px] font-bold text-white leading-snug truncate">
+            {primaryExercise}
+          </p>
+          {customSessionLabel && (
+            <p className="mt-0.5 text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
+              {customSessionLabel}
+            </p>
+          )}
 
-        {secondaryExercises.length > 0 && (
-          <div className="ml-3 mt-4">
-            <div className="mb-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#7E8DA0]">
-              Also Logged
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-              {secondaryExercises.slice(0, 6).map((exerciseName) => (
+          {/* Stats row */}
+          <div className="mt-2 flex items-center gap-2.5 text-[12px]" style={{ color: 'var(--text-secondary)' }}>
+            <span className="inline-flex items-center gap-1">
+              <Clock3 className="h-3.5 w-3.5" style={{ color: accent }} />
+              {workout.duration_minutes || 0} min
+            </span>
+            <span className="h-1 w-1 rounded-full bg-white/20" />
+            <span>{exerciseCount} exercise{exerciseCount !== 1 ? 's' : ''}</span>
+            {volume > 0 && (
+              <>
+                <span className="h-1 w-1 rounded-full bg-white/20" />
+                <span>{Math.round(volume).toLocaleString()} {displayUnit}</span>
+              </>
+            )}
+          </div>
+
+          {/* Secondary exercises */}
+          {secondaryExercises.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {secondaryExercises.slice(0, 5).map((name) => (
                 <span
-                  key={exerciseName}
-                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 text-[11px] font-medium text-[var(--text-secondary)]"
+                  key={name}
+                  className="inline-flex items-center rounded-lg px-2 py-0.5 text-[11px] font-medium"
+                  style={{
+                    background: 'rgba(255,255,255,0.04)',
+                    color: 'var(--text-muted)',
+                    border: '1px solid rgba(255,255,255,0.06)',
+                  }}
                 >
-                  <span className="h-1.5 w-1.5 rounded-full bg-white/65" />
-                  {exerciseName}
+                  {name}
                 </span>
               ))}
-              {secondaryExercises.length > 6 && (
-                <span className="inline-flex shrink-0 items-center rounded-full border border-white/8 bg-white/[0.03] px-3 py-1.5 text-[11px] font-medium text-[#B7C4D2]">
-                  +{secondaryExercises.length - 6} more
+              {secondaryExercises.length > 5 && (
+                <span
+                  className="inline-flex items-center rounded-lg px-2 py-0.5 text-[11px] font-medium"
+                  style={{ color: 'var(--text-muted)' }}
+                >
+                  +{secondaryExercises.length - 5}
                 </span>
               )}
             </div>
-          </div>
-        )}
-
-        {Array.isArray(workout.muscle_groups) && workout.muscle_groups.length > 1 && (
-          <div className="ml-3 mt-3 flex flex-wrap gap-2">
-            {workout.muscle_groups.map((muscle: string) => (
-              <span
-                key={muscle}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.03] px-2.5 py-1 text-[10px] font-medium text-[var(--text-secondary)]"
-              >
-                <span
-                  className="h-1.5 w-1.5 rounded-full"
-                  style={{ backgroundColor: muscleColor(muscle) }}
-                />
-                {muscle}
-              </span>
-            ))}
-          </div>
-        )}
+          )}
+        </div>
       </div>
     );
   };
@@ -630,31 +625,38 @@ export const Calendar: React.FC = () => {
           exit={{ opacity: 0, y: -10 }}
           className="rounded-[24px] border border-white/6 bg-[linear-gradient(180deg,#171717_0%,#121212_100%)] p-5"
         >
-          <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[var(--accent)]/20 bg-[var(--accent)]/8 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--accent)]">
-                <Sparkles className="h-3.5 w-3.5" />
-                {title}
-              </div>
-              <h3 className="text-[22px] font-semibold text-white">
-                {selectedDaySummary.workoutCount > 0
-                  ? `${selectedDaySummary.workoutCount} workout${selectedDaySummary.workoutCount > 1 ? 's' : ''}`
-                  : 'No workouts yet'}
-              </h3>
+          <div className="mb-5">
+            {/* Date badge + title */}
+            <div className="mb-1 inline-flex items-center gap-2 rounded-full border border-[var(--accent)]/20 bg-[var(--accent)]/8 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--accent)]">
+              <Sparkles className="h-3.5 w-3.5" />
+              {title}
             </div>
+            <h3 className="text-[22px] font-semibold text-white">
+              {selectedDaySummary.workoutCount > 0
+                ? `${selectedDaySummary.workoutCount} workout${selectedDaySummary.workoutCount > 1 ? 's' : ''}`
+                : 'No workouts yet'}
+            </h3>
 
-            <div className="grid grid-cols-3 gap-2 md:min-w-[320px]">
-              {[
-                { label: 'Minutes', value: selectedDaySummary.totalDuration },
-                { label: 'Exercises', value: selectedDaySummary.exerciseCount },
-                { label: 'Volume', value: `${Math.round(selectedDaySummary.totalVolume).toLocaleString()} ${displayUnit}` },
-              ].map((item) => (
-                <div key={item.label} className="rounded-2xl border border-white/6 bg-white/[0.03] px-3 py-2">
-                  <div className="text-[10px] uppercase tracking-[0.16em] text-[#8090A3]">{item.label}</div>
-                  <div className="mt-1 text-[15px] font-semibold text-white">{item.value}</div>
-                </div>
-              ))}
-            </div>
+            {/* Compact stats strip */}
+            {selectedDaySummary.workoutCount > 0 && (
+              <div
+                className="mt-3 inline-flex items-center gap-0 rounded-xl border border-white/[0.07] overflow-hidden divide-x divide-white/[0.07]"
+                style={{ background: 'var(--bg-elevated)' }}
+              >
+                {[
+                  { label: 'MIN', value: selectedDaySummary.totalDuration },
+                  { label: 'EXERCISES', value: selectedDaySummary.exerciseCount },
+                  { label: 'VOLUME', value: `${Math.round(selectedDaySummary.totalVolume).toLocaleString()} ${displayUnit}` },
+                ].map((item) => (
+                  <div key={item.label} className="flex flex-col items-center px-4 py-2">
+                    <span className="text-[9px] font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--text-muted)' }}>
+                      {item.label}
+                    </span>
+                    <span className="mt-0.5 text-[15px] font-bold text-white tabular-nums">{item.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {loading ? (
