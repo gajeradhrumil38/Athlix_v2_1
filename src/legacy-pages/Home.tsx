@@ -12,6 +12,7 @@ import { getBodyWeightLogs, getPersonalRecords, getWorkouts } from '../lib/supab
 import { parseDateAtStartOfDay } from '../lib/dates';
 import { getExerciseMuscleProfile, getMuscleSlugLabel, PRIMARY_LOAD_WEIGHT, SECONDARY_LOAD_WEIGHT } from '../lib/exerciseMuscles';
 import { convertWeight, isWeightUnit, type WeightUnit } from '../lib/units';
+import { WhoopDashboard } from '../components/whoop/WhoopDashboard';
 
 // --- Utility Functions ---
 const calculateStreak = (workouts: { date: string }[]) => {
@@ -775,21 +776,7 @@ export const Home: React.FC = () => {
         </p>
       </div>
     ),
-    whoop_row: (
-      <div key="whoop_row">
-        <div className="grid grid-cols-4 gap-[6px] opacity-50 animate-card-enter" style={{ animationDelay: '420ms' }}>
-          {['Recovery', 'HRV', 'Sleep', 'Strain'].map(label => (
-            <div key={label} className="bg-[var(--bg-surface)] border border-dashed border-[var(--border)] rounded-[10px] p-2 text-center">
-              <div className="text-[16px] font-bold text-[var(--text-secondary)]">—</div>
-              <div className="text-[9px] text-[var(--text-secondary)] mt-0.5">{label}</div>
-            </div>
-          ))}
-        </div>
-        <div className="text-center mt-2 animate-card-enter" style={{ animationDelay: '420ms' }}>
-          <span className="text-[10px] text-[var(--accent)]/50 cursor-pointer">Connect your device →</span>
-        </div>
-      </div>
-    )
+    whoop_row: <WhoopDashboard key="whoop_row" />
   };
 
   const renderWidgets = () => {

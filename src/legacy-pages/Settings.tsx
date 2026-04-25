@@ -3,10 +3,111 @@ import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import {
   Moon, Scale, Activity, LogOut, LayoutDashboard,
-  ChevronRight, Trash2, Dumbbell, User, Save, Loader2,
+  ChevronRight, Trash2, Dumbbell, User, Save, Loader2, CheckCircle, XCircle,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { convertWeight, type WeightUnit } from '../lib/units';
+import { whoopService } from '../services/whoopService';
+
+const WHOOP_TOKEN_KEY = 'whoop_token';
+const WHOOP_CONNECTED_AT_KEY = 'whoop_connected_at';
+
+/* ── WHOOP connect sub-section ─────────────────────────────── */
+const WhoopConnect: React.FC = () => {
+  const [token, setToken] = useState(() => localStorage.getItem(WHOOP_TOKEN_KEY) ?? '');
+  const [draft, setDraft] = useState('');
+  const [validating, setValidating] = useState(false);
+  const connectedAt = localStorage.getItem(WHOOP_CONNECTED_AT_KEY);
+  const isConnected = Boolean(token);
+
+  const handleConnect = async () => {
+    const t = draft.trim();
+    if (!t) return;
+    setValidating(true);
+    try {
+      await whoopService.validateToken(t);
+      localStorage.setItem(WHOOP_TOKEN_KEY, t);
+      localStorage.setItem(WHOOP_CONNECTED_AT_KEY, new Date().toISOString());
+      setToken(t);
+      setDraft('');
+      toast.success('WHOOP connected');
+    } catch (err: unknown) {
+      const e = err as { status?: number; message?: string };
+      const msg = e?.status === 401
+        ? 'Invalid token — check your WHOOP access token'
+        : (e?.message || 'Could not connect to WHOOP');
+      toast.error(msg);
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  const handleDisconnect = () => {
+    localStorage.removeItem(WHOOP_TOKEN_KEY);
+    localStorage.removeItem(WHOOP_CONNECTED_AT_KEY);
+    setToken('');
+    setDraft('');
+    toast.success('WHOOP disconnected');
+  };
+
+  const fmtDate = (iso: string | null) => {
+    if (!iso) return '';
+    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  return (
+    <div className="px-5 py-4 space-y-3">
+      {/* Connection status */}
+      <div className="flex items-center gap-2">
+        {isConnected
+          ? <CheckCircle className="w-4 h-4 shrink-0" style={{ color: '#4ade80' }} />
+          : <XCircle className="w-4 h-4 shrink-0" style={{ color: 'var(--text-muted)' }} />
+        }
+        <span className="text-[13px] font-medium" style={{ color: isConnected ? '#4ade80' : 'var(--text-secondary)' }}>
+          {isConnected ? 'Connected' : 'Not connected'}
+        </span>
+        {isConnected && connectedAt && (
+          <span className="text-[11px] ml-auto" style={{ color: 'var(--text-muted)' }}>
+            since {fmtDate(connectedAt)}
+          </span>
+        )}
+      </div>
+
+      {!isConnected ? (
+        <>
+          <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
+            Paste your WHOOP API access token to sync Recovery, Sleep, Heart Rate, and Steps.
+          </p>
+          <input
+            type="password"
+            placeholder="WHOOP access token"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && void handleConnect()}
+            className="w-full h-10 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-3.5 text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]/60 transition-colors"
+          />
+          <button
+            onClick={() => void handleConnect()}
+            disabled={validating || !draft.trim()}
+            className="w-full h-10 rounded-xl bg-[var(--accent)] text-black text-[13px] font-bold flex items-center justify-center gap-2 disabled:opacity-40 transition-opacity"
+          >
+            {validating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
+            {validating ? 'Validating…' : 'Connect WHOOP'}
+          </button>
+        </>
+      ) : (
+        <button
+          onClick={handleDisconnect}
+          className="w-full h-10 rounded-xl border text-[13px] font-medium flex items-center justify-center gap-2 transition-colors"
+          style={{ borderColor: 'rgba(248,113,113,0.3)', color: 'rgba(248,113,113,0.8)' }}
+        >
+          <XCircle className="w-4 h-4" />
+          Disconnect WHOOP
+        </button>
+      )}
+    </div>
+  );
+};
 
 /* ── Reusable sub-components ───────────────────────────── */
 
@@ -399,16 +500,16 @@ export const Settings: React.FC = () => {
 
       {/* ── Integrations ──────────────────────── */}
       <SectionCard title="Integrations">
-        <Row className="opacity-40">
-          <RowLabel
-            icon={<Activity className="w-4 h-4" />}
-            title="Wearable Sync"
-            subtitle="Recovery & HRV from supported devices"
-          />
-          <span className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-[var(--bg-elevated)] text-[var(--text-muted)] border border-[var(--border)] shrink-0">
-            Soon
-          </span>
-        </Row>
+        <div className="px-5 pt-4 pb-1">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4 shrink-0" style={{ color: 'var(--accent)' }} />
+            <span className="text-[14px] font-medium" style={{ color: 'var(--text-primary)' }}>WHOOP</span>
+          </div>
+          <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+            Recovery, Sleep Efficiency, Heart Rate &amp; Steps
+          </p>
+        </div>
+        <WhoopConnect />
       </SectionCard>
 
       {/* ── Account ───────────────────────────── */}
