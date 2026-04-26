@@ -62,51 +62,64 @@ type RingProps = {
 };
 
 const Ring: React.FC<RingProps> = ({ value, max, color, label, unit, decimals = 0 }) => {
-  const r = 38;
+  const size = 116;
+  const cx = size / 2;
+  const cy = size / 2;
+  const r = 48;
   const circumference = 2 * Math.PI * r;
   const progress = value != null ? Math.min(Math.max(value / max, 0), 1) : 0;
   const offset = circumference * (1 - progress);
   const display = value != null ? (decimals > 0 ? value.toFixed(decimals) : Math.round(value).toString()) : '—';
-
-  const fontSize = display === '—' ? 20 : display.length > 4 ? 14 : display.length > 3 ? 16 : 20;
+  const numFontSize = display === '—' ? 26 : display.length > 4 ? 18 : display.length > 3 ? 22 : 28;
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <svg width="100" height="100" viewBox="0 0 100 100">
+    <div className="flex flex-col items-center" style={{ gap: 10 }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         {/* Track */}
-        <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="6" />
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="7" />
         {/* Progress */}
         <circle
-          cx="50" cy="50" r={r}
+          cx={cx} cy={cy} r={r}
           fill="none"
           stroke={value != null ? color : 'transparent'}
-          strokeWidth="6"
+          strokeWidth="7"
           strokeDasharray={`${circumference}`}
           strokeDashoffset={`${offset}`}
           strokeLinecap="round"
-          transform="rotate(-90 50 50)"
+          transform={`rotate(-90 ${cx} ${cy})`}
           style={{ transition: 'stroke-dashoffset 0.9s ease' }}
         />
-        {/* Value centered */}
+        {/* Number — shifted up slightly when unit is present */}
         <text
-          x="50" y="50"
+          x={cx}
+          y={unit && value != null ? cy - 6 : cy}
           textAnchor="middle"
           dominantBaseline="central"
           fill="white"
-          fontSize={fontSize}
-          fontWeight="900"
+          fontSize={numFontSize}
+          fontWeight="800"
           fontFamily="system-ui, -apple-system, sans-serif"
         >
           {display}
         </text>
+        {/* Unit below number */}
         {unit && value != null && (
-          <text x="50" y="66" textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="8" fontFamily="system-ui">
+          <text
+            x={cx} y={cy + numFontSize * 0.72}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fill="rgba(255,255,255,0.55)"
+            fontSize="11"
+            fontWeight="600"
+            fontFamily="system-ui, -apple-system, sans-serif"
+          >
             {unit}
           </text>
         )}
       </svg>
-      <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-        {label}
+      {/* Label */}
+      <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+        {label} <span style={{ opacity: 0.5 }}>›</span>
       </div>
     </div>
   );
@@ -160,9 +173,9 @@ const InfoPopup: React.FC<{ stat: string; onClose: () => void }> = ({ stat, onCl
 
 // ── Skeleton shimmer ───────────────────────────────────────────
 const RingSkeleton: React.FC = () => (
-  <div className="flex flex-col items-center gap-2">
-    <div className="skeleton rounded-full" style={{ width: 100, height: 100 }} />
-    <div className="skeleton h-2.5 w-14 rounded" />
+  <div className="flex flex-col items-center" style={{ gap: 10 }}>
+    <div className="skeleton rounded-full" style={{ width: 116, height: 116 }} />
+    <div className="skeleton h-2.5 w-16 rounded" />
   </div>
 );
 
@@ -320,7 +333,7 @@ export const WhoopDashboard: React.FC = () => {
       )}
 
       {/* Rings */}
-      <div className="flex justify-around px-4 py-5">
+      <div className="flex justify-around px-3 py-4">
         {loading ? (
           <>
             <RingSkeleton />
@@ -330,25 +343,26 @@ export const WhoopDashboard: React.FC = () => {
         ) : (
           <>
             <Ring
+              value={sleepVal}
+              max={100}
+              color="#60a5fa"
+              label="Sleep"
+              unit="%"
+              decimals={1}
+            />
+            <Ring
               value={recoveryVal}
               max={100}
               color={recoveryVal != null ? recoveryColor(recoveryVal) : '#666'}
               label="Recovery"
+              unit="%"
             />
             <Ring
               value={strainVal}
               max={21}
               color="#C8FF00"
               label="Strain"
-              unit="/21"
-              decimals={1}
-            />
-            <Ring
-              value={sleepVal}
-              max={100}
-              color="#60a5fa"
-              label="Performance"
-              unit="%"
+              unit="/ 21"
               decimals={1}
             />
           </>
