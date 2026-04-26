@@ -164,32 +164,43 @@ export const whoopService = {
     return res.json();
   },
 
-  async fetchRecovery(startDate: string, endDate: string): Promise<WhoopRecovery[]> {
-    const key = cacheKey('recovery', startDate, endDate);
+  // Pass startDate/endDate for range queries; omit both for "most recent" (Day tab)
+  async fetchRecovery(startDate?: string, endDate?: string): Promise<WhoopRecovery[]> {
+    const key = cacheKey('recovery', startDate ?? 'latest', endDate ?? 'latest');
     const cached = getCached<WhoopRecovery[]>(key);
     if (cached) return cached;
 
-    const path = `/v1/recovery?start=${startDate}&end=${endDate}&limit=25`;
+    // No date filter → fetch most recent scored records (descending order from WHOOP)
+    const path = startDate && endDate
+      ? `/v1/recovery?start=${startDate}&end=${endDate}&limit=25`
+      : `/v1/recovery?limit=10`;
+
     const records = await fetchAllPages<WhoopRecovery>(path, (body) =>
-      ((body.records as Record<string, unknown>[]) || []).map((r) => ({
-        date: format(new Date(r.created_at as string), 'yyyy-MM-dd'),
-        recovery_score: (r.score as Record<string, number>)?.recovery_score ?? 0,
-        hrv_rmssd_milli: (r.score as Record<string, number>)?.hrv_rmssd_milli ?? 0,
-        resting_heart_rate: (r.score as Record<string, number>)?.resting_heart_rate ?? 0,
-        skin_temp_celsius: (r.score as Record<string, number>)?.skin_temp_celsius,
-      })),
+      ((body.records as Record<string, unknown>[]) || [])
+        .filter((r) => (r.score_state as string) === 'SCORED')
+        .map((r) => ({
+          date: format(new Date(r.created_at as string), 'yyyy-MM-dd'),
+          recovery_score: (r.score as Record<string, number>)?.recovery_score ?? 0,
+          hrv_rmssd_milli: (r.score as Record<string, number>)?.hrv_rmssd_milli ?? 0,
+          resting_heart_rate: (r.score as Record<string, number>)?.resting_heart_rate ?? 0,
+          skin_temp_celsius: (r.score as Record<string, number>)?.skin_temp_celsius,
+        })),
     );
 
     setCache(key, records);
     return records;
   },
 
-  async fetchSleep(startDate: string, endDate: string): Promise<WhoopSleep[]> {
-    const key = cacheKey('sleep', startDate, endDate);
+  // Pass startDate/endDate for range queries; omit both for "most recent" (Day tab)
+  async fetchSleep(startDate?: string, endDate?: string): Promise<WhoopSleep[]> {
+    const key = cacheKey('sleep', startDate ?? 'latest', endDate ?? 'latest');
     const cached = getCached<WhoopSleep[]>(key);
     if (cached) return cached;
 
-    const path = `/v1/activity/sleep?start=${startDate}&end=${endDate}&limit=25`;
+    const path = startDate && endDate
+      ? `/v1/activity/sleep?start=${startDate}&end=${endDate}&limit=25`
+      : `/v1/activity/sleep?limit=10`;
+
     const records = await fetchAllPages<WhoopSleep>(path, (body) =>
       ((body.records as Record<string, unknown>[]) || [])
         .filter((r) => !r.nap && (r.score_state === 'SCORED' || r.score_state === 'PENDING_SCORE'))
@@ -226,12 +237,14 @@ export const whoopService = {
     return records;
   },
 
-  async fetchStepCount(startDate: string, endDate: string): Promise<WhoopCycle[]> {
-    const key = cacheKey('steps', startDate, endDate);
+  async fetchStepCount(startDate?: string, endDate?: string): Promise<WhoopCycle[]> {
+    const key = cacheKey('steps', startDate ?? 'latest', endDate ?? 'latest');
     const cached = getCached<WhoopCycle[]>(key);
     if (cached) return cached;
 
-    const path = `/v1/cycle?start=${startDate}&end=${endDate}&limit=25`;
+    const path = startDate && endDate
+      ? `/v1/cycle?start=${startDate}&end=${endDate}&limit=25`
+      : `/v1/cycle?limit=5`;
     const records = await fetchAllPages<WhoopCycle>(path, (body) =>
       ((body.records as Record<string, unknown>[]) || []).map((r) => {
         const score = r.score as Record<string, number> | undefined;

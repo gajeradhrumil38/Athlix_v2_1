@@ -57,14 +57,15 @@ type RingProps = {
   label: string;
   status: string;
   unit?: string;
+  decimals?: number;
 };
 
-const Ring: React.FC<RingProps> = ({ value, max, color, label, status, unit }) => {
+const Ring: React.FC<RingProps> = ({ value, max, color, label, status, unit, decimals = 0 }) => {
   const r = 36;
   const circumference = 2 * Math.PI * r;
   const progress = value != null ? Math.min(Math.max(value / max, 0), 1) : 0;
   const offset = circumference * (1 - progress);
-  const display = value != null ? Math.round(value) : '—';
+  const display = value != null ? (decimals > 0 ? value.toFixed(decimals) : Math.round(value).toString()) : '—';
 
   return (
     <div className="flex flex-col items-center gap-1.5">
@@ -89,7 +90,7 @@ const Ring: React.FC<RingProps> = ({ value, max, color, label, status, unit }) =
           textAnchor="middle"
           dominantBaseline="middle"
           fill="white"
-          fontSize={display === '—' ? '20' : '18'}
+          fontSize={display === '—' ? '20' : display.length > 4 ? '14' : display.length > 3 ? '16' : '18'}
           fontWeight="900"
           fontFamily="system-ui, -apple-system, sans-serif"
         >
@@ -158,7 +159,6 @@ export const WhoopDashboard: React.FC = () => {
 
   const fetchAll = useCallback(async () => {
     if (!connected || !user?.id) return;
-    const { start, end } = buildDateRange(TAB_DAYS[tab]);
     setLoading(true);
     setError(null);
     try {
@@ -166,10 +166,17 @@ export const WhoopDashboard: React.FC = () => {
       // so concurrent refreshes would invalidate each other.
       await whoopService.getStoredToken(user.id);
 
+      // Day tab: no date restriction — always get the most recent records regardless of when
+      // they were generated (recovery/sleep are scored after waking, may be days old).
+      // Week/month: use a date range for trend data.
+      const dateArgs = tab === 'day'
+        ? ([undefined, undefined] as [undefined, undefined])
+        : (() => { const { start, end } = buildDateRange(TAB_DAYS[tab]); return [start, end] as [string, string]; })();
+
       const [rec, slp, stps] = await Promise.all([
-        whoopService.fetchRecovery(start, end),
-        whoopService.fetchSleep(start, end),
-        whoopService.fetchStepCount(start, end),
+        whoopService.fetchRecovery(...dateArgs),
+        whoopService.fetchSleep(...dateArgs),
+        whoopService.fetchStepCount(...dateArgs),
       ]);
       setRecovery(rec);
       setSleep(slp);
@@ -310,6 +317,7 @@ export const WhoopDashboard: React.FC = () => {
               label="Strain"
               status={strainVal != null ? strainStatus(strainVal) : ''}
               unit="/21"
+              decimals={1}
             />
             <Ring
               value={sleepVal}
@@ -318,6 +326,7 @@ export const WhoopDashboard: React.FC = () => {
               label="Performance"
               status={sleepVal != null ? sleepStatus(sleepVal) : ''}
               unit="%"
+              decimals={1}
             />
           </>
         )}
