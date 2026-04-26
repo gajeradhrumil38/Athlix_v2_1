@@ -5,17 +5,6 @@ import { supabase } from '../lib/supabase';
 const BASE = 'https://api.prod.whoop.com/developer';
 const EDGE_FN = 'https://mrntwydykqsdawpklumf.supabase.co/functions/v1';
 
-export const WHOOP_CLIENT_ID = 'd00b485b-7052-4a22-ad29-c57ab43f0817';
-export const WHOOP_REDIRECT_URI = `${EDGE_FN}/whoop-oauth`;
-export const WHOOP_AUTH_URL = 'https://api.prod.whoop.com/oauth/oauth2/auth';
-export const WHOOP_SCOPES = [
-  'read:recovery',
-  'read:cycles',
-  'read:sleep',
-  'read:workout',
-  'read:profile',
-  'read:body_measurement',
-].join(' ');
 
 // Session-level cache — invalidated on page reload
 const cache = new Map<string, { data: unknown; ts: number }>();
@@ -72,18 +61,36 @@ async function fetchAllPages<T>(
 export const whoopService = {
   // ── OAuth helpers ──────────────────────────────────────────
 
-  /** Build the WHOOP OAuth authorization URL. Call window.location.href = this. */
-  buildAuthUrl(userId: string): string {
-    const returnUrl = window.location.href;
-    const state = btoa(JSON.stringify({ userId, returnUrl }));
-    const params = new URLSearchParams({
-      client_id: WHOOP_CLIENT_ID,
-      redirect_uri: WHOOP_REDIRECT_URI,
-      response_type: 'code',
-      scope: WHOOP_SCOPES,
-      state,
+  /**
+   * Save the user's own WHOOP Client ID + Secret to the edge function (server-side only),
+   * then get back the OAuth authorization URL to redirect to.
+   */
+  async saveCredentialsAndGetAuthUrl(clientId: string, clientSecret: string): Promise<string> {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const jwt = sessionData.session?.access_token;
+    if (!jwt) throw new Error('Not authenticated');
+
+    const res = await fetch(`${EDGE_FN}/whoop-oauth`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${jwt}`,
+      },
+      body: JSON.stringify({
+        action: 'save_credentials',
+        clientId,
+        clientSecret,
+        returnUrl: window.location.href,
+      }),
     });
-    return `${WHOOP_AUTH_URL}?${params.toString()}`;
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({})) as { error?: string };
+      throw new Error(err.error ?? 'Failed to save credentials');
+    }
+
+    const { authUrl } = await res.json() as { authUrl: string };
+    return authUrl;
   },
 
   /** Get the stored access token for a user, refreshing via edge function if expired. */

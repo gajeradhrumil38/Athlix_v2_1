@@ -13,10 +13,12 @@ import { whoopService } from '../services/whoopService';
 const WhoopConnect: React.FC<{ userId: string }> = ({ userId }) => {
   const [status, setStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading');
   const [connectedAt, setConnectedAt] = useState<string | null>(null);
+  const [clientId, setClientId] = useState('');
+  const [clientSecret, setClientSecret] = useState('');
+  const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Load connection status from Supabase
   useEffect(() => {
     if (!userId) return;
     whoopService.getConnectionInfo(userId).then((info) => {
@@ -43,15 +45,26 @@ const WhoopConnect: React.FC<{ userId: string }> = ({ userId }) => {
       });
     } else if (result === 'error') {
       toast.error(msg ? decodeURIComponent(msg) : 'WHOOP connection failed');
+      setStatus('disconnected');
     }
 
-    // Clear params so toast doesn't re-fire on refresh
     setSearchParams({}, { replace: true });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleConnect = () => {
-    window.location.href = whoopService.buildAuthUrl(userId);
+  const handleConnect = async () => {
+    const id = clientId.trim();
+    const secret = clientSecret.trim();
+    if (!id || !secret) return;
+    setConnecting(true);
+    try {
+      const authUrl = await whoopService.saveCredentialsAndGetAuthUrl(id, secret);
+      window.location.href = authUrl;
+    } catch (err: unknown) {
+      const e = err as { message?: string };
+      toast.error(e?.message ?? 'Failed to initiate WHOOP connection');
+      setConnecting(false);
+    }
   };
 
   const handleDisconnect = async () => {
@@ -60,6 +73,8 @@ const WhoopConnect: React.FC<{ userId: string }> = ({ userId }) => {
       await whoopService.disconnect(userId);
       setStatus('disconnected');
       setConnectedAt(null);
+      setClientId('');
+      setClientSecret('');
       toast.success('WHOOP disconnected');
     } catch {
       toast.error('Failed to disconnect');
@@ -71,9 +86,11 @@ const WhoopConnect: React.FC<{ userId: string }> = ({ userId }) => {
   const fmtDate = (iso: string) =>
     new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
+  const inputCls = 'w-full h-10 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-3.5 text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]/60 transition-colors';
+
   return (
     <div className="px-5 py-4 space-y-3">
-      {/* Connection status row */}
+      {/* Status row */}
       <div className="flex items-center gap-2">
         {status === 'loading' && <Loader2 className="w-4 h-4 animate-spin shrink-0" style={{ color: 'var(--text-muted)' }} />}
         {status === 'connected' && <CheckCircle className="w-4 h-4 shrink-0" style={{ color: '#4ade80' }} />}
@@ -91,15 +108,52 @@ const WhoopConnect: React.FC<{ userId: string }> = ({ userId }) => {
       {status === 'disconnected' && (
         <>
           <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
-            Connect your WHOOP account to sync Recovery, Sleep, Heart Rate, Steps &amp; Strain.
+            Register at{' '}
+            <a
+              href="https://developer.whoop.com"
+              target="_blank"
+              rel="noreferrer"
+              className="underline"
+              style={{ color: 'var(--accent)' }}
+            >
+              developer.whoop.com
+            </a>
+            , create an app, then paste your Client ID &amp; Client Secret below.
+            Set the redirect URI to:{' '}
+            <span className="font-mono text-[10px] select-all" style={{ color: 'var(--text-secondary)' }}>
+              https://mrntwydykqsdawpklumf.supabase.co/functions/v1/whoop-oauth
+            </span>
           </p>
+
+          <div className="space-y-2">
+            <input
+              type="text"
+              placeholder="Client ID"
+              value={clientId}
+              onChange={(e) => setClientId(e.target.value)}
+              className={inputCls}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <input
+              type="password"
+              placeholder="Client Secret"
+              value={clientSecret}
+              onChange={(e) => setClientSecret(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && void handleConnect()}
+              className={inputCls}
+              autoComplete="off"
+            />
+          </div>
+
           <button
             type="button"
-            onClick={handleConnect}
-            className="w-full h-10 rounded-xl bg-[var(--accent)] text-black text-[13px] font-bold flex items-center justify-center gap-2 transition-opacity"
+            onClick={() => void handleConnect()}
+            disabled={connecting || !clientId.trim() || !clientSecret.trim()}
+            className="w-full h-10 rounded-xl bg-[var(--accent)] text-black text-[13px] font-bold flex items-center justify-center gap-2 disabled:opacity-40 transition-opacity"
           >
-            <Activity className="w-4 h-4" />
-            Connect with WHOOP
+            {connecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
+            {connecting ? 'Redirecting to WHOOP…' : 'Connect with WHOOP'}
           </button>
         </>
       )}
