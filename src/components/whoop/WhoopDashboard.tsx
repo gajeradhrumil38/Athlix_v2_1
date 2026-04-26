@@ -190,6 +190,7 @@ export const WhoopDashboard: React.FC = () => {
   const [sleep, setSleep] = useState<WhoopSleep[]>([]);
   const [steps, setSteps] = useState<WhoopCycle[]>([]);
   const [loading, setLoading] = useState(false);
+  const [stale, setStale] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeInfo, setActiveInfo] = useState<string | null>(null);
 
@@ -206,20 +207,12 @@ export const WhoopDashboard: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      await whoopService.getStoredToken(user.id);
-
-      const dateArgs = tab === 'day'
-        ? ([undefined, undefined] as [undefined, undefined])
-        : (() => { const { start, end } = buildDateRange(TAB_DAYS[tab]); return [start, end] as [string, string]; })();
-
-      const [rec, slp, stps] = await Promise.all([
-        whoopService.fetchRecovery(...dateArgs),
-        whoopService.fetchSleep(...dateArgs),
-        whoopService.fetchStepCount(...dateArgs),
-      ]);
-      setRecovery(rec);
-      setSleep(slp);
-      setSteps(stps);
+      const { start, end } = tab === 'day' ? { start: undefined, end: undefined } : buildDateRange(TAB_DAYS[tab]);
+      const result = await whoopService.fetchAll(tab, start, end);
+      setRecovery(result.recovery);
+      setSleep(result.sleep);
+      setSteps(result.cycles);
+      setStale(result.fromCache);
     } catch (err) {
       setError(friendlyError(err));
     } finally {
@@ -297,9 +290,14 @@ export const WhoopDashboard: React.FC = () => {
           <Activity className="w-4 h-4" style={{ color: '#C8FF00' }} />
           <span style={{ color: 'white', fontSize: 13, fontWeight: 800, letterSpacing: '0.08em' }}>WHOOP</span>
         </div>
-        {lastDate && tab === 'day' && (
-          <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10 }}>{lastDate}</span>
-        )}
+        <div className="flex items-center gap-2">
+          {lastDate && tab === 'day' && (
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10 }}>{lastDate}</span>
+          )}
+          {stale && !loading && (
+            <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 9, letterSpacing: '0.05em' }}>cached</span>
+          )}
+        </div>
       </div>
 
       {/* Tabs */}

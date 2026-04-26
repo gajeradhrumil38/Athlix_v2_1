@@ -1,81 +1,102 @@
 import { format } from 'date-fns';
-import type { WhoopRecovery, WhoopSleep, WhoopHeartRate, WhoopCycle } from '../types/whoop';
+import type { WhoopRecovery, WhoopSleep, WhoopCycle } from '../types/whoop';
 import { supabase } from '../lib/supabase';
 
-const BASE = 'https://api.prod.whoop.com/developer';
 const EDGE_FN = 'https://mrntwydykqsdawpklumf.supabase.co/functions/v1';
+const BASE = 'https://api.prod.whoop.com/developer';
 const WHOOP_CLIENT_ID = 'd00b485b-7052-4a22-ad29-c57ab43f0817';
 const WHOOP_REDIRECT_URI = `${EDGE_FN}/whoop-oauth`;
 const WHOOP_AUTH_URL = 'https://api.prod.whoop.com/oauth/oauth2/auth';
-// offline is required to receive a refresh_token (per WHOOP docs)
 const WHOOP_SCOPES = 'offline read:recovery read:cycles read:sleep read:workout read:profile read:body_measurement';
 
+// ── localStorage cache (survives page reload) ──────────────────
+const LS_PREFIX = 'whoop_cache:';
+const LS_TTL_MS = 10 * 60 * 1000; // 10 min — server cache is 15 min, so always slightly stale
 
-// Session-level cache — invalidated on page reload
-const cache = new Map<string, { data: unknown; ts: number }>();
-const CACHE_TTL_MS = 5 * 60 * 1000;
-
-function cacheKey(method: string, start: string, end: string) {
-  return `${method}:${start}:${end}`;
+function lsGet<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(LS_PREFIX + key);
+    if (!raw) return null;
+    const { data, ts } = JSON.parse(raw) as { data: T; ts: number };
+    if (Date.now() - ts > LS_TTL_MS) { localStorage.removeItem(LS_PREFIX + key); return null; }
+    return data;
+  } catch { return null; }
 }
 
-function getCached<T>(key: string): T | null {
-  const entry = cache.get(key);
-  if (entry && Date.now() - entry.ts < CACHE_TTL_MS) return entry.data as T;
-  return null;
+function lsSet(key: string, data: unknown) {
+  try { localStorage.setItem(LS_PREFIX + key, JSON.stringify({ data, ts: Date.now() })); } catch { /* quota */ }
 }
 
-function setCache(key: string, data: unknown) {
-  cache.set(key, { data, ts: Date.now() });
+function lsClear() {
+  try {
+    Object.keys(localStorage).filter(k => k.startsWith(LS_PREFIX)).forEach(k => localStorage.removeItem(k));
+  } catch { /* ignore */ }
 }
 
-// Proxy WHOOP API calls through the edge function to avoid browser CORS restrictions
-async function whoopFetch<T>(path: string): Promise<T> {
-  const { data: { session } } = await supabase.auth.getSession();
-  const jwt = session?.access_token;
+// ── Raw WHOOP API response parsers ─────────────────────────────
+function parseRecovery(raw: { records?: unknown[] }): WhoopRecovery[] {
+  return ((raw?.records ?? []) as Record<string, unknown>[])
+    .filter((r) => (r.score_state as string) === 'SCORED')
+    .map((r) => {
+      const score = r.score as Record<string, number>;
+      return {
+        date: format(new Date(r.created_at as string), 'yyyy-MM-dd'),
+        recovery_score: score?.recovery_score ?? 0,
+        hrv_rmssd_milli: score?.hrv_rmssd_milli ?? 0,
+        resting_heart_rate: score?.resting_heart_rate ?? 0,
+        spo2_percentage: score?.spo2_percentage,
+        skin_temp_celsius: score?.skin_temp_celsius,
+      };
+    });
+}
 
-  const res = await fetch(`${EDGE_FN}/whoop-oauth`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
-    },
-    body: JSON.stringify({ action: 'fetch', path }),
+function parseSleep(raw: { records?: unknown[] }): WhoopSleep[] {
+  return ((raw?.records ?? []) as Record<string, unknown>[])
+    .filter((r) => !r.nap && (r.score_state === 'SCORED' || r.score_state === 'PENDING_SCORE'))
+    .map((r) => {
+      const score = r.score as Record<string, unknown>;
+      const stages = score?.stage_summary as Record<string, number> | undefined;
+      return {
+        date: format(new Date(r.start as string), 'yyyy-MM-dd'),
+        sleep_performance_percentage: (score?.sleep_performance_percentage as number) ?? 0,
+        sleep_efficiency_percentage: (score?.sleep_efficiency_percentage as number) ?? 0,
+        total_in_bed_time_milli: stages?.total_in_bed_time_milli ?? 0,
+        total_slow_wave_sleep_time_milli: stages?.total_slow_wave_sleep_time_milli,
+        total_rem_sleep_time_milli: stages?.total_rem_sleep_time_milli,
+      };
+    });
+}
+
+function parseCycles(raw: { records?: unknown[] }): WhoopCycle[] {
+  return ((raw?.records ?? []) as Record<string, unknown>[]).map((r) => {
+    const score = r.score as Record<string, number> | undefined;
+    const kj = score?.kilojoule ?? 0;
+    return {
+      date: format(new Date(r.start as string), 'yyyy-MM-dd'),
+      estimated_steps: Math.round(kj * 23.9),
+      raw_kilojoules: kj,
+      strain_score: score?.strain,
+      average_heart_rate: score?.average_heart_rate,
+      max_heart_rate: score?.max_heart_rate,
+    };
   });
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    const err = new Error(`WHOOP ${res.status}: ${text || res.statusText}`) as Error & { status: number };
-    err.status = res.status;
-    throw err;
-  }
-  return res.json() as Promise<T>;
 }
 
-async function fetchAllPages<T>(
-  basePath: string,
-  extractRecords: (body: Record<string, unknown>) => T[],
-): Promise<T[]> {
-  const results: T[] = [];
-  let nextToken: string | null = null;
+async function getJwt(): Promise<string | undefined> {
+  const { data: { session } } = await supabase.auth.getSession();
+  return session?.access_token;
+}
 
-  do {
-    const sep = basePath.includes('?') ? '&' : '?';
-    const path: string = nextToken
-      ? `${basePath}${sep}nextToken=${encodeURIComponent(nextToken)}`
-      : basePath;
-    const body: Record<string, unknown> = await whoopFetch<Record<string, unknown>>(path);
-    results.push(...extractRecords(body));
-    nextToken = (body.next_token as string) ?? null;
-  } while (nextToken);
-
-  return results;
+export interface WhoopAllData {
+  recovery: WhoopRecovery[];
+  sleep: WhoopSleep[];
+  cycles: WhoopCycle[];
+  fromCache: boolean;
 }
 
 export const whoopService = {
   // ── OAuth helpers ──────────────────────────────────────────
 
-  /** Build the WHOOP OAuth authorization URL. Opens in a popup — postMessages result back. */
   buildAuthUrl(userId: string): string {
     const callbackPage = `${window.location.origin}/#/whoop/callback`;
     const state = btoa(JSON.stringify({ userId, returnUrl: callbackPage }));
@@ -89,7 +110,6 @@ export const whoopService = {
     return `${WHOOP_AUTH_URL}?${params.toString()}`;
   },
 
-  /** Get the stored access token, refreshing via edge function if nearly expired. */
   async getStoredToken(userId: string): Promise<string | null> {
     const { data } = await supabase
       .from('whoop_tokens')
@@ -100,14 +120,10 @@ export const whoopService = {
     if (!data) return null;
 
     const expiresAt = data.expires_at ? new Date(data.expires_at as string).getTime() : Infinity;
-    if (Date.now() < expiresAt - 5 * 60 * 1000) {
-      return data.access_token as string;
-    }
-
+    if (Date.now() < expiresAt - 5 * 60 * 1000) return data.access_token as string;
     if (!data.refresh_token) return data.access_token as string;
 
-    const { data: session } = await supabase.auth.getSession();
-    const jwt = session.session?.access_token;
+    const jwt = await getJwt();
     if (!jwt) return data.access_token as string;
 
     const res = await fetch(`${EDGE_FN}/whoop-oauth`, {
@@ -121,20 +137,16 @@ export const whoopService = {
     return access_token;
   },
 
-  /** Check whether the user has a stored WHOOP connection and return metadata. */
   async getConnectionInfo(userId: string): Promise<{ connected: boolean; connectedAt?: string } | null> {
     const { data } = await supabase
       .from('whoop_tokens')
       .select('created_at')
       .eq('user_id', userId)
       .single();
-
     return data ? { connected: true, connectedAt: data.created_at as string } : { connected: false };
   },
 
-  /** Validate a personal access token then store it (fallback for when OAuth popup fails). */
   async connect(userId: string, token: string): Promise<void> {
-    // Validate by calling WHOOP directly (not proxied — just for the initial token check)
     const res = await fetch(`${BASE}/v2/user/profile/basic`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -147,15 +159,11 @@ export const whoopService = {
     });
   },
 
-  /** Remove the stored WHOOP token for a user. */
   async disconnect(userId: string): Promise<void> {
     await supabase.from('whoop_tokens').delete().eq('user_id', userId);
-    cache.clear();
+    lsClear();
   },
 
-  // ── Data fetchers (all proxied server-side — no CORS issues) ──
-
-  /** Validates token — throws on 401/other errors */
   async validateToken(token: string): Promise<{ user_id: number; email: string; first_name: string; last_name: string }> {
     const res = await fetch(`${BASE}/v2/user/profile/basic`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -164,90 +172,49 @@ export const whoopService = {
     return res.json();
   },
 
-  // Pass startDate/endDate for range queries; omit both for "most recent" (Day tab)
-  async fetchRecovery(startDate?: string, endDate?: string): Promise<WhoopRecovery[]> {
-    const key = cacheKey('recovery', startDate ?? 'latest', endDate ?? 'latest');
-    const cached = getCached<WhoopRecovery[]>(key);
-    if (cached) return cached;
+  // ── Primary data method: one edge-function call, server + localStorage caching ──
 
-    const path = startDate && endDate
-      ? `/v2/recovery?start=${startDate}&end=${endDate}&limit=25`
-      : `/v2/recovery?limit=10`;
+  async fetchAll(tab: 'day' | 'week' | 'month', startDate?: string, endDate?: string): Promise<WhoopAllData> {
+    const lsKey = `all:${tab}:${startDate ?? 'latest'}:${endDate ?? 'latest'}`;
 
-    const records = await fetchAllPages<WhoopRecovery>(path, (body) =>
-      ((body.records as Record<string, unknown>[]) || [])
-        .filter((r) => (r.score_state as string) === 'SCORED')
-        .map((r) => ({
-          date: format(new Date(r.created_at as string), 'yyyy-MM-dd'),
-          recovery_score: (r.score as Record<string, number>)?.recovery_score ?? 0,
-          hrv_rmssd_milli: (r.score as Record<string, number>)?.hrv_rmssd_milli ?? 0,
-          resting_heart_rate: (r.score as Record<string, number>)?.resting_heart_rate ?? 0,
-          spo2_percentage: (r.score as Record<string, number>)?.spo2_percentage,
-          skin_temp_celsius: (r.score as Record<string, number>)?.skin_temp_celsius,
-        })),
-    );
+    // 1. Instant return from localStorage if fresh
+    const cached = lsGet<WhoopAllData>(lsKey);
+    if (cached) return { ...cached, fromCache: true };
 
-    setCache(key, records);
-    return records;
-  },
+    // 2. Single batch call to edge function (which has its own 15-min DB cache)
+    const jwt = await getJwt();
+    const res = await fetch(`${EDGE_FN}/whoop-oauth`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(jwt ? { Authorization: `Bearer ${jwt}` } : {}),
+      },
+      body: JSON.stringify({ action: 'fetch_all', tab, start: startDate, end: endDate }),
+    });
 
-  // Pass startDate/endDate for range queries; omit both for "most recent" (Day tab)
-  async fetchSleep(startDate?: string, endDate?: string): Promise<WhoopSleep[]> {
-    const key = cacheKey('sleep', startDate ?? 'latest', endDate ?? 'latest');
-    const cached = getCached<WhoopSleep[]>(key);
-    if (cached) return cached;
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      const err = new Error(`WHOOP ${res.status}: ${text || res.statusText}`) as Error & { status: number };
+      err.status = res.status;
+      throw err;
+    }
 
-    const path = startDate && endDate
-      ? `/v2/activity/sleep?start=${startDate}&end=${endDate}&limit=25`
-      : `/v2/activity/sleep?limit=10`;
+    const raw = await res.json() as {
+      recovery: { records?: unknown[] };
+      sleep: { records?: unknown[] };
+      cycles: { records?: unknown[] };
+      from_cache: boolean;
+    };
 
-    const records = await fetchAllPages<WhoopSleep>(path, (body) =>
-      ((body.records as Record<string, unknown>[]) || [])
-        .filter((r) => !r.nap && (r.score_state === 'SCORED' || r.score_state === 'PENDING_SCORE'))
-        .map((r) => {
-          const score = r.score as Record<string, unknown>;
-          // WHOOP API v2 uses _time_milli (not _duration_milli)
-          const stages = score?.stage_summary as Record<string, number> | undefined;
-          return {
-            date: format(new Date(r.start as string), 'yyyy-MM-dd'),
-            sleep_performance_percentage: (score?.sleep_performance_percentage as number) ?? 0,
-            sleep_efficiency_percentage: (score?.sleep_efficiency_percentage as number) ?? 0,
-            total_in_bed_time_milli: stages?.total_in_bed_time_milli ?? 0,
-            total_slow_wave_sleep_time_milli: stages?.total_slow_wave_sleep_time_milli,
-            total_rem_sleep_time_milli: stages?.total_rem_sleep_time_milli,
-          };
-        }),
-    );
+    const result: WhoopAllData = {
+      recovery: parseRecovery(raw.recovery),
+      sleep: parseSleep(raw.sleep),
+      cycles: parseCycles(raw.cycles),
+      fromCache: raw.from_cache,
+    };
 
-    setCache(key, records);
-    return records;
-  },
-
-  async fetchStepCount(startDate?: string, endDate?: string): Promise<WhoopCycle[]> {
-    const key = cacheKey('steps', startDate ?? 'latest', endDate ?? 'latest');
-    const cached = getCached<WhoopCycle[]>(key);
-    if (cached) return cached;
-
-    const path = startDate && endDate
-      ? `/v2/cycle?start=${startDate}&end=${endDate}&limit=25`
-      : `/v2/cycle?limit=5`;
-
-    const records = await fetchAllPages<WhoopCycle>(path, (body) =>
-      ((body.records as Record<string, unknown>[]) || []).map((r) => {
-        const score = r.score as Record<string, number> | undefined;
-        const kj = score?.kilojoule ?? 0;
-        return {
-          date: format(new Date(r.start as string), 'yyyy-MM-dd'),
-          estimated_steps: Math.round(kj * 23.9),
-          raw_kilojoules: kj,
-          strain_score: score?.strain,
-          average_heart_rate: score?.average_heart_rate,
-          max_heart_rate: score?.max_heart_rate,
-        };
-      }),
-    );
-
-    setCache(key, records);
-    return records;
+    // 3. Save parsed result to localStorage for next visit
+    lsSet(lsKey, result);
+    return result;
   },
 };

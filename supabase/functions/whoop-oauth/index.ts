@@ -11,6 +11,10 @@ const TOKEN_URL = 'https://api.prod.whoop.com/oauth/oauth2/token';
 const PROFILE_URL = 'https://api.prod.whoop.com/developer/v2/user/profile/basic';
 const WHOOP_API_BASE = 'https://api.prod.whoop.com/developer';
 
+// Server-side cache TTL: day tab 15 min, range tabs 60 min
+const CACHE_TTL_DAY_MS = 15 * 60 * 1000;
+const CACHE_TTL_RANGE_MS = 60 * 60 * 1000;
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -61,6 +65,14 @@ async function resolveToken(sb: any, userId: string): Promise<string | null> {
   return accessToken;
 }
 
+async function whoopGet(accessToken: string, path: string): Promise<any> {
+  const res = await fetch(`${WHOOP_API_BASE}${path}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (res.status === 404) return { records: [], next_token: null };
+  return res.json().catch(() => ({}));
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
@@ -79,7 +91,7 @@ Deno.serve(async (req: Request) => {
     const { data: { user }, error: authErr } = await sb.auth.getUser(jwt);
     if (authErr || !user) return json({ error: 'Unauthorized' }, 401);
 
-    // ── refresh: exchange refresh token for new access token ───
+    // ── refresh ────────────────────────────────────────────────
     if (action === 'refresh') {
       const { data: row } = await sb
         .from('whoop_tokens')
@@ -115,7 +127,75 @@ Deno.serve(async (req: Request) => {
       return json({ access_token: t.access_token, expires_at: expiresAt });
     }
 
-    // ── fetch: server-side proxy for WHOOP API (avoids browser CORS) ──
+    // ── fetch_all: single batched call with server-side DB caching ──
+    if (action === 'fetch_all') {
+      const tab = (body.tab as string) ?? 'day';
+      const startDate = body.start as string | undefined;
+      const endDate = body.end as string | undefined;
+
+      const cacheTtl = tab === 'day' ? CACHE_TTL_DAY_MS : CACHE_TTL_RANGE_MS;
+      const suffix = tab === 'day' ? 'latest' : `${startDate}:${endDate}`;
+      const cacheKeys = [`recovery:${suffix}`, `sleep:${suffix}`, `cycles:${suffix}`];
+
+      // Check DB cache for all three keys at once
+      const { data: cachedRows } = await sb
+        .from('whoop_cache')
+        .select('cache_key, data, fetched_at')
+        .eq('user_id', user.id)
+        .in('cache_key', cacheKeys);
+
+      const now = Date.now();
+      const freshData = new Map<string, any>();
+      const staleKeys: string[] = [];
+
+      for (const key of cacheKeys) {
+        const row = (cachedRows ?? []).find((r: any) => r.cache_key === key);
+        if (row && now - new Date(row.fetched_at as string).getTime() < cacheTtl) {
+          freshData.set(key, row.data);
+        } else {
+          staleKeys.push(key);
+        }
+      }
+
+      // Only hit WHOOP for stale keys
+      if (staleKeys.length > 0) {
+        const accessToken = await resolveToken(sb, user.id);
+        if (!accessToken) return json({ error: 'Not connected' }, 404);
+
+        const paths: Record<string, string> = {
+          [`recovery:${suffix}`]: tab === 'day'
+            ? '/v2/recovery?limit=10'
+            : `/v2/recovery?start=${startDate}&end=${endDate}&limit=25`,
+          [`sleep:${suffix}`]: tab === 'day'
+            ? '/v2/activity/sleep?limit=10'
+            : `/v2/activity/sleep?start=${startDate}&end=${endDate}&limit=25`,
+          [`cycles:${suffix}`]: tab === 'day'
+            ? '/v2/cycle?limit=5'
+            : `/v2/cycle?start=${startDate}&end=${endDate}&limit=25`,
+        };
+
+        await Promise.all(staleKeys.map(async (key) => {
+          const data = await whoopGet(accessToken, paths[key]);
+          freshData.set(key, data);
+          // Fire-and-forget cache write — don't block response
+          sb.from('whoop_cache').upsert({
+            user_id: user.id,
+            cache_key: key,
+            data,
+            fetched_at: new Date().toISOString(),
+          }).then(() => {/* ignore */}).catch(() => {/* ignore */});
+        }));
+      }
+
+      return json({
+        recovery: freshData.get(`recovery:${suffix}`) ?? { records: [] },
+        sleep: freshData.get(`sleep:${suffix}`) ?? { records: [] },
+        cycles: freshData.get(`cycles:${suffix}`) ?? { records: [] },
+        from_cache: staleKeys.length === 0,
+      });
+    }
+
+    // ── fetch: legacy single-path proxy (kept for backwards compat) ──
     if (action === 'fetch') {
       const path = body.path as string;
       if (!path) return json({ error: 'Missing path' }, 400);
@@ -127,8 +207,6 @@ Deno.serve(async (req: Request) => {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
-      // WHOOP returns 404 for list endpoints when no records exist in the period
-      // (rather than an empty records array). Normalise to empty so UI shows "no data".
       if (whoopRes.status === 404) {
         return json({ records: [], next_token: null, values: [] });
       }
