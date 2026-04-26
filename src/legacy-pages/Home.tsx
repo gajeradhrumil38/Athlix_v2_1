@@ -426,7 +426,7 @@ export const Home: React.FC = () => {
       };
     }
     return null;
-  }, [strainScore, trainedMuscleGroups, prs, currentPrIndex, displayUnit]);
+  }, [trainedMuscleGroups, prs, currentPrIndex, displayUnit]);
 
   // --- Handlers ---
   const handlePrev = useCallback(() => {
