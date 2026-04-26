@@ -43,6 +43,7 @@
     "node_modules",
     "src",
     "dist",
-    "opentraining-exercises-master"
+    "opentraining-exercises-master",
+    "supabase/functions"
   ]
 }

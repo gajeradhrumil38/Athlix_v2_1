@@ -4,6 +4,10 @@ import { supabase } from '../lib/supabase';
 
 const BASE = 'https://api.prod.whoop.com/developer';
 const EDGE_FN = 'https://mrntwydykqsdawpklumf.supabase.co/functions/v1';
+const WHOOP_CLIENT_ID = 'd00b485b-7052-4a22-ad29-c57ab43f0817';
+const WHOOP_REDIRECT_URI = `${EDGE_FN}/whoop-oauth`;
+const WHOOP_AUTH_URL = 'https://api.prod.whoop.com/oauth/oauth2/auth';
+const WHOOP_SCOPES = 'read:recovery read:cycles read:sleep read:workout read:profile read:body_measurement';
 
 
 // Session-level cache — invalidated on page reload
@@ -61,70 +65,51 @@ async function fetchAllPages<T>(
 export const whoopService = {
   // ── OAuth helpers ──────────────────────────────────────────
 
-  /**
-   * Save the user's own WHOOP Client ID + Secret to the edge function (server-side only),
-   * then get back the OAuth authorization URL to redirect to.
-   */
-  async saveCredentialsAndGetAuthUrl(clientId: string, clientSecret: string): Promise<string> {
-    const { data: sessionData } = await supabase.auth.getSession();
-    const jwt = sessionData.session?.access_token;
-    if (!jwt) throw new Error('Not authenticated');
-
-    const res = await fetch(`${EDGE_FN}/whoop-oauth`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${jwt}`,
-      },
-      body: JSON.stringify({
-        action: 'save_credentials',
-        clientId,
-        clientSecret,
-        returnUrl: window.location.href,
-      }),
+  /** Build the WHOOP OAuth authorization URL — redirect the browser to this. */
+  buildAuthUrl(userId: string): string {
+    const state = btoa(JSON.stringify({ userId, returnUrl: window.location.href }));
+    const params = new URLSearchParams({
+      client_id: WHOOP_CLIENT_ID,
+      redirect_uri: WHOOP_REDIRECT_URI,
+      response_type: 'code',
+      scope: WHOOP_SCOPES,
+      state,
     });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({})) as { error?: string };
-      throw new Error(err.error ?? 'Failed to save credentials');
-    }
-
-    const { authUrl } = await res.json() as { authUrl: string };
-    return authUrl;
+    return `${WHOOP_AUTH_URL}?${params.toString()}`;
   },
 
-  /** Get the stored access token for a user, refreshing via edge function if expired. */
+  /** Get the stored access token, refreshing via edge function if nearly expired. */
   async getStoredToken(userId: string): Promise<string | null> {
     const { data } = await supabase
       .from('whoop_tokens')
-      .select('access_token, expires_at')
+      .select('access_token, expires_at, refresh_token')
       .eq('user_id', userId)
       .single();
 
     if (!data) return null;
 
     // Still valid with 5-min buffer
-    if (Date.now() < new Date(data.expires_at).getTime() - 5 * 60 * 1000) {
+    const expiresAt = data.expires_at ? new Date(data.expires_at as string).getTime() : Infinity;
+    if (Date.now() < expiresAt - 5 * 60 * 1000) {
       return data.access_token as string;
     }
 
-    // Expired — ask edge function to refresh (client secret stays server-side)
-    const { data: sessionData } = await supabase.auth.getSession();
-    const jwt = sessionData.session?.access_token;
-    if (!jwt) return null;
+    // Expired and has a refresh token — ask edge function (client secret stays server-side)
+    if (!data.refresh_token) return data.access_token as string;
+
+    const { data: session } = await supabase.auth.getSession();
+    const jwt = session.session?.access_token;
+    if (!jwt) return data.access_token as string;
 
     const res = await fetch(`${EDGE_FN}/whoop-oauth`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${jwt}`,
-      },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
       body: JSON.stringify({ action: 'refresh' }),
     });
 
-    if (!res.ok) return null;
-    const body = await res.json() as { access_token: string };
-    return body.access_token;
+    if (!res.ok) return data.access_token as string;
+    const { access_token } = await res.json() as { access_token: string };
+    return access_token;
   },
 
   /** Check whether the user has a stored WHOOP connection and return metadata. */
@@ -138,7 +123,7 @@ export const whoopService = {
     return data ? { connected: true, connectedAt: data.created_at as string } : { connected: false };
   },
 
-  /** Remove the stored WHOOP tokens for a user. */
+  /** Remove the stored WHOOP token for a user. */
   async disconnect(userId: string): Promise<void> {
     await supabase.from('whoop_tokens').delete().eq('user_id', userId);
     cache.clear();
