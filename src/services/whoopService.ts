@@ -124,11 +124,11 @@ export const whoopService = {
   async getConnectionInfo(userId: string): Promise<{ connected: boolean; connectedAt?: string } | null> {
     const { data } = await supabase
       .from('whoop_tokens')
-      .select('connected_at')
+      .select('created_at')
       .eq('user_id', userId)
       .single();
 
-    return data ? { connected: true, connectedAt: data.connected_at as string } : { connected: false };
+    return data ? { connected: true, connectedAt: data.created_at as string } : { connected: false };
   },
 
   /** Remove the stored WHOOP tokens for a user. */

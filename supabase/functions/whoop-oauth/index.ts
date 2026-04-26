@@ -131,7 +131,6 @@ Deno.serve(async (req: Request) => {
     refresh_token: tokens.refresh_token,
     expires_at: expiresAt,
     whoop_user_id: profile.user_id ?? null,
-    connected_at: new Date().toISOString(),
   });
 
   if (dbErr) return errorRedirect('Failed to save connection');
