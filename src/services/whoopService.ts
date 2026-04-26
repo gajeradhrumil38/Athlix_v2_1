@@ -1,7 +1,21 @@
 import { format } from 'date-fns';
 import type { WhoopRecovery, WhoopSleep, WhoopHeartRate, WhoopCycle } from '../types/whoop';
+import { supabase } from '../lib/supabase';
 
 const BASE = 'https://api.prod.whoop.com/developer';
+const EDGE_FN = 'https://mrntwydykqsdawpklumf.supabase.co/functions/v1';
+
+export const WHOOP_CLIENT_ID = 'd00b485b-7052-4a22-ad29-c57ab43f0817';
+export const WHOOP_REDIRECT_URI = `${EDGE_FN}/whoop-oauth`;
+export const WHOOP_AUTH_URL = 'https://api.prod.whoop.com/oauth/oauth2/auth';
+export const WHOOP_SCOPES = [
+  'read:recovery',
+  'read:cycles',
+  'read:sleep',
+  'read:workout',
+  'read:profile',
+  'read:body_measurement',
+].join(' ');
 
 // Session-level cache — invalidated on page reload
 const cache = new Map<string, { data: unknown; ts: number }>();
@@ -34,7 +48,6 @@ async function whoopFetch<T>(token: string, path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-// Follows next_token pagination until exhausted
 async function fetchAllPages<T>(
   token: string,
   basePath: string,
@@ -45,10 +58,10 @@ async function fetchAllPages<T>(
 
   do {
     const sep = basePath.includes('?') ? '&' : '?';
-    const path = nextToken
+    const path: string = nextToken
       ? `${basePath}${sep}nextToken=${encodeURIComponent(nextToken)}`
       : basePath;
-    const body = await whoopFetch<Record<string, unknown>>(token, path);
+    const body: Record<string, unknown> = await whoopFetch<Record<string, unknown>>(token, path);
     results.push(...extractRecords(body));
     nextToken = (body.next_token as string) ?? null;
   } while (nextToken);
@@ -57,6 +70,75 @@ async function fetchAllPages<T>(
 }
 
 export const whoopService = {
+  // ── OAuth helpers ──────────────────────────────────────────
+
+  /** Build the WHOOP OAuth authorization URL. Call window.location.href = this. */
+  buildAuthUrl(userId: string): string {
+    const returnUrl = window.location.href;
+    const state = btoa(JSON.stringify({ userId, returnUrl }));
+    const params = new URLSearchParams({
+      client_id: WHOOP_CLIENT_ID,
+      redirect_uri: WHOOP_REDIRECT_URI,
+      response_type: 'code',
+      scope: WHOOP_SCOPES,
+      state,
+    });
+    return `${WHOOP_AUTH_URL}?${params.toString()}`;
+  },
+
+  /** Get the stored access token for a user, refreshing via edge function if expired. */
+  async getStoredToken(userId: string): Promise<string | null> {
+    const { data } = await supabase
+      .from('whoop_tokens')
+      .select('access_token, expires_at')
+      .eq('user_id', userId)
+      .single();
+
+    if (!data) return null;
+
+    // Still valid with 5-min buffer
+    if (Date.now() < new Date(data.expires_at).getTime() - 5 * 60 * 1000) {
+      return data.access_token as string;
+    }
+
+    // Expired — ask edge function to refresh (client secret stays server-side)
+    const { data: sessionData } = await supabase.auth.getSession();
+    const jwt = sessionData.session?.access_token;
+    if (!jwt) return null;
+
+    const res = await fetch(`${EDGE_FN}/whoop-oauth`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${jwt}`,
+      },
+      body: JSON.stringify({ action: 'refresh' }),
+    });
+
+    if (!res.ok) return null;
+    const body = await res.json() as { access_token: string };
+    return body.access_token;
+  },
+
+  /** Check whether the user has a stored WHOOP connection and return metadata. */
+  async getConnectionInfo(userId: string): Promise<{ connected: boolean; connectedAt?: string } | null> {
+    const { data } = await supabase
+      .from('whoop_tokens')
+      .select('connected_at')
+      .eq('user_id', userId)
+      .single();
+
+    return data ? { connected: true, connectedAt: data.connected_at as string } : { connected: false };
+  },
+
+  /** Remove the stored WHOOP tokens for a user. */
+  async disconnect(userId: string): Promise<void> {
+    await supabase.from('whoop_tokens').delete().eq('user_id', userId);
+    cache.clear();
+  },
+
+  // ── Data fetchers ──────────────────────────────────────────
+
   /** Validates token — throws on 401/other errors */
   async validateToken(token: string): Promise<{ user_id: number; email: string; first_name: string; last_name: string }> {
     return whoopFetch(token, '/v1/user/profile/basic');
@@ -131,12 +213,14 @@ export const whoopService = {
     const path = `/v1/cycle?start=${startDate}&end=${endDate}&limit=25`;
     const records = await fetchAllPages<WhoopCycle>(token, path, (body) =>
       ((body.records as Record<string, unknown>[]) || []).map((r) => {
-        const kj = ((r.score as Record<string, number>)?.kilojoule) ?? 0;
+        const score = r.score as Record<string, number> | undefined;
+        const kj = score?.kilojoule ?? 0;
         return {
           date: format(new Date(r.start as string), 'yyyy-MM-dd'),
           // WHOOP doesn't natively expose step count; estimated from kilojoules: 1 kJ ≈ 23.9 steps
           estimated_steps: Math.round(kj * 23.9),
           raw_kilojoules: kj,
+          strain_score: score?.strain,
         };
       }),
     );

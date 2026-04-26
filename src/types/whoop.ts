@@ -22,4 +22,5 @@ export interface WhoopCycle {
   date: string;
   estimated_steps: number;
   raw_kilojoules: number;
+  strain_score?: number;
 }

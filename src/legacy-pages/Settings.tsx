@@ -5,103 +5,114 @@ import {
   Moon, Scale, Activity, LogOut, LayoutDashboard,
   ChevronRight, Trash2, Dumbbell, User, Save, Loader2, CheckCircle, XCircle,
 } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { convertWeight, type WeightUnit } from '../lib/units';
 import { whoopService } from '../services/whoopService';
 
-const WHOOP_TOKEN_KEY = 'whoop_token';
-const WHOOP_CONNECTED_AT_KEY = 'whoop_connected_at';
-
 /* ── WHOOP connect sub-section ─────────────────────────────── */
-const WhoopConnect: React.FC = () => {
-  const [token, setToken] = useState(() => localStorage.getItem(WHOOP_TOKEN_KEY) ?? '');
-  const [draft, setDraft] = useState('');
-  const [validating, setValidating] = useState(false);
-  const connectedAt = localStorage.getItem(WHOOP_CONNECTED_AT_KEY);
-  const isConnected = Boolean(token);
+const WhoopConnect: React.FC<{ userId: string }> = ({ userId }) => {
+  const [status, setStatus] = useState<'loading' | 'connected' | 'disconnected'>('loading');
+  const [connectedAt, setConnectedAt] = useState<string | null>(null);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const handleConnect = async () => {
-    const t = draft.trim();
-    if (!t) return;
-    setValidating(true);
+  // Load connection status from Supabase
+  useEffect(() => {
+    if (!userId) return;
+    whoopService.getConnectionInfo(userId).then((info) => {
+      if (info?.connected) {
+        setStatus('connected');
+        setConnectedAt(info.connectedAt ?? null);
+      } else {
+        setStatus('disconnected');
+      }
+    });
+  }, [userId]);
+
+  // Handle OAuth redirect result (?whoop=connected or ?whoop=error)
+  useEffect(() => {
+    const result = searchParams.get('whoop');
+    const msg = searchParams.get('msg');
+    if (!result) return;
+
+    if (result === 'connected') {
+      toast.success('WHOOP connected successfully');
+      setStatus('connected');
+      whoopService.getConnectionInfo(userId).then((info) => {
+        if (info?.connectedAt) setConnectedAt(info.connectedAt);
+      });
+    } else if (result === 'error') {
+      toast.error(msg ? decodeURIComponent(msg) : 'WHOOP connection failed');
+    }
+
+    // Clear params so toast doesn't re-fire on refresh
+    setSearchParams({}, { replace: true });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleConnect = () => {
+    window.location.href = whoopService.buildAuthUrl(userId);
+  };
+
+  const handleDisconnect = async () => {
+    setDisconnecting(true);
     try {
-      await whoopService.validateToken(t);
-      localStorage.setItem(WHOOP_TOKEN_KEY, t);
-      localStorage.setItem(WHOOP_CONNECTED_AT_KEY, new Date().toISOString());
-      setToken(t);
-      setDraft('');
-      toast.success('WHOOP connected');
-    } catch (err: unknown) {
-      const e = err as { status?: number; message?: string };
-      const msg = e?.status === 401
-        ? 'Invalid token — check your WHOOP access token'
-        : (e?.message || 'Could not connect to WHOOP');
-      toast.error(msg);
+      await whoopService.disconnect(userId);
+      setStatus('disconnected');
+      setConnectedAt(null);
+      toast.success('WHOOP disconnected');
+    } catch {
+      toast.error('Failed to disconnect');
     } finally {
-      setValidating(false);
+      setDisconnecting(false);
     }
   };
 
-  const handleDisconnect = () => {
-    localStorage.removeItem(WHOOP_TOKEN_KEY);
-    localStorage.removeItem(WHOOP_CONNECTED_AT_KEY);
-    setToken('');
-    setDraft('');
-    toast.success('WHOOP disconnected');
-  };
-
-  const fmtDate = (iso: string | null) => {
-    if (!iso) return '';
-    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-  };
+  const fmtDate = (iso: string) =>
+    new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
   return (
     <div className="px-5 py-4 space-y-3">
-      {/* Connection status */}
+      {/* Connection status row */}
       <div className="flex items-center gap-2">
-        {isConnected
-          ? <CheckCircle className="w-4 h-4 shrink-0" style={{ color: '#4ade80' }} />
-          : <XCircle className="w-4 h-4 shrink-0" style={{ color: 'var(--text-muted)' }} />
-        }
-        <span className="text-[13px] font-medium" style={{ color: isConnected ? '#4ade80' : 'var(--text-secondary)' }}>
-          {isConnected ? 'Connected' : 'Not connected'}
+        {status === 'loading' && <Loader2 className="w-4 h-4 animate-spin shrink-0" style={{ color: 'var(--text-muted)' }} />}
+        {status === 'connected' && <CheckCircle className="w-4 h-4 shrink-0" style={{ color: '#4ade80' }} />}
+        {status === 'disconnected' && <XCircle className="w-4 h-4 shrink-0" style={{ color: 'var(--text-muted)' }} />}
+        <span className="text-[13px] font-medium" style={{ color: status === 'connected' ? '#4ade80' : 'var(--text-secondary)' }}>
+          {status === 'loading' ? 'Checking…' : status === 'connected' ? 'Connected' : 'Not connected'}
         </span>
-        {isConnected && connectedAt && (
+        {status === 'connected' && connectedAt && (
           <span className="text-[11px] ml-auto" style={{ color: 'var(--text-muted)' }}>
             since {fmtDate(connectedAt)}
           </span>
         )}
       </div>
 
-      {!isConnected ? (
+      {status === 'disconnected' && (
         <>
           <p className="text-[12px]" style={{ color: 'var(--text-muted)' }}>
-            Paste your WHOOP API access token to sync Recovery, Sleep, Heart Rate, and Steps.
+            Connect your WHOOP account to sync Recovery, Sleep, Heart Rate, Steps &amp; Strain.
           </p>
-          <input
-            type="password"
-            placeholder="WHOOP access token"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && void handleConnect()}
-            className="w-full h-10 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-3.5 text-[14px] text-[var(--text-primary)] outline-none focus:border-[var(--accent)]/60 transition-colors"
-          />
           <button
-            onClick={() => void handleConnect()}
-            disabled={validating || !draft.trim()}
-            className="w-full h-10 rounded-xl bg-[var(--accent)] text-black text-[13px] font-bold flex items-center justify-center gap-2 disabled:opacity-40 transition-opacity"
+            type="button"
+            onClick={handleConnect}
+            className="w-full h-10 rounded-xl bg-[var(--accent)] text-black text-[13px] font-bold flex items-center justify-center gap-2 transition-opacity"
           >
-            {validating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
-            {validating ? 'Validating…' : 'Connect WHOOP'}
+            <Activity className="w-4 h-4" />
+            Connect with WHOOP
           </button>
         </>
-      ) : (
+      )}
+
+      {status === 'connected' && (
         <button
-          onClick={handleDisconnect}
-          className="w-full h-10 rounded-xl border text-[13px] font-medium flex items-center justify-center gap-2 transition-colors"
+          type="button"
+          onClick={() => void handleDisconnect()}
+          disabled={disconnecting}
+          className="w-full h-10 rounded-xl border text-[13px] font-medium flex items-center justify-center gap-2 transition-colors disabled:opacity-40"
           style={{ borderColor: 'rgba(248,113,113,0.3)', color: 'rgba(248,113,113,0.8)' }}
         >
-          <XCircle className="w-4 h-4" />
+          {disconnecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
           Disconnect WHOOP
         </button>
       )}
@@ -509,7 +520,7 @@ export const Settings: React.FC = () => {
             Recovery, Sleep Efficiency, Heart Rate &amp; Steps
           </p>
         </div>
-        <WhoopConnect />
+        <WhoopConnect userId={user?.id ?? ''} />
       </SectionCard>
 
       {/* ── Account ───────────────────────────── */}
