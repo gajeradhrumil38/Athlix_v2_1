@@ -44,7 +44,7 @@ const Ring: React.FC<RingProps> = ({ value, color, label, subLabel, delay = 0 })
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-[22px] font-bold text-white leading-none">{value.toFixed(0)}</span>
+          <span className="font-victory text-[22px] font-bold text-white leading-none">{value.toFixed(0)}</span>
           {/* <span className="text-[10px] text-[var(--text-muted)] mt-0.5">%</span> */}
         </div>
       </div>

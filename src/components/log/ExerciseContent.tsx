@@ -93,16 +93,16 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = (props) => {
             {/* Sets */}
             <div className="flex flex-col gap-0.5 px-3 py-2.5">
               <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">Sets</div>
-              <div className="text-[20px] font-black text-[var(--text-primary)] tabular-nums leading-none">
+              <div className="font-victory text-[20px] font-black text-[var(--text-primary)] tabular-nums leading-none">
                 {completedSets}
-                <span className="text-[14px] font-bold text-[var(--text-muted)]">/{exercise.sets.length}</span>
+                <span className="font-victory text-[14px] font-bold text-[var(--text-muted)]">/{exercise.sets.length}</span>
               </div>
             </div>
 
             {/* divider */}
             <div className="border-l border-r border-[var(--border)] flex flex-col gap-0.5 px-3 py-2.5">
               <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">Volume</div>
-              <div className="text-[20px] font-black text-[var(--text-primary)] tabular-nums leading-none">
+              <div className="font-victory text-[20px] font-black text-[var(--text-primary)] tabular-nums leading-none">
                 {totalVolume > 0 ? totalVolume.toLocaleString() : <span className="text-[var(--text-muted)]">—</span>}
               </div>
               {relativeLoad !== null && (

@@ -87,28 +87,28 @@ export const FinishSheet: React.FC<FinishSheetProps> = ({
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl">
               <Clock className="w-4 h-4 text-[var(--accent)] mb-2" />
-              <div className="text-[20px] font-extrabold text-[var(--text-primary)] tabular-nums">{formatTime(workout.elapsedSeconds)}</div>
+              <div className="font-victory text-[20px] font-extrabold text-[var(--text-primary)] tabular-nums">{formatTime(workout.elapsedSeconds)}</div>
               <div className="text-[9px] text-[var(--text-secondary)] uppercase tracking-wider">Duration</div>
             </div>
             <div className="p-4 bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl">
               <Weight className="w-4 h-4 text-[var(--accent)] mb-2" />
-              <div className="text-[20px] font-extrabold text-[var(--text-primary)] tabular-nums">
+              <div className="font-victory text-[20px] font-extrabold text-[var(--text-primary)] tabular-nums">
                 {totalVolume.toLocaleString()}
                 {weightUnit}
               </div>
               {relativeLoad !== null && (
-                <div className="mt-1 text-[10px] font-semibold text-[var(--text-secondary)] tabular-nums">{relativeLoad.toFixed(2)}x BW</div>
+                <div className="font-victory mt-1 text-[10px] font-semibold text-[var(--text-secondary)] tabular-nums">{relativeLoad.toFixed(2)}x BW</div>
               )}
               <div className="text-[9px] text-[var(--text-secondary)] uppercase tracking-wider">Total Volume</div>
             </div>
             <div className="p-4 bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl">
               <Activity className="w-4 h-4 text-[var(--accent)] mb-2" />
-              <div className="text-[20px] font-extrabold text-[var(--text-primary)] tabular-nums">{totalSets}</div>
+              <div className="font-victory text-[20px] font-extrabold text-[var(--text-primary)] tabular-nums">{totalSets}</div>
               <div className="text-[9px] text-[var(--text-secondary)] uppercase tracking-wider">Total Sets</div>
             </div>
             <div className="p-4 bg-[var(--bg-surface)] border border-[var(--border)] rounded-2xl">
               <Trophy className="w-4 h-4 text-[#EF9F27] mb-2" />
-              <div className="text-[20px] font-extrabold text-[var(--text-primary)] tabular-nums">{prCount}</div>
+              <div className="font-victory text-[20px] font-extrabold text-[var(--text-primary)] tabular-nums">{prCount}</div>
               <div className="text-[9px] text-[var(--text-secondary)] uppercase tracking-wider">New PRs</div>
             </div>
           </div>

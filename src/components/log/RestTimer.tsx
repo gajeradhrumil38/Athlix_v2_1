@@ -43,7 +43,7 @@ export const RestTimer: React.FC<RestTimerProps> = ({ duration, exerciseName, on
     >
       <div className="flex flex-col items-center min-w-[40px]">
         <span className="text-[7px] font-bold text-[var(--text-muted)] uppercase tracking-widest leading-none mb-0.5">REST</span>
-        <span className="text-[16px] font-black text-[#EF9F27] tabular-nums leading-none">
+        <span className="font-victory text-[16px] font-black text-[#EF9F27] tabular-nums leading-none">
           {formatTime(timeLeft)}
         </span>
       </div>

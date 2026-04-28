@@ -557,7 +557,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
         {/* ── Timer Bar (visible when exercises exist) ──────────────── */}
         {workout.exercises.length > 0 && (
           <div className="shrink-0 flex items-center gap-3 px-4 py-2.5 border-b border-white/5">
-            <span className="text-[18px] font-semibold text-[var(--text-primary)] tabular-nums">
+            <span className="font-victory text-[18px] font-semibold text-[var(--text-primary)] tabular-nums">
               {formatElapsedTime(workout.elapsedSeconds)}
             </span>
             <button

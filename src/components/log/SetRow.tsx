@@ -34,7 +34,7 @@ const ValueBox: React.FC<{
     >
       {/* top shimmer line */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-      <div className="tabular-nums text-[36px] leading-none font-black text-[var(--text-primary)]">{field.displayValue}</div>
+      <div className="font-victory tabular-nums text-[36px] leading-none font-black text-[var(--text-primary)]">{field.displayValue}</div>
       <div className="text-[10px] font-bold tracking-[0.16em] uppercase text-[var(--text-muted)]">{field.label}</div>
     </button>
   );

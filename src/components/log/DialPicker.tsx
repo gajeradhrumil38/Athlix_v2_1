@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronLeft, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import type { DialFieldKind, DistanceUnit, ExerciseInputType, WeightUnit } from '../../lib/exerciseTypes';
 import { haptics } from '../../lib/haptics';
 
@@ -27,7 +27,6 @@ const ITEM_HEIGHT = 44;
 const VISIBLE_ROWS = 5;
 const VIEW_HEIGHT = ITEM_HEIGHT * VISIBLE_ROWS;
 const VIEW_PADDING = (VIEW_HEIGHT - ITEM_HEIGHT) / 2;
-const COLUMN_SPACING = 5;
 // Increased from 120ms — iOS momentum scrolling can take 300-500ms to settle
 const SCROLL_SETTLE_MS = 280;
 // How long to wait after programmatic snap before re-enabling scroll reads
@@ -328,16 +327,17 @@ const WheelColumn: React.FC<WheelColumnProps> = ({ values, format, initialIndex,
         {values.map((value, index) => (
           <div
             key={`${value}-${index}`}
-            className={`relative flex w-full items-center justify-center text-center tabular-nums leading-none select-none ${
+            className={`font-victory relative flex w-full items-center justify-center text-center tabular-nums leading-none select-none ${
               index === selectedIndex
-                ? 'font-bold text-[var(--text-primary)]'
+                ? 'font-bold text-[var(--accent)]'
                 : 'font-normal text-[var(--text-muted)]'
             }`}
             style={{
               height: `${ITEM_HEIGHT}px`,
               scrollSnapAlign: 'center',
-              fontSize: index === selectedIndex ? '30px' : '26px',
-              transition: 'font-size 0.1s ease, color 0.1s ease',
+              fontSize: index === selectedIndex ? '32px' : '24px',
+              opacity: index === selectedIndex ? 1 : Math.max(0.25, 1 - Math.abs(index - selectedIndex) * 0.25),
+              transition: 'font-size 0.12s ease, color 0.12s ease, opacity 0.12s ease',
             }}
           >
             {format(value)}
@@ -347,16 +347,16 @@ const WheelColumn: React.FC<WheelColumnProps> = ({ values, format, initialIndex,
 
       {unitLabel && (
         <div
-          className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-[11px] font-semibold tracking-[0.12em] text-[var(--text-secondary)]"
-          style={{ right: '10px' }}
+          className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-[10px] font-bold tracking-[0.18em] text-[var(--text-muted)]"
+          style={{ right: '12px' }}
         >
           {unitLabel}
         </div>
       )}
 
-      {/* Fade overlays — use CSS var so they match the current theme */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[88px] bg-gradient-to-b from-[var(--bg-base)] to-transparent" />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[88px] bg-gradient-to-t from-[var(--bg-base)] to-transparent" />
+      {/* Fade overlays matching the container background */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[72px] bg-gradient-to-b from-[var(--bg-elevated)] to-transparent" />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[72px] bg-gradient-to-t from-[var(--bg-elevated)] to-transparent" />
     </div>
   );
 };
@@ -392,56 +392,81 @@ export const DialPicker: React.FC<DialPickerProps> = ({
 
   const submit = () => onConfirm(composeValue(fieldKind, selectedValues));
 
+  const liveValue = composeValue(fieldKind, selectedValues);
+  const liveUnit = columns[0]?.unitLabel ?? '';
+
+  const liveDisplay = (() => {
+    if (fieldKind === 'weight') {
+      const whole = selectedValues[0] ?? 0;
+      const dec = selectedValues[1] ?? 0;
+      return dec === 5 ? `${whole}.5` : `${whole}`;
+    }
+    if (fieldKind === 'distance') {
+      const whole = selectedValues[0] ?? 0;
+      const dec = selectedValues[1] ?? 0;
+      return `${whole}.${dec}`;
+    }
+    if (fieldKind === 'seconds') return String(liveValue).padStart(2, '0');
+    return String(liveValue);
+  })();
+
   return (
     <div className="fixed inset-0 z-[220]">
       <button
         type="button"
         aria-label="Dismiss picker"
         onClick={onClose}
-        className="absolute inset-0 bg-black/60 backdrop-blur-[1px]"
+        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
       />
 
       <motion.div
         initial={{ y: '100%' }}
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
-        transition={{ type: 'spring', damping: 30, stiffness: 280 }}
-        className="absolute bottom-0 left-0 right-0 mx-auto w-full max-w-[860px] rounded-t-[24px] border border-[var(--border)] border-b-0 pb-[calc(env(safe-area-inset-bottom)+16px)] pt-3 px-4"
+        transition={{ type: 'spring', damping: 32, stiffness: 300 }}
+        className="absolute bottom-0 left-0 right-0 mx-auto w-full max-w-[860px] rounded-t-[28px] border-t border-x border-[var(--border)] pb-[calc(env(safe-area-inset-bottom)+20px)] pt-3 px-5"
         style={{ background: 'var(--bg-surface)' }}
       >
-        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-white/20" />
+        {/* Drag pill */}
+        <div className="mx-auto mb-5 h-[3px] w-9 rounded-full bg-white/15" />
 
-        <div className="mb-3 flex items-center justify-between">
+        {/* Header: label + live value + dismiss */}
+        <div className="mb-5 flex items-start justify-between">
+          <div>
+            <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+              {title}
+            </p>
+            <div className="flex items-baseline gap-2">
+              <span className="font-victory tabular-nums leading-none text-[var(--text-primary)]" style={{ fontSize: '48px', fontWeight: 700 }}>
+                {liveDisplay}
+              </span>
+              {liveUnit && (
+                <span className="font-victory text-[18px] font-semibold text-[var(--text-muted)] uppercase tracking-wide">
+                  {liveUnit}
+                </span>
+              )}
+            </div>
+          </div>
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-9 items-center gap-1 rounded-lg px-3 text-[12px] font-medium text-[var(--text-secondary)] transition-colors"
-            style={{ background: 'var(--bg-elevated)' }}
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back
-          </button>
-          <h3 className="text-[16px] font-semibold text-[var(--text-primary)]">{title}</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-[var(--text-muted)] transition-colors"
+            className="mt-1 flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-muted)] transition-colors active:bg-white/8"
             style={{ background: 'var(--bg-elevated)' }}
           >
             <X className="h-4 w-4" />
           </button>
         </div>
 
+        {/* Wheel container */}
         <div
-          className={`relative mb-4 grid overflow-hidden rounded-[20px] border border-[var(--border)] ${
-            columns.length > 1 ? 'grid-cols-2' : 'grid-cols-1'
-          }`}
-          style={{ gap: `${COLUMN_SPACING}px`, height: `${VIEW_HEIGHT}px`, background: 'var(--bg-elevated)' }}
+          className={`relative mb-5 flex overflow-hidden rounded-[18px] border border-[var(--border)]`}
+          style={{ height: `${VIEW_HEIGHT}px`, background: 'var(--bg-elevated)' }}
         >
           {columns.map((column, columnIndex) => (
             <div
               key={column.id}
               className={`flex flex-col ${columnIndex > 0 ? 'border-l border-[var(--border)]' : ''}`}
+              style={{ flex: column.id === 'decimal' ? '0 0 30%' : '1 1 0%' }}
             >
               <WheelColumn
                 values={column.values}
@@ -458,19 +483,27 @@ export const DialPicker: React.FC<DialPickerProps> = ({
               />
             </div>
           ))}
-          {/* Selection highlight bar */}
+
+          {/* Selection highlight rail */}
           <div
-            className="pointer-events-none absolute inset-x-2 top-1/2 -translate-y-1/2 border-y border-[var(--border)] bg-white/5"
-            style={{ height: `${ITEM_HEIGHT}px`, borderRadius: '12px' }}
+            className="pointer-events-none absolute inset-x-3 top-1/2 -translate-y-1/2"
+            style={{
+              height: `${ITEM_HEIGHT}px`,
+              borderRadius: '10px',
+              background: 'rgba(200,255,0,0.06)',
+              border: '1px solid rgba(200,255,0,0.18)',
+              boxShadow: '0 0 12px rgba(200,255,0,0.08)',
+            }}
           />
         </div>
 
+        {/* Confirm button */}
         <button
           type="button"
           onClick={submit}
-          className="h-[52px] w-full rounded-xl text-[15px] font-semibold transition-colors bg-[var(--accent)] text-black"
+          className="h-[54px] w-full rounded-2xl text-[15px] font-bold tracking-[0.04em] transition-all active:scale-[0.98] bg-[var(--accent)] text-black"
         >
-          Done
+          Set {liveDisplay} {liveUnit}
         </button>
       </motion.div>
     </div>

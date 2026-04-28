@@ -93,8 +93,8 @@ export const WeightRepsModal: React.FC<WeightRepsModalProps> = ({
       <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-12">
         {/* Big Value Display */}
         <div className="text-center">
-          <div className="text-[72px] font-black text-[var(--text-primary)] leading-none tabular-nums">
-            {value}<span className="text-[24px] font-bold text-[var(--text-muted)] ml-1">{unit}</span>
+          <div className="font-victory text-[72px] font-black text-[var(--text-primary)] leading-none tabular-nums">
+            {value}<span className="font-victory text-[24px] font-bold text-[var(--text-muted)] ml-1">{unit}</span>
           </div>
           <div className="text-[12px] font-bold text-[var(--text-muted)] uppercase tracking-[2px] mt-2">
             Target {field}

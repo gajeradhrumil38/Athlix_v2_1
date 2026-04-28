@@ -79,7 +79,7 @@ export const WeightRepsPicker: React.FC<WeightRepsPickerProps> = ({ type, initia
             {range.map((v, i) => (
               <div 
                 key={v}
-                className={`h-10 flex items-center justify-center text-[24px] font-bold tabular-nums transition-all snap-center ${value === v ? 'text-[var(--accent)] scale-125' : 'text-[var(--text-muted)] opacity-40'}`}
+                className={`font-victory h-10 flex items-center justify-center text-[24px] font-bold tabular-nums transition-all snap-center ${value === v ? 'text-[var(--accent)] scale-125' : 'text-[var(--text-muted)] opacity-40'}`}
               >
                 {v}{type === 'weight' ? 'kg' : ''}
               </div>
@@ -121,7 +121,7 @@ export const WeightRepsPicker: React.FC<WeightRepsPickerProps> = ({ type, initia
               </div>
 
               <div className="flex-1 flex flex-col items-center justify-center">
-                <div className="text-[48px] font-extrabold text-[var(--accent)] mb-2">{value}kg</div>
+                <div className="font-victory text-[48px] font-extrabold text-[var(--accent)] mb-2">{value}kg</div>
                 <div className="text-[10px] text-[var(--text-secondary)] uppercase tracking-widest mb-8">Total Weight (20kg Bar)</div>
 
                 <div className="flex gap-2 flex-wrap justify-center max-w-[300px]">

@@ -1050,11 +1050,11 @@ export const Progress: React.FC = () => {
                 <div className="flex gap-5 text-right">
                   <div>
                     <p className="text-[10px] uppercase tracking-[1.2px] text-[var(--text-muted)]">Streak</p>
-                    <p className="text-[15px] font-bold text-[var(--accent)] tabular-nums">{currentStreak}d</p>
+                    <p className="font-victory text-[15px] font-bold text-[var(--accent)] tabular-nums">{currentStreak}d</p>
                   </div>
                   <div>
                     <p className="text-[10px] uppercase tracking-[1.2px] text-[var(--text-muted)]">Best</p>
-                    <p className="text-[15px] font-bold text-[var(--text-primary)] tabular-nums">{maxStreak}d</p>
+                    <p className="font-victory text-[15px] font-bold text-[var(--text-primary)] tabular-nums">{maxStreak}d</p>
                   </div>
                 </div>
               </div>
@@ -1096,9 +1096,9 @@ export const Progress: React.FC = () => {
                     Weekly Volume · by muscle
                   </p>
                   {setVolumeData.length > 0 && (
-                    <p className="text-[22px] font-bold text-[var(--text-primary)] mt-1 tabular-nums">
+                    <p className="font-victory text-[22px] font-bold text-[var(--text-primary)] mt-1 tabular-nums">
                       {setVolumeData.reduce((a, d) => a + d.current, 0)}
-                      <span className="text-[14px] font-medium text-[var(--text-muted)] ml-1">sets this week</span>
+                      <span className="font-victory text-[14px] font-medium text-[var(--text-muted)] ml-1">sets this week</span>
                     </p>
                   )}
                 </div>
@@ -1671,7 +1671,7 @@ export const Progress: React.FC = () => {
                   </motion.div>
                 </div>
 
-                <div className="text-5xl font-black text-white tabular-nums leading-none mt-1">{currentBpm ?? '--'}</div>
+                <div className="font-victory text-5xl font-black text-white tabular-nums leading-none mt-1">{currentBpm ?? '--'}</div>
                 <div className="text-[11px] tracking-[0.2em] uppercase text-[#8EA0B8] mt-1">Beats Per Minute</div>
                 <div
                   className="mt-3 px-3 py-1.5 rounded-full border text-sm font-semibold"

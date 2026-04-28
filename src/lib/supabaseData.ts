@@ -167,7 +167,7 @@ const DEFAULT_EXERCISES: Record<string, string[]> = {
     'Running (Outdoor)',
     'Walking',
   ],
-  Flexibility: [
+  Yoga: [
     // Yoga flows
     'Sun Salutation',
     'Vinyasa Flow',
