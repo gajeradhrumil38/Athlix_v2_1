@@ -9,6 +9,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { HeartRateProvider } from './contexts/HeartRateContext';
 import { RestTimerProvider } from './contexts/RestTimerContext';
 import { Layout } from './components/Layout';
+import { LoadingScreen } from './components/LoadingScreen';
 import { Auth } from './legacy-pages/Auth';
 import { Home } from './legacy-pages/Home';
 import { Calendar } from './legacy-pages/Calendar';
@@ -23,7 +24,7 @@ import { WhoopCallback } from './legacy-pages/WhoopCallback';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
-  if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-white">Loading...</div>;
+  if (loading) return <LoadingScreen />;
   if (!user) return <Navigate to="/auth" replace />;
   return <>{children}</>;
 };
