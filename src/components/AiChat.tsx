@@ -12,8 +12,9 @@ import {
 } from '../lib/supabaseData';
 
 const GEMINI_KEY_STORAGE = 'athlix:gemini_api_key';
-const GEMINI_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_MODEL_STORAGE = 'athlix:gemini_model';
+const DEFAULT_MODEL = 'gemini-1.5-flash'; // free tier: 15 RPM, 1500 req/day
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 interface Message {
   role: 'user' | 'model';
