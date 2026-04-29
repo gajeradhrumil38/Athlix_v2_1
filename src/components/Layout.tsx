@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AppIcon, IconName } from '../config/icons';
+import { AiChat } from './AiChat';
 
 const navItems: { path: string; icon: IconName; label: string }[] = [
   { path: '/',          icon: 'Home',      label: 'Home'      },
@@ -135,7 +136,21 @@ export const Layout: React.FC = () => {
         </nav>
 
         {/* Sidebar footer */}
-        <div className="px-3 py-4 border-t border-[var(--border)]">
+        <div className="px-3 py-4 border-t border-[var(--border)] space-y-2">
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent('athlix:open-ai'))}
+            className="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-[14px] font-medium text-[var(--text-secondary)] hover:bg-[var(--bg-elevated)] hover:text-[var(--text-primary)] transition-all duration-150"
+          >
+            <span
+              className="flex h-5 w-5 items-center justify-center rounded-md shrink-0"
+              style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+              </svg>
+            </span>
+            <span>AI Coach</span>
+          </button>
           <p className="text-[11px] text-[var(--text-muted)] px-3">Track. Recover. Perform.</p>
         </div>
       </aside>
@@ -204,6 +219,9 @@ export const Layout: React.FC = () => {
           <Outlet />
         </div>
       </main>
+
+      {/* ── AI Chat ──────────────────────────────────── */}
+      {!isImmersiveRoute && <AiChat />}
 
       {/* ── Floating Action Button ────────────────────── */}
       {!isImmersiveRoute && (

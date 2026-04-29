@@ -3,7 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 import {
   Moon, Scale, Activity, LogOut, LayoutDashboard,
-  ChevronRight, Trash2, Dumbbell, User, Save, Loader2, CheckCircle, XCircle,
+  ChevronRight, Trash2, Dumbbell, User, Save, Loader2, CheckCircle, XCircle, Sparkles, Eye, EyeOff,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { convertWeight, type WeightUnit } from '../lib/units';
@@ -286,6 +286,11 @@ export const Settings: React.FC = () => {
   const [defaultView, setDefaultView] = useState<'Day' | 'Week'>(
     () => (localStorage.getItem('defaultView') as 'Day' | 'Week') || 'Week'
   );
+  const [geminiKey, setGeminiKey] = useState(
+    () => localStorage.getItem('athlix:gemini_api_key') || ''
+  );
+  const [showGeminiKey, setShowGeminiKey] = useState(false);
+  const [geminiSaved, setGeminiSaved] = useState(false);
 
   useEffect(() => {
     setDraftProfile(profile);
@@ -357,6 +362,17 @@ export const Settings: React.FC = () => {
       return { ...prev, body_weight: nextWeight, body_weight_unit: nextUnit };
     });
     setMetricsChanged(true);
+  };
+
+  const saveGeminiKey = () => {
+    const trimmed = geminiKey.trim();
+    if (trimmed) {
+      localStorage.setItem('athlix:gemini_api_key', trimmed);
+    } else {
+      localStorage.removeItem('athlix:gemini_api_key');
+    }
+    setGeminiSaved(true);
+    setTimeout(() => setGeminiSaved(false), 2000);
   };
 
   /* ── Delete account ──────────────────────────── */
@@ -627,6 +643,63 @@ export const Settings: React.FC = () => {
           </p>
         </div>
         <WhoopConnect userId={user?.id ?? ''} />
+      </SectionCard>
+
+      {/* ── AI Assistant ──────────────────────── */}
+      <SectionCard title="AI Assistant">
+        <div className="px-5 py-5 space-y-3">
+          <div className="flex items-center gap-2 mb-1">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
+              style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-white" />
+            </div>
+            <div>
+              <p className="text-[13px] font-medium text-[var(--text-primary)]">Gemini API Key</p>
+              <p className="text-[11px] text-[var(--text-muted)]">
+                Get a free key at aistudio.google.com
+              </p>
+            </div>
+          </div>
+          <div className="relative">
+            <input
+              type={showGeminiKey ? 'text' : 'password'}
+              value={geminiKey}
+              onChange={(e) => setGeminiKey(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && saveGeminiKey()}
+              placeholder="AIza…"
+              className="w-full h-10 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-3.5 pr-10 text-[13px] text-[var(--text-primary)] outline-none focus:border-purple-500/50 transition-colors placeholder:text-[var(--text-muted)]"
+            />
+            <button
+              type="button"
+              onClick={() => setShowGeminiKey((v) => !v)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+            >
+              {showGeminiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          <button
+            onClick={saveGeminiKey}
+            className="w-full h-10 rounded-xl text-[13px] font-bold flex items-center justify-center gap-2 text-white transition-opacity"
+            style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)', opacity: geminiSaved ? 0.7 : 1 }}
+          >
+            {geminiSaved ? (
+              <><CheckCircle className="w-4 h-4" /> Saved!</>
+            ) : (
+              <><Save className="w-3.5 h-3.5" /> Save API Key</>
+            )}
+          </button>
+          {geminiKey && (
+            <button
+              type="button"
+              onClick={() => { setGeminiKey(''); localStorage.removeItem('athlix:gemini_api_key'); }}
+              className="w-full text-[12px] text-[var(--text-muted)] hover:text-[var(--red)] transition-colors"
+            >
+              Remove key
+            </button>
+          )}
+        </div>
       </SectionCard>
 
       {/* ── Account ───────────────────────────── */}
