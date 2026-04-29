@@ -2,8 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate, Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CheckCircle2, Eye, EyeOff, Loader2, X, Check } from 'lucide-react';
-import { signInLocal, signUpLocal } from '../lib/supabaseData';
+import { CheckCircle2, Eye, EyeOff, Loader2, X, Check, ArrowLeft } from 'lucide-react';
+import { signInLocal, signUpLocal, sendPasswordResetEmail } from '../lib/supabaseData';
 
 /* ─── Autofill override ───────────────────────────────────── */
 const inputStyle: React.CSSProperties = {
@@ -24,8 +24,6 @@ const getStrength = (v: string) => {
   return { label: 'Strong', color: '#22c55e', n: 3 };
 };
 
-const FORGOT_PASSWORD_URL = '/login?showForgot=1';
-
 /* ─── Left-panel stat pill ────────────────────────────────── */
 const StatPill: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <span className="flex items-center gap-1.5 text-[13px] text-white/60">
@@ -38,7 +36,7 @@ export const Auth: React.FC = () => {
   const emailRef = useRef<HTMLInputElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
 
-  const [mode, setMode] = useState<'signin' | 'signup'>('signup');
+  const [mode, setMode] = useState<'signin' | 'signup' | 'forgot'>('signup');
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -52,6 +50,7 @@ export const Auth: React.FC = () => {
   const [shakeKey, setShakeKey] = useState(0);
 
   const isSignUp = mode === 'signup';
+  const isForgot = mode === 'forgot';
   const strength = getStrength(password);
 
   if (user) return <Navigate to="/" replace />;
@@ -65,7 +64,7 @@ export const Auth: React.FC = () => {
     shake();
   };
 
-  const switchMode = (next: 'signin' | 'signup') => {
+  const switchMode = (next: 'signin' | 'signup' | 'forgot') => {
     setMode(next);
     setError(null);
     setSuccess(null);
@@ -75,12 +74,22 @@ export const Auth: React.FC = () => {
     setTimeout(() => (next === 'signup' ? nameRef.current?.focus() : emailRef.current?.focus()), 80);
   };
 
-  const goToForgotPassword = () => {
-    const base = FORGOT_PASSWORD_URL;
-    const withEmail = email.trim()
-      ? `${base}&email=${encodeURIComponent(email.trim().toLowerCase())}`
-      : base;
-    (window.top || window).location.href = withEmail;
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail.includes('@')) { setErr('Enter a valid email address.'); return; }
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      await sendPasswordResetEmail(trimmedEmail);
+      setSuccess('Reset link sent! Check your email — it may take a minute.');
+    } catch (err: any) {
+      setErr(err?.message || 'Failed to send reset email. Try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -250,11 +259,24 @@ export const Auth: React.FC = () => {
         <div className="w-full max-w-[420px]">
           {/* Heading */}
           <div className="mb-6">
+            {isForgot && (
+              <button
+                type="button"
+                onClick={() => switchMode('signin')}
+                className="mb-3 flex items-center gap-1.5 text-[13px] text-white/40 hover:text-white/70 transition-colors"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" /> Back to sign in
+              </button>
+            )}
             <h2 className="text-[26px] font-bold text-white tracking-tight">
-              {isSignUp ? 'Create account' : 'Sign in'}
+              {isSignUp ? 'Create account' : isForgot ? 'Forgot password?' : 'Sign in'}
             </h2>
             <p className="mt-1 text-[14px] text-white/40">
-              {isSignUp ? 'Start tracking your performance today.' : 'Welcome back to Athlix.'}
+              {isSignUp
+                ? 'Start tracking your performance today.'
+                : isForgot
+                  ? "Enter your email and we'll send a reset link."
+                  : 'Welcome back to Athlix.'}
             </p>
           </div>
 
@@ -326,7 +348,7 @@ export const Auth: React.FC = () => {
           {/* ── Form ── */}
           <motion.form
             key={shakeKey}
-            onSubmit={handleAuth}
+            onSubmit={isForgot ? handleForgotPassword : handleAuth}
             noValidate
             animate={shakeKey > 0 ? { x: [0, -8, 8, -6, 6, 0] } : { x: 0 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
@@ -383,16 +405,25 @@ export const Auth: React.FC = () => {
               />
             </div>
 
-            {/* Password */}
+            {/* Password — hidden in forgot mode */}
+            <AnimatePresence initial={false}>
+            {!isForgot && <motion.div
+              key="password-block"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
             <div>
               <div className="mb-1.5 flex items-center justify-between">
                 <label htmlFor="auth-password" className="text-[12px] font-medium text-white/50">
                   Password
                 </label>
-                {!isSignUp && (
+                {!isSignUp && !isForgot && (
                   <button
                     type="button"
-                    onClick={goToForgotPassword}
+                    onClick={() => switchMode('forgot')}
                     className="text-[12px] text-white/35 hover:text-[#C8FF00] transition-colors"
                   >
                     Forgot password?
@@ -450,6 +481,8 @@ export const Auth: React.FC = () => {
                 )}
               </AnimatePresence>
             </div>
+            </motion.div>}
+            </AnimatePresence>
 
             {/* Terms checkbox (sign-up only) */}
             <AnimatePresence initial={false}>
@@ -503,8 +536,10 @@ export const Auth: React.FC = () => {
               {loading ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  {isSignUp ? 'Creating account…' : 'Signing in…'}
+                  {isForgot ? 'Sending…' : isSignUp ? 'Creating account…' : 'Signing in…'}
                 </>
+              ) : isForgot ? (
+                'Send reset link'
               ) : isSignUp ? (
                 'Create account'
               ) : (
@@ -514,16 +549,18 @@ export const Auth: React.FC = () => {
           </motion.form>
 
           {/* ── Mode toggle ── */}
-          <p className="mt-5 text-center text-[13px] text-white/35">
-            {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-            <button
-              type="button"
-              onClick={() => switchMode(isSignUp ? 'signin' : 'signup')}
-              className="font-semibold text-white/70 hover:text-[#C8FF00] transition-colors"
-            >
-              {isSignUp ? 'Sign in' : 'Create account'}
-            </button>
-          </p>
+          {!isForgot && (
+            <p className="mt-5 text-center text-[13px] text-white/35">
+              {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+              <button
+                type="button"
+                onClick={() => switchMode(isSignUp ? 'signin' : 'signup')}
+                className="font-semibold text-white/70 hover:text-[#C8FF00] transition-colors"
+              >
+                {isSignUp ? 'Sign in' : 'Create account'}
+              </button>
+            </p>
+          )}
         </div>
       </div>
     </div>

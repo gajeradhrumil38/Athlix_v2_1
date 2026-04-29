@@ -21,10 +21,12 @@ import { Progress } from './legacy-pages/Progress';
 
 import { DashboardLayoutEditor } from './legacy-pages/DashboardLayoutEditor';
 import { WhoopCallback } from './legacy-pages/WhoopCallback';
+import { ResetPassword } from './legacy-pages/ResetPassword';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+  const { user, loading, isPasswordRecovery } = useAuth();
   if (loading) return <LoadingScreen />;
+  if (isPasswordRecovery) return <ResetPassword />;
   if (!user) return <Navigate to="/auth" replace />;
   return <>{children}</>;
 };
@@ -36,30 +38,37 @@ const RedirectToStatic = ({ path }: { path: string }) => {
   return null;
 };
 
-export default function App() {
+const AppRoutes = () => {
+  const { isPasswordRecovery } = useAuth();
   const staticBase = '/';
+  if (isPasswordRecovery) return <ResetPassword />;
+  return (
+    <Routes>
+      <Route path="/auth" element={<Auth />} />
+      <Route path="/whoop/callback" element={<WhoopCallback />} />
+      <Route path="/privacy" element={<RedirectToStatic path={`${staticBase}privacy.html`} />} />
+      <Route path="/terms" element={<RedirectToStatic path={`${staticBase}terms.html`} />} />
+      <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
+        <Route index element={<Home />} />
+        <Route path="calendar" element={<Calendar />} />
+        <Route path="log" element={<Log />} />
+        <Route path="templates" element={<Templates />} />
+        <Route path="timeline" element={<Timeline />} />
+        <Route path="progress" element={<Progress />} />
+        <Route path="settings" element={<Settings />} />
+        <Route path="settings/layout" element={<DashboardLayoutEditor />} />
+      </Route>
+    </Routes>
+  );
+};
 
+export default function App() {
   return (
     <AuthProvider>
       <HeartRateProvider>
         <RestTimerProvider>
           <HashRouter>
-            <Routes>
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/whoop/callback" element={<WhoopCallback />} />
-              <Route path="/privacy" element={<RedirectToStatic path={`${staticBase}privacy.html`} />} />
-              <Route path="/terms" element={<RedirectToStatic path={`${staticBase}terms.html`} />} />
-              <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
-                <Route index element={<Home />} />
-                <Route path="calendar" element={<Calendar />} />
-                <Route path="log" element={<Log />} />
-                <Route path="templates" element={<Templates />} />
-                <Route path="timeline" element={<Timeline />} />
-                <Route path="progress" element={<Progress />} />
-                <Route path="settings" element={<Settings />} />
-                <Route path="settings/layout" element={<DashboardLayoutEditor />} />
-              </Route>
-            </Routes>
+            <AppRoutes />
           </HashRouter>
         </RestTimerProvider>
       </HeartRateProvider>

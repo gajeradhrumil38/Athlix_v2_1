@@ -390,13 +390,25 @@ const fetchByIds = async (table: string, ids: string[], select = '*') => {
   return rows;
 };
 
+/** Returns the current page's base URL (before the hash) so redirects always work regardless of deploy path. */
+const getAppUrl = (): string =>
+  typeof window !== 'undefined'
+    ? window.location.href.split('#')[0]
+    : 'https://athlix-v2-1.vercel.app/legacy-app/';
+
 const ensureSupabaseAuthInitialized = () => {
   if (!hasSupabaseConfig || authInitialized) return;
   authInitialized = true;
 
-  const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+  const { data } = supabase.auth.onAuthStateChange((event, session) => {
     const nextUser = toLocalUser(session?.user);
     currentUserCache = nextUser;
+
+    if (event === 'PASSWORD_RECOVERY') {
+      // Notify the app that we're in recovery mode BEFORE emitting normal auth change,
+      // so the app can intercept and show the reset-password form instead of home.
+      window.dispatchEvent(new CustomEvent('athlix:password-recovery'));
+    }
 
     if (session?.user) {
       void migrateLegacyDataIfNeeded(session.user.id, session.user.email || null);
@@ -927,7 +939,7 @@ export const signUpLocal = async (email: string, password: string, fullName?: st
       data: {
         full_name: fullName || normalizedEmail.split('@')[0],
       },
-      emailRedirectTo: 'https://athlix-v2-1.vercel.app/auth/callback',
+      emailRedirectTo: getAppUrl(),
     },
   });
 
@@ -996,6 +1008,23 @@ export const signOutLocal = async () => {
 
   currentUserCache = null;
   emitAuthChange();
+};
+
+export const sendPasswordResetEmail = async (email: string): Promise<void> => {
+  if (!hasSupabaseConfig) throw new Error('Password reset requires a Supabase connection.');
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), {
+    redirectTo: getAppUrl(),
+  });
+
+  if (error) throw normalizeError(error, 'Failed to send reset email.');
+};
+
+export const updatePassword = async (newPassword: string): Promise<void> => {
+  if (!hasSupabaseConfig) throw new Error('Password update requires a Supabase connection.');
+
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) throw normalizeError(error, 'Failed to update password.');
 };
 
 export const deleteAccountLocal = async (userId: string) => {

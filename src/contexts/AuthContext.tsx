@@ -17,6 +17,8 @@ interface AuthContextType {
   user: User | null;
   profile: UserProfile | null;
   loading: boolean;
+  isPasswordRecovery: boolean;
+  clearPasswordRecovery: () => void;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -28,6 +30,8 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   profile: null,
   loading: true,
+  isPasswordRecovery: false,
+  clearPasswordRecovery: () => {},
   signOut: async () => {},
   deleteAccount: async () => {},
   refreshProfile: async () => {},
@@ -39,6 +43,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setIsPasswordRecovery(true);
+    window.addEventListener('athlix:password-recovery', handler);
+    return () => window.removeEventListener('athlix:password-recovery', handler);
+  }, []);
 
   const loadProfile = async (userId?: string | null) => {
     if (!userId) {
@@ -124,8 +135,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await deleteAccountLocal(user.id);
   };
 
+  const clearPasswordRecovery = () => setIsPasswordRecovery(false);
+
   return (
-    <AuthContext.Provider value={{ session, user, profile, loading, signOut, deleteAccount, refreshProfile, updateProfile }}>
+    <AuthContext.Provider value={{ session, user, profile, loading, isPasswordRecovery, clearPasswordRecovery, signOut, deleteAccount, refreshProfile, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );
