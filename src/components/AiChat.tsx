@@ -13,7 +13,7 @@ import {
 
 const GEMINI_KEY_STORAGE = 'athlix:gemini_api_key';
 const GEMINI_MODEL_STORAGE = 'athlix:gemini_model';
-const DEFAULT_MODEL = 'gemini-1.5-flash'; // free tier: 15 RPM, 1500 req/day
+const DEFAULT_MODEL = 'gemini-2.5-flash'; // free tier: 5 RPM, 250K tokens/min
 const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 interface Message {
@@ -177,10 +177,11 @@ export const AiChat: React.FC = () => {
       try {
         const systemPrompt = buildSystemPrompt(profile, workouts, prs);
 
-        // Tool format differs between model families:
-        // Gemini 2.x → { google_search: {} }
-        // Gemini 1.5 → { google_search_retrieval: { dynamic_retrieval_config: { mode: "MODE_DYNAMIC" } } }
-        const searchTool = model.startsWith('gemini-2')
+        // Search grounding tool format differs by model family:
+        //   Gemini 2.x / 2.5.x  → { google_search: {} }
+        //   Gemini 1.5.x         → { google_search_retrieval: { dynamic_retrieval_config: { mode: "MODE_DYNAMIC" } } }
+        const isV2 = /^gemini-2/.test(model);
+        const searchTool = isV2
           ? { google_search: {} }
           : { google_search_retrieval: { dynamic_retrieval_config: { mode: 'MODE_DYNAMIC' } } };
 

@@ -290,7 +290,7 @@ export const Settings: React.FC = () => {
     () => localStorage.getItem('athlix:gemini_api_key') || ''
   );
   const [geminiModel, setGeminiModel] = useState(
-    () => localStorage.getItem('athlix:gemini_model') || 'gemini-1.5-flash'
+    () => localStorage.getItem('athlix:gemini_model') || 'gemini-2.5-flash'
   );
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [geminiSaved, setGeminiSaved] = useState(false);
@@ -673,10 +673,10 @@ export const Settings: React.FC = () => {
             </label>
             <div className="grid grid-cols-2 gap-1.5">
               {[
-                { id: 'gemini-1.5-flash', label: '1.5 Flash', note: 'Free tier' },
-                { id: 'gemini-1.5-pro', label: '1.5 Pro', note: 'Smarter' },
-                { id: 'gemini-2.0-flash', label: '2.0 Flash', note: 'Paid only' },
-                { id: 'gemini-2.0-flash-lite', label: '2.0 Lite', note: 'Fast' },
+                { id: 'gemini-2.5-flash', label: '2.5 Flash', note: '✦ Free · 250K tokens' },
+                { id: 'gemini-2.5-flash-preview-05-20', label: '2.5 Flash Preview', note: 'Free · Latest' },
+                { id: 'gemini-1.5-flash', label: '1.5 Flash', note: 'Free · 15 RPM' },
+                { id: 'gemini-2.5-pro', label: '2.5 Pro', note: 'Paid only' },
               ].map((m) => (
                 <button
                   key={m.id}
