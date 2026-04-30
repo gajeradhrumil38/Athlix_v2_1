@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Send, Loader2, Settings as SettingsIcon, RotateCcw, Copy, Check } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { format, subDays } from 'date-fns';
+import { format, subDays, differenceInCalendarDays } from 'date-fns';
 import { useAuth } from '../contexts/AuthContext';
 import {
   getWorkouts,
@@ -23,9 +23,17 @@ const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 // Max conversation turns sent to API (keeps token usage low while preserving short-term memory)
 const MAX_HISTORY = 12;
 
+const LOADING_PHASES = [
+  'Reviewing your workout history…',
+  'Checking muscle recovery status…',
+  'Analyzing your progression…',
+  'Formulating advice…',
+];
+
 interface Message {
   role: 'user' | 'model';
   text: string;
+  thought?: string; // coach's reasoning chain (from Gemini thinking tokens)
 }
 
 interface ApiUsage {
@@ -77,16 +85,91 @@ function renderText(raw: string) {
   });
 }
 
+/* ── Parse "YYYY-MM-DD" as local calendar date (not UTC midnight) ────── */
+function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d); // local midnight — never shifts timezone
+}
+
+function calDaysSince(dateStr: string): number {
+  return differenceInCalendarDays(new Date(), parseLocalDate(dateStr));
+}
+
+/* ── Weekly volume per muscle group (Israetel MEV reference) ────────── */
+const MEV: Record<string, string> = {
+  chest: '10-20', back: '10-25', shoulders: '12-20',
+  legs: '12-20', quads: '12-20', hamstrings: '10-16',
+  glutes: '12-18', biceps: '10-15', triceps: '10-15', abs: '10-16',
+};
+
+function weeklyVolume(workouts: WorkoutWithExercises[]): string {
+  const sets: Record<string, number> = {};
+  for (const w of workouts) {
+    if (calDaysSince(w.date) > 6) continue;
+    for (const ex of (w.exercises || [])) {
+      const mg = (ex.muscle_group || 'other').toLowerCase();
+      sets[mg] = (sets[mg] || 0) + ex.sets;
+    }
+  }
+  if (!Object.keys(sets).length) return '  No sets logged this week';
+  return Object.entries(sets)
+    .sort((a, b) => b[1] - a[1])
+    .map(([mg, n]) => {
+      const rec = MEV[mg];
+      const cap = mg.charAt(0).toUpperCase() + mg.slice(1);
+      return rec ? `  ${cap}: ${n} sets (rec ${rec}/wk)` : `  ${cap}: ${n} sets`;
+    })
+    .join('\n');
+}
+
+/* ── Progressive overload: compare last 14d vs 15–56d ──────────────── */
+function progressionReport(workouts: WorkoutWithExercises[], unit: string): string {
+  const hist: Record<string, { recent: number[]; older: number[] }> = {};
+  for (const w of workouts) {
+    const age = calDaysSince(w.date);
+    for (const ex of (w.exercises || [])) {
+      if (ex.weight <= 0) continue;
+      if (!hist[ex.name]) hist[ex.name] = { recent: [], older: [] };
+      if (age <= 14) hist[ex.name].recent.push(ex.weight);
+      else if (age <= 56) hist[ex.name].older.push(ex.weight);
+    }
+  }
+  const lines: string[] = [];
+  for (const [name, { recent, older }] of Object.entries(hist)) {
+    if (!recent.length || !older.length) continue;
+    const r = Math.max(...recent);
+    const o = Math.max(...older);
+    const diff = +(r - o).toFixed(1);
+    if (diff > 0) lines.push(`  ↑ ${name}: ${o}→${r}${unit} (+${diff})`);
+    else if (diff < 0) lines.push(`  ↓ ${name}: ${o}→${r}${unit} (${diff})`);
+    else lines.push(`  ~ ${name}: plateau at ${r}${unit} (8+ weeks)`);
+  }
+  return lines.length ? lines.join('\n') : '  Insufficient data for trend analysis';
+}
+
+/* ── Training frequency & streak ────────────────────────────────────── */
+function trainingStats(workouts: WorkoutWithExercises[]): string {
+  const dateSeen = new Set(workouts.map((w) => w.date));
+  const last28 = workouts.filter((w) => calDaysSince(w.date) <= 28);
+  const sessionsPerWeek = (new Set(last28.map((w) => w.date)).size / 4).toFixed(1);
+  let streak = 0;
+  for (let i = 0; i < 60; i++) {
+    const d = format(new Date(new Date().setDate(new Date().getDate() - i)), 'yyyy-MM-dd');
+    if (dateSeen.has(d)) streak++;
+    else if (i > 0) break;
+  }
+  return `${sessionsPerWeek} sessions/week avg (last 28d) · Streak: ${streak} day${streak !== 1 ? 's' : ''}`;
+}
+
 /* ── System prompt builder ──────────────────────────────────────────── */
 function buildSystemPrompt(
   profile: any,
   workouts: WorkoutWithExercises[],
   prs: LocalPersonalRecord[],
 ): string {
-  const now = new Date();
-  const today = format(now, 'EEEE, MMMM d, yyyy');
+  const today = format(new Date(), 'EEEE, MMMM d, yyyy');
   const name = profile?.full_name || 'Athlete';
-  const weight = profile?.body_weight
+  const bodyWeight = profile?.body_weight
     ? `${profile.body_weight} ${profile.body_weight_unit}`
     : 'not set';
   const height =
@@ -95,84 +178,103 @@ function buildSystemPrompt(
       : 'not set';
   const unit = profile?.unit_preference || 'kg';
 
-  // ── Last 7 workouts with full exercise detail ──
-  const detailedWorkouts = workouts.slice(0, 7).map((w) => {
-    const daysDiff = Math.round(
-      (now.getTime() - new Date(w.date).getTime()) / 86_400_000,
+  // Last 7 workouts: full exercise detail
+  const detailedSection = workouts.slice(0, 7).map((w) => {
+    const age = calDaysSince(w.date);
+    const label = age === 0 ? 'Today' : age === 1 ? 'Yesterday' : `${age}d ago`;
+    const header = `${w.date} (${label}) — ${w.title} · ${w.duration_minutes ?? '?'} min`;
+    const exLines = (w.exercises || []).map(
+      (ex) => `    · ${ex.name}: ${ex.sets}×${ex.reps}${ex.weight > 0 ? ` @ ${ex.weight}${ex.unit}` : ''}`,
     );
-    const dayLabel = daysDiff === 0 ? 'Today' : daysDiff === 1 ? 'Yesterday' : `${daysDiff}d ago`;
-    const header = `${w.date} (${dayLabel}) — ${w.title} · ${w.duration_minutes ?? '?'} min`;
-    const exLines = (w.exercises || []).map((ex) => {
-      const wt = ex.weight > 0 ? ` @ ${ex.weight}${ex.unit}` : '';
-      return `    · ${ex.name}: ${ex.sets}×${ex.reps}${wt}`;
-    });
-    return exLines.length
-      ? `  ${header}\n${exLines.join('\n')}`
-      : `  ${header}`;
+    return exLines.length ? `  ${header}\n${exLines.join('\n')}` : `  ${header}`;
   }).join('\n');
 
-  // ── Older workouts (8-20): summary only ──
-  const olderLines = workouts.slice(7, 20).map((w) =>
-    `  ${w.date} — ${w.title}${w.muscle_groups?.length ? ` [${w.muscle_groups.join(', ')}]` : ''}`,
-  ).join('\n');
+  // Workouts 8-20: title + muscle groups only
+  const olderSection = workouts.slice(7, 20)
+    .map((w) => `  ${w.date} — ${w.title}${w.muscle_groups?.length ? ` [${w.muscle_groups.join(', ')}]` : ''}`)
+    .join('\n');
 
-  // ── Muscle group recovery status ──
-  const muscleLastSeen: Record<string, number> = {}; // group → days ago
+  // Muscle group recovery (calendar-day accurate)
+  const muscleAge: Record<string, number> = {};
   for (const w of workouts) {
-    const daysAgo = Math.round((now.getTime() - new Date(w.date).getTime()) / 86_400_000);
+    const age = calDaysSince(w.date);
     for (const mg of (w.muscle_groups || [])) {
-      const key = mg.toLowerCase();
-      if (muscleLastSeen[key] === undefined || daysAgo < muscleLastSeen[key]) {
-        muscleLastSeen[key] = daysAgo;
-      }
+      const k = mg.toLowerCase();
+      if (muscleAge[k] === undefined || age < muscleAge[k]) muscleAge[k] = age;
     }
   }
-  const recoveryLines = Object.entries(muscleLastSeen)
+  const recoverySection = Object.entries(muscleAge)
     .sort((a, b) => a[1] - b[1])
-    .map(([mg, days]) => {
-      const status = days < 2 ? '⛔ needs rest' : days < 3 ? '⚠️ borderline' : '✅ recovered';
-      return `  ${mg.charAt(0).toUpperCase() + mg.slice(1)}: ${days}d ago ${status}`;
+    .map(([mg, d]) => {
+      const status = d === 0 ? '⛔ trained today' : d === 1 ? '⛔ 1d — rest' : d === 2 ? '⚠️ 2d — borderline' : '✅ recovered';
+      return `  ${mg.charAt(0).toUpperCase() + mg.slice(1)}: ${d}d since last session — ${status}`;
     })
     .join('\n');
 
-  // ── Personal records ──
-  const prLines = prs
-    .slice(0, 30)
-    .map((p) => `  ${p.exercise_name}: ${p.best_weight}${unit} × ${p.best_reps} reps (${p.achieved_date})`)
+  // Personal records with date
+  const prSection = prs.slice(0, 30)
+    .map((p) => `  ${p.exercise_name}: ${p.best_weight}${unit} × ${p.best_reps} reps (set ${p.achieved_date})`)
     .join('\n');
 
-  return `You are an expert AI fitness coach inside the Athlix workout app. Your job is to give ${name} accurate, personalised advice based solely on their real logged data below.
+  return `You are an expert strength & conditioning coach embedded in the Athlix fitness app. Your role: give ${name} evidence-based, data-driven advice using ONLY their logged data below. Never fabricate numbers.
 
 TODAY: ${today}
-ATHLETE: ${name} | Weight: ${weight} | Height: ${height} | Unit: ${unit}
+ATHLETE: ${name} | BW: ${bodyWeight} | Height: ${height} | Unit: ${unit}
+TRAINING PATTERN: ${workouts.length ? trainingStats(workouts) : 'no data'}
 
-━━ RECENT WORKOUTS (with exercises) ━━
-${detailedWorkouts || '  (no workouts logged yet)'}
-${olderLines ? `\n━━ OLDER SESSIONS ━━\n${olderLines}` : ''}
+━━ RECENT SESSIONS (full detail) ━━
+${detailedSection || '  No workouts logged yet'}
+${olderSection ? `\n━━ OLDER SESSIONS ━━\n${olderSection}` : ''}
 
-━━ MUSCLE GROUP RECOVERY ━━
-${recoveryLines || '  (no data yet)'}
+━━ MUSCLE RECOVERY STATUS ━━
+${recoverySection || '  No muscle data — cannot assess recovery'}
+
+━━ WEEKLY VOLUME (this week) ━━
+${weeklyVolume(workouts)}
+
+━━ STRENGTH TRENDS (last 2 vs prior 6 weeks) ━━
+${progressionReport(workouts, unit)}
 
 ━━ PERSONAL RECORDS ━━
-${prLines || '  (no records yet)'}
+${prSection || '  No records yet'}
 
-COACHING RULES:
-- Always reference the user's actual exercises, weights, sets, and reps — never invent data
-- For "what should I train today": use the recovery status above; never recommend a muscle group with ⛔
-- For progress questions: compare current weights to PRs; note any plateaus or improvements
-- For exercise advice or science questions: use Google Search for up-to-date info
-- Keep responses under 250 words unless asked for a detailed plan
-- Format workout suggestions as:  Exercise: X sets × Y reps @ Zkg
-- Be direct and motivating; skip filler phrases`;
+COACHING PRINCIPLES (follow strictly):
+1. Date accuracy: use the RECOVERY STATUS section — muscle groups marked ⛔ must NOT be trained today
+2. Progression: if an exercise shows ~plateau, proactively suggest a rep scheme change, drop set, or technique cue
+3. Volume: if weekly sets for a group are below the MEV range shown, flag it as undertrained
+4. PRs: when current session weights match or exceed a PR, flag it as a PR attempt opportunity
+5. Format workout plans as:  "Exercise — X sets × Y–Z reps @ W${unit}"
+6. For nutrition/science/technique questions: use Google Search for current evidence
+7. Be terse and specific. Skip all filler. Lead with the actionable answer.`;
 }
 
-/* ── Suggested prompts shown on empty chat ──────────────────────────── */
-const SUGGESTIONS = [
-  'What should I train today?',
-  "How's my progress looking?",
-  'Best exercises for my weak points?',
-  'Give me a deload week plan.',
-];
+/* ── Context-aware suggestions ──────────────────────────────────────── */
+function getSuggestions(workouts: WorkoutWithExercises[]): string[] {
+  const trainedToday = workouts.some((w) => calDaysSince(w.date) === 0);
+  const hasData = workouts.length > 3;
+  if (trainedToday) {
+    return [
+      'How did this session compare to last time?',
+      'Any recovery tips for what I just trained?',
+      'Am I hitting enough volume per muscle group?',
+      'What should I focus on next session?',
+    ];
+  }
+  if (hasData) {
+    return [
+      'What should I train today?',
+      'Which exercises am I plateauing on?',
+      "How's my weekly volume looking?",
+      'Give me a progressive overload plan for next week.',
+    ];
+  }
+  return [
+    'What should I train today?',
+    "How's my progress looking?",
+    'Best exercises for my weak points?',
+    'Give me a deload week plan.',
+  ];
+}
 
 /* ── Main AiChat component ─────────────────────────────────────────── */
 export const AiChat: React.FC = () => {
@@ -182,6 +284,7 @@ export const AiChat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingPhase, setLoadingPhase] = useState(0);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
   const [dataReady, setDataReady] = useState(false);
   const [workouts, setWorkouts] = useState<WorkoutWithExercises[]>([]);
@@ -229,6 +332,13 @@ export const AiChat: React.FC = () => {
     return () => window.removeEventListener('athlix:open-ai', handler);
   }, []);
 
+  // Cycle through loading phase labels while waiting for Gemini
+  useEffect(() => {
+    if (!loading) { setLoadingPhase(0); return; }
+    const id = setInterval(() => setLoadingPhase((p) => (p + 1) % LOADING_PHASES.length), 2200);
+    return () => clearInterval(id);
+  }, [loading]);
+
   const close = () => setOpen(false);
 
   /* ── Send message to Gemini ───────────────────────────────────────── */
@@ -257,6 +367,9 @@ export const AiChat: React.FC = () => {
         // Only send the last MAX_HISTORY messages to keep prompt tokens low
         const trimmedHistory = history.slice(-MAX_HISTORY);
 
+        // Gemini 2.5 Flash supports native thinking tokens — gives coach-level reasoning
+        const supportsThinking = /^gemini-2\.5/.test(model);
+
         const res = await fetch(`${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -267,14 +380,17 @@ export const AiChat: React.FC = () => {
               parts: [{ text: m.text }],
             })),
             tools: [searchTool],
-            generationConfig: { temperature: 0.7, maxOutputTokens: 900 },
+            generationConfig: {
+              temperature: 1, // required when thinkingConfig is set
+              maxOutputTokens: 900,
+              ...(supportsThinking && { thinkingConfig: { thinkingBudget: 6144 } }),
+            },
           }),
         });
 
         if (!res.ok) {
           const errBody = await res.json().catch(() => ({}));
           const errMsg: string = errBody?.error?.message || `Request failed (${res.status})`;
-          // Detect billing/quota issues — guide the user to create a free-tier key
           if (
             res.status === 429 ||
             errMsg.includes('quota') ||
@@ -293,11 +409,12 @@ export const AiChat: React.FC = () => {
         }
 
         const data = await res.json();
-        const aiText =
-          data?.candidates?.[0]?.content?.parts?.map((p: any) => p.text).join('') ||
-          '(no response)';
+        const parts: Array<{ text?: string; thought?: boolean }> =
+          data?.candidates?.[0]?.content?.parts || [];
+        const thought = parts.filter((p) => p.thought).map((p) => p.text).join('').trim();
+        const aiText = parts.filter((p) => !p.thought).map((p) => p.text).join('').trim() || '(no response)';
         trackTokenUsage(data?.usageMetadata?.totalTokenCount ?? 0);
-        setMessages((prev) => [...prev, { role: 'model', text: aiText }]);
+        setMessages((prev) => [...prev, { role: 'model', text: aiText, thought: thought || undefined }]);
       } catch (err: any) {
         const raw: string = err?.message || 'Something went wrong.';
         const display = raw.startsWith('QUOTA:')
@@ -384,8 +501,10 @@ export const AiChat: React.FC = () => {
             <ChatContent
               apiKey={apiKey}
               messages={messages}
+              suggestions={getSuggestions(workouts)}
               input={input}
               loading={loading}
+              loadingPhase={loadingPhase}
               copiedIdx={copiedIdx}
               inputRef={inputRef}
               bottomRef={bottomRef}
@@ -421,8 +540,10 @@ export const AiChat: React.FC = () => {
             <ChatContent
               apiKey={apiKey}
               messages={messages}
+              suggestions={getSuggestions(workouts)}
               input={input}
               loading={loading}
+              loadingPhase={loadingPhase}
               copiedIdx={copiedIdx}
               inputRef={inputRef}
               bottomRef={bottomRef}
@@ -453,8 +574,10 @@ export const AiChat: React.FC = () => {
 interface ChatContentProps {
   apiKey: string;
   messages: Message[];
+  suggestions: string[];
   input: string;
   loading: boolean;
+  loadingPhase: number;
   copiedIdx: number | null;
   inputRef: React.RefObject<HTMLInputElement>;
   bottomRef: React.RefObject<HTMLDivElement>;
@@ -469,11 +592,14 @@ interface ChatContentProps {
 }
 
 const ChatContent: React.FC<ChatContentProps> = ({
-  apiKey, messages, input, loading, copiedIdx,
+  apiKey, messages, suggestions, input, loading, loadingPhase, copiedIdx,
   inputRef, bottomRef,
   onInput, onKey, onSend, onSuggest,
   onClose, onGoSettings, onClear, onCopy,
-}) => (
+}) => {
+  const [expandedThought, setExpandedThought] = useState<number | null>(null);
+
+  return (
   <>
     {/* Header */}
     <div
@@ -543,13 +669,13 @@ const ChatContent: React.FC<ChatContentProps> = ({
       <>
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-          {/* Empty state with suggestions */}
+          {/* Empty state */}
           {messages.length === 0 && (
             <div className="py-4 space-y-2.5">
               <p className="text-[12px] text-[var(--text-muted)] text-center mb-3">
                 Ask me anything about your training
               </p>
-              {SUGGESTIONS.map((q) => (
+              {suggestions.map((q) => (
                 <button
                   key={q}
                   onClick={() => onSuggest(q)}
@@ -577,13 +703,45 @@ const ChatContent: React.FC<ChatContentProps> = ({
                 </div>
               )}
               <div className="max-w-[82%] flex flex-col gap-1">
+                {/* Coach thinking — collapsible, shown before the reply */}
+                {m.role === 'model' && m.thought && (
+                  <div className="mb-0.5">
+                    <button
+                      onClick={() => setExpandedThought(expandedThought === i ? null : i)}
+                      className="flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-lg transition-colors"
+                      style={{
+                        background: 'rgba(124,58,237,0.08)',
+                        color: 'rgba(124,58,237,0.8)',
+                        border: '1px solid rgba(124,58,237,0.2)',
+                      }}
+                    >
+                      <Sparkles className="w-2.5 h-2.5" />
+                      Coach's reasoning
+                      <span className="ml-0.5 opacity-60">{expandedThought === i ? '▲' : '▼'}</span>
+                    </button>
+                    {expandedThought === i && (
+                      <div
+                        className="mt-1.5 px-3 py-2.5 rounded-xl text-[11px] leading-relaxed whitespace-pre-wrap"
+                        style={{
+                          background: 'rgba(124,58,237,0.05)',
+                          border: '1px solid rgba(124,58,237,0.15)',
+                          color: 'var(--text-secondary)',
+                          maxHeight: 220,
+                          overflowY: 'auto',
+                        }}
+                      >
+                        {m.thought}
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Main reply bubble */}
                 <div
                   className="px-3.5 py-2.5 text-[13px] leading-relaxed"
                   style={{
                     background: m.role === 'user' ? 'var(--accent)' : 'var(--bg-elevated)',
                     color: m.role === 'user' ? '#000' : 'var(--text-primary)',
-                    borderRadius:
-                      m.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                    borderRadius: m.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                     border: m.role === 'model' ? '1px solid var(--border)' : 'none',
                   }}
                 >
@@ -598,15 +756,14 @@ const ChatContent: React.FC<ChatContentProps> = ({
                   >
                     {copiedIdx === i
                       ? <><Check className="w-3 h-3" /> Copied</>
-                      : <><Copy className="w-3 h-3" /> Copy</>
-                    }
+                      : <><Copy className="w-3 h-3" /> Copy</>}
                   </button>
                 )}
               </div>
             </div>
           ))}
 
-          {/* Typing indicator */}
+          {/* Loading indicator with cycling phase labels */}
           {loading && (
             <div className="flex gap-2 justify-start">
               <div
@@ -616,16 +773,21 @@ const ChatContent: React.FC<ChatContentProps> = ({
                 <Sparkles className="w-3 h-3 text-white" />
               </div>
               <div
-                className="flex items-center gap-1.5 px-3.5 py-3 rounded-[18px_18px_18px_4px]"
+                className="flex flex-col gap-1.5 px-3.5 py-2.5 rounded-[18px_18px_18px_4px]"
                 style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
               >
-                {[0, 1, 2].map((d) => (
-                  <span
-                    key={d}
-                    className="block w-1.5 h-1.5 rounded-full bg-[var(--text-muted)] animate-bounce"
-                    style={{ animationDelay: `${d * 0.15}s` }}
-                  />
-                ))}
+                <p className="text-[11px] text-[var(--text-muted)] animate-pulse">
+                  {LOADING_PHASES[loadingPhase]}
+                </p>
+                <div className="flex items-center gap-1.5">
+                  {[0, 1, 2].map((d) => (
+                    <span
+                      key={d}
+                      className="block w-1.5 h-1.5 rounded-full bg-[var(--text-muted)] animate-bounce"
+                      style={{ animationDelay: `${d * 0.15}s` }}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
           )}
@@ -648,10 +810,7 @@ const ChatContent: React.FC<ChatContentProps> = ({
             disabled={loading}
             placeholder="Ask about your training…"
             className="flex-1 h-10 rounded-xl px-3.5 text-[13px] outline-none transition-colors placeholder:text-[var(--text-muted)] text-[var(--text-primary)]"
-            style={{
-              background: 'var(--bg-elevated)',
-              border: '1px solid var(--border)',
-            }}
+            style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
           />
           <button
             onClick={onSend}
@@ -659,14 +818,13 @@ const ChatContent: React.FC<ChatContentProps> = ({
             className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
             style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}
           >
-            {loading ? (
-              <Loader2 className="w-4 h-4 text-white animate-spin" />
-            ) : (
-              <Send className="w-4 h-4 text-white" />
-            )}
+            {loading
+              ? <Loader2 className="w-4 h-4 text-white animate-spin" />
+              : <Send className="w-4 h-4 text-white" />}
           </button>
         </div>
       </>
     )}
   </>
-);
+  );
+};
