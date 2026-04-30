@@ -37,7 +37,7 @@ const ValueBox: React.FC<{
       <div className="font-victory tabular-nums text-[36px] leading-none font-black text-[var(--text-primary)]">
         {field.displayValue}
       </div>
-      <div className="text-[10px] font-bold tracking-[0.16em] uppercase text-[var(--text-muted)]">
+      <div className="text-[10px] font-bold tracking-[0.16em] uppercase text-[var(--text-secondary)]">
         {field.label}
       </div>
     </button>
@@ -54,7 +54,7 @@ export const SetRow: React.FC<SetRowProps> = ({
 }) => {
   return (
     <div
-      className="relative overflow-hidden rounded-xl border transition-all duration-200"
+      className="relative overflow-hidden rounded-lg border transition-all duration-200"
       style={{
         background: 'var(--bg-base)',
         borderColor: set.done ? 'rgba(200,255,0,0.12)' : 'var(--border)',

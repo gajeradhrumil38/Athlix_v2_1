@@ -88,7 +88,7 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = (props) => {
   return (
     <div className="h-full overflow-y-auto bg-transparent pb-24">
       <div className="sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--bg-base)]/90 px-4 pb-3 pt-3 backdrop-blur-xl">
-        <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-surface)]">
+        <div className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--bg-surface)]">
           <div className="grid grid-cols-3">
             {/* Sets */}
             <div className="flex flex-col gap-0.5 px-3 py-2.5">

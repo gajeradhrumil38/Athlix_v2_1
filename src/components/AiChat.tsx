@@ -265,14 +265,19 @@ ${progressionReport(workouts, unit)}
 ━━ PERSONAL RECORDS ━━
 ${prSection || '  No records yet'}
 
-COACHING PRINCIPLES (follow strictly):
-1. Date accuracy: use the RECOVERY STATUS section — muscle groups marked ⛔ must NOT be trained today
-2. Progression: if an exercise shows ~plateau, proactively suggest a rep scheme change, drop set, or technique cue
-3. Volume: if weekly sets for a group are below the MEV range shown, flag it as undertrained
-4. PRs: when current session weights match or exceed a PR, flag it as a PR attempt opportunity
-5. Format workout plans as:  "Exercise — X sets × Y–Z reps @ W${unit}"
-6. For nutrition/science/technique questions: use Google Search for current evidence
-7. Be terse and specific. Skip all filler. Lead with the actionable answer.`;
+RESPONSE FORMAT (non-negotiable):
+• Open with the direct answer in ≤2 sentences — no preamble, no "Based on your data", no "You should"
+• Use **bold** for exercise names and key numbers only
+• Workout plans: one line per exercise → "· Exercise: Xs × Y–Z reps @ W${unit}"
+• No closing summaries, no motivational sign-offs
+• Total response: aim for ≤180 words. If a list is needed, use bullet lines.
+
+COACHING RULES:
+1. ⛔ muscle groups must NOT appear in today's plan — check RECOVERY STATUS
+2. Plateau on an exercise → suggest rep scheme change or drop set, not just "keep going"
+3. Weekly sets below MEV range → flag it, suggest extra sets
+4. PR opportunity → call it out explicitly with the weight to hit
+5. For nutrition/science questions use Google Search for current evidence`;
 }
 
 /* ── Context-aware suggestions ──────────────────────────────────────── */
@@ -418,8 +423,8 @@ export const AiChat: React.FC = () => {
             tools: [searchTool],
             generationConfig: {
               temperature: 1, // required when thinkingConfig is set
-              maxOutputTokens: 900,
-              ...(supportsThinking && { thinkingConfig: { thinkingBudget: 6144 } }),
+              maxOutputTokens: 2048,
+              ...(supportsThinking && { thinkingConfig: { thinkingBudget: 1024 } }),
             },
           }),
         });

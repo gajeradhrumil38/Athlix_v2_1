@@ -465,23 +465,26 @@ export const DialPicker: React.FC<DialPickerProps> = ({
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 32, stiffness: 300 }}
-        className="absolute bottom-0 left-0 right-0 mx-auto w-full max-w-[860px] rounded-t-[28px] border-t border-x border-[var(--border)] pb-[calc(env(safe-area-inset-bottom)+20px)] pt-3 px-5"
+        className="absolute bottom-0 left-0 right-0 mx-auto w-full max-w-[860px] rounded-t-[16px] border-t border-x border-[var(--border)] pb-[calc(env(safe-area-inset-bottom)+20px)] pt-3 px-5"
         style={{ background: 'var(--bg-surface)' }}
       >
         {/* Drag pill */}
         <div className="mx-auto mb-5 h-[3px] w-9 rounded-full bg-white/15" />
 
-        {/* Header: live value + dismiss (no "SELECT …" label) */}
-        <div className="mb-4 flex items-center justify-between">
+        {/* Header: live value + dismiss */}
+        <div
+          className="flex items-center justify-between"
+          style={{ paddingBottom: 14, marginBottom: 14, borderBottom: '1px solid var(--border)' }}
+        >
           <div className="flex items-baseline gap-1.5">
             <span
               className="font-victory tabular-nums leading-none text-[var(--text-primary)]"
-              style={{ fontSize: '42px', fontWeight: 700 }}
+              style={{ fontSize: '44px', fontWeight: 700, lineHeight: 1 }}
             >
               {liveDisplay}
             </span>
             {liveUnit && (
-              <span className="font-victory text-[15px] font-semibold text-[var(--text-secondary)] uppercase tracking-[0.12em]">
+              <span className="font-victory text-[15px] font-semibold uppercase tracking-[0.12em] text-[var(--text-secondary)]">
                 {liveUnit}
               </span>
             )}
@@ -489,8 +492,8 @@ export const DialPicker: React.FC<DialPickerProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--text-muted)]"
-            style={{ background: 'var(--bg-elevated)' }}
+            className="flex h-8 w-8 items-center justify-center text-[var(--text-secondary)]"
+            style={{ borderRadius: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
           >
             <X className="h-3.5 w-3.5" />
           </button>
@@ -498,7 +501,7 @@ export const DialPicker: React.FC<DialPickerProps> = ({
 
         {/* Wheel container */}
         <div
-          className="relative mb-5 flex overflow-hidden rounded-[18px] border border-[var(--border)]"
+          className="relative mb-4 flex overflow-hidden rounded-lg border border-[var(--border)]"
           style={{ height: VIEW_HEIGHT, background: 'var(--bg-elevated)' }}
         >
           {columns.map((column, columnIndex) => (
@@ -523,10 +526,10 @@ export const DialPicker: React.FC<DialPickerProps> = ({
             </div>
           ))}
 
-          {/* Selection zone — two hairline rules around the centre row */}
+          {/* Selection zone — faint fill + two hairline rules */}
           <div
             className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2"
-            style={{ height: ITEM_HEIGHT }}
+            style={{ height: ITEM_HEIGHT, zIndex: 1 }}
           >
             <div className="absolute inset-0" style={{ background: 'rgba(255,255,255,0.035)' }} />
             <div
@@ -538,13 +541,42 @@ export const DialPicker: React.FC<DialPickerProps> = ({
               style={{ background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.18) 20%,rgba(255,255,255,0.18) 80%,transparent 100%)' }}
             />
           </div>
+
+          {/* Tick marks — left edge, 3-tier sizing */}
+          {Array.from({ length: 9 }, (_, i) => (
+            <div
+              key={`lt${i}`}
+              className="pointer-events-none absolute left-0"
+              style={{
+                top: `${(i + 0.5) * (VIEW_HEIGHT / 9)}px`,
+                width: i === 4 ? 14 : i % 2 === 0 ? 8 : 5,
+                height: i === 4 ? 2 : 1,
+                background: i === 4 ? 'rgba(255,255,255,0.35)' : i % 2 === 0 ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)',
+                zIndex: 4,
+              }}
+            />
+          ))}
+          {/* Tick marks — right edge */}
+          {Array.from({ length: 9 }, (_, i) => (
+            <div
+              key={`rt${i}`}
+              className="pointer-events-none absolute right-0"
+              style={{
+                top: `${(i + 0.5) * (VIEW_HEIGHT / 9)}px`,
+                width: i === 4 ? 14 : i % 2 === 0 ? 8 : 5,
+                height: i === 4 ? 2 : 1,
+                background: i === 4 ? 'rgba(255,255,255,0.35)' : i % 2 === 0 ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.06)',
+                zIndex: 4,
+              }}
+            />
+          ))}
         </div>
 
-        {/* Confirm — just "Set", no repeated value/unit */}
+        {/* Confirm */}
         <button
           type="button"
           onClick={submit}
-          className="h-[54px] w-full rounded-2xl text-[15px] font-bold tracking-[0.04em] transition-all active:scale-[0.98] bg-[var(--accent)] text-black"
+          className="h-[54px] w-full rounded-lg text-[15px] font-bold tracking-[0.04em] transition-all active:scale-[0.98] bg-[var(--accent)] text-black uppercase"
         >
           Set
         </button>
