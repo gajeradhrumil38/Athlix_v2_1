@@ -23,6 +23,33 @@ const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 // Max conversation turns sent to API (keeps token usage low while preserving short-term memory)
 const MAX_HISTORY = 12;
 
+// Aurora gradient border CSS — injected once into <head>
+const AURORA_CSS = `
+  @property --ai-angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+  @keyframes ai-spin { to { --ai-angle: 360deg; } }
+  @keyframes ai-pulse-glow {
+    0%,100% { opacity:1; box-shadow:0 0 5px rgba(200,255,0,0.5); }
+    50%      { opacity:0.7; box-shadow:0 0 10px rgba(124,58,237,0.6); }
+  }
+  .ai-aurora-spin {
+    background-image: linear-gradient(var(--bg-elevated,#1a2030),var(--bg-elevated,#1a2030)),
+      conic-gradient(from var(--ai-angle),#7c3aed,#2563eb,#C8FF00,#7c3aed);
+    background-origin: border-box; background-clip: padding-box,border-box;
+    animation: ai-spin 3s linear infinite;
+  }
+  .ai-aurora-static {
+    background-image: linear-gradient(var(--bg-elevated,#1a2030),var(--bg-elevated,#1a2030)),
+      linear-gradient(135deg,#7c3aed,#2563eb,#C8FF00);
+    background-origin: border-box; background-clip: padding-box,border-box;
+  }
+  .ai-online-dot {
+    width:7px; height:7px; border-radius:50%; background:var(--accent,#C8FF00); flex-shrink:0;
+    animation: ai-pulse-glow 2s ease-in-out infinite;
+  }
+  .ai-input-wrap { transition: border-color 0.15s; }
+  .ai-input-wrap:focus-within { border-color: rgba(200,255,0,0.35) !important; }
+`;
+
 const LOADING_PHASES = [
   'Reviewing your workout history…',
   'Checking muscle recovery status…',
@@ -325,6 +352,15 @@ export const AiChat: React.FC = () => {
     if (open) setTimeout(() => inputRef.current?.focus(), 320);
   }, [open]);
 
+  // Inject aurora CSS once
+  useEffect(() => {
+    if (document.getElementById('athlix-ai-aurora-css')) return;
+    const el = document.createElement('style');
+    el.id = 'athlix-ai-aurora-css';
+    el.textContent = AURORA_CSS;
+    document.head.appendChild(el);
+  }, []);
+
   // Allow sidebar / other components to open the chat via a custom event
   useEffect(() => {
     const handler = () => setOpen(true);
@@ -456,17 +492,19 @@ export const AiChat: React.FC = () => {
     <button
       onClick={() => setOpen(true)}
       aria-label="Open AI assistant"
-      className="fixed flex items-center justify-center rounded-full shadow-lg active:scale-95 transition-transform z-[94]"
+      className="ai-aurora-spin fixed flex items-center justify-center active:scale-95 transition-transform z-[94]"
       style={{
-        width: 48,
-        height: 48,
-        right: 'calc(16px + 56px + 12px)', // right of screen + FAB(56px) + gap(12px)
+        width: 50,
+        height: 50,
+        borderRadius: 8,
+        border: '1.5px solid transparent',
+        right: 'calc(16px + 56px + 12px)',
         bottom: 'calc(80px + max(env(safe-area-inset-bottom), 12px))',
-        background: 'linear-gradient(135deg, #7c3aed, #2563eb)',
-        boxShadow: '0 4px 18px rgba(124,58,237,0.45)',
+        background: 'var(--bg-elevated)',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
       }}
     >
-      <Sparkles className="w-5 h-5 text-white" />
+      <Sparkles className="w-5 h-5" style={{ color: 'var(--accent)' }} />
     </button>
   );
 
@@ -493,11 +531,15 @@ export const AiChat: React.FC = () => {
             className="md:hidden fixed bottom-0 left-0 right-0 z-[200] flex flex-col"
             style={{
               height: '82vh',
-              borderRadius: '22px 22px 0 0',
+              borderRadius: '16px 16px 0 0',
               background: 'var(--bg-surface)',
               borderTop: '1px solid var(--border)',
+              borderLeft: '1px solid var(--border)',
+              borderRight: '1px solid var(--border)',
             }}
           >
+            {/* Drag pill */}
+            <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.15)', margin: '10px auto 0', flexShrink: 0 }} />
             <ChatContent
               apiKey={apiKey}
               messages={messages}
@@ -603,19 +645,23 @@ const ChatContent: React.FC<ChatContentProps> = ({
   <>
     {/* Header */}
     <div
-      className="flex items-center justify-between px-4 py-3.5 shrink-0"
-      style={{ borderBottom: '1px solid var(--border)' }}
+      className="flex items-center justify-between px-4 shrink-0"
+      style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}
     >
       <div className="flex items-center gap-2.5">
+        {/* Avatar with aurora gradient border */}
         <div
-          className="w-8 h-8 rounded-[10px] flex items-center justify-center shrink-0"
-          style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}
+          className="ai-aurora-static flex items-center justify-center shrink-0"
+          style={{ width: 36, height: 36, borderRadius: 8, border: '1.5px solid transparent' }}
         >
-          <Sparkles className="w-4 h-4 text-white" />
+          <Sparkles className="w-[18px] h-[18px]" style={{ color: 'var(--accent)' }} />
         </div>
         <div>
-          <p className="text-[14px] font-bold text-[var(--text-primary)] leading-tight">Athlix AI</p>
-          <p className="text-[10px] text-[var(--text-muted)] leading-tight">Powered by Gemini</p>
+          <p className="text-[15px] font-bold text-[var(--text-primary)] leading-tight">Athlix AI</p>
+          <div className="flex items-center gap-[5px] mt-[1px]">
+            <div className="ai-online-dot" />
+            <p className="text-[11px] leading-tight" style={{ color: 'var(--text-muted)' }}>Ready to coach</p>
+          </div>
         </div>
       </div>
       <div className="flex items-center gap-1">
@@ -623,16 +669,18 @@ const ChatContent: React.FC<ChatContentProps> = ({
           <button
             onClick={onClear}
             title="Clear chat"
-            className="w-8 h-8 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors"
+            className="w-8 h-8 flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors"
+            style={{ borderRadius: 8 }}
           >
             <RotateCcw className="w-3.5 h-3.5" />
           </button>
         )}
         <button
           onClick={onClose}
-          className="w-8 h-8 flex items-center justify-center rounded-full text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors"
+          className="w-8 h-8 flex items-center justify-center text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)] transition-colors"
+          style={{ borderRadius: 8 }}
         >
-          <X className="w-4 h-4" />
+          <X className="w-[15px] h-[15px]" />
         </button>
       </div>
     </div>
@@ -641,28 +689,28 @@ const ChatContent: React.FC<ChatContentProps> = ({
     {!apiKey ? (
       <div className="flex-1 flex flex-col items-center justify-center gap-5 px-6 text-center">
         <div
-          className="w-16 h-16 rounded-2xl flex items-center justify-center"
-          style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}
+          className="ai-aurora-static flex items-center justify-center"
+          style={{ width: 64, height: 64, borderRadius: 8, border: '1.5px solid transparent' }}
         >
-          <Sparkles className="w-8 h-8 text-white" />
+          <Sparkles className="w-8 h-8" style={{ color: 'var(--accent)' }} />
         </div>
         <div>
           <p className="text-[17px] font-bold text-[var(--text-primary)]">Set up AI Coach</p>
-          <p className="mt-1.5 text-[13px] text-[var(--text-muted)] leading-relaxed max-w-[260px]">
+          <p className="mt-1.5 text-[13px] leading-relaxed max-w-[260px]" style={{ color: 'var(--text-muted)' }}>
             Add your Gemini API key in Settings to enable personalized fitness coaching.
           </p>
         </div>
         <button
           onClick={onGoSettings}
-          className="h-11 px-5 rounded-xl text-[13px] font-bold flex items-center gap-2 text-white"
-          style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}
+          className="h-11 px-5 text-[13px] font-bold flex items-center gap-2"
+          style={{ background: 'var(--accent)', color: '#000', borderRadius: 8, border: 'none' }}
         >
           <SettingsIcon className="w-4 h-4" />
           Go to Settings
         </button>
-        <p className="text-[11px] text-[var(--text-muted)]">
+        <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
           Get a free key at{' '}
-          <span className="text-purple-400">aistudio.google.com</span>
+          <span style={{ color: '#818cf8' }}>aistudio.google.com</span>
         </p>
       </div>
     ) : (
@@ -671,20 +719,42 @@ const ChatContent: React.FC<ChatContentProps> = ({
         <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
           {/* Empty state */}
           {messages.length === 0 && (
-            <div className="py-4 space-y-2.5">
-              <p className="text-[12px] text-[var(--text-muted)] text-center mb-3">
-                Ask me anything about your training
+            <div className="flex-1 flex flex-col items-center justify-center gap-0 px-5" style={{ minHeight: '60%' }}>
+              {/* Aurora icon */}
+              <div
+                className="ai-aurora-static flex items-center justify-center"
+                style={{ width: 52, height: 52, borderRadius: 8, border: '1.5px solid transparent', marginBottom: 14 }}
+              >
+                <Sparkles className="w-[22px] h-[22px]" style={{ color: 'var(--accent)' }} />
+              </div>
+              <p className="text-[17px] font-bold text-center mb-[6px]" style={{ color: 'var(--text-primary)' }}>
+                Your AI fitness coach
               </p>
-              {suggestions.map((q) => (
-                <button
-                  key={q}
-                  onClick={() => onSuggest(q)}
-                  className="w-full text-left px-3.5 py-2.5 rounded-xl text-[13px] text-[var(--text-secondary)] transition-colors hover:bg-[var(--bg-elevated)]"
-                  style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
-                >
-                  {q}
-                </button>
-              ))}
+              <p className="text-[13px] text-center leading-relaxed mb-6 max-w-[260px]" style={{ color: 'var(--text-secondary)' }}>
+                Ask me about recovery, programming, progress, or anything training-related.
+              </p>
+              {/* 2-col chip grid */}
+              <div className="w-full grid grid-cols-2 gap-2">
+                {suggestions.map((q) => (
+                  <button
+                    key={q}
+                    onClick={() => onSuggest(q)}
+                    className="text-left transition-all"
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: 8,
+                      background: 'var(--bg-elevated)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--text-secondary)',
+                      fontSize: 12,
+                      fontWeight: 500,
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {q}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
@@ -696,20 +766,21 @@ const ChatContent: React.FC<ChatContentProps> = ({
             >
               {m.role === 'model' && (
                 <div
-                  className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-1"
-                  style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}
+                  className="ai-aurora-static flex items-center justify-center shrink-0"
+                  style={{ width: 26, height: 26, borderRadius: 8, border: '1.5px solid transparent', marginTop: 2 }}
                 >
-                  <Sparkles className="w-3 h-3 text-white" />
+                  <Sparkles className="w-[11px] h-[11px]" style={{ color: 'var(--accent)' }} />
                 </div>
               )}
-              <div className="max-w-[82%] flex flex-col gap-1">
+              <div style={{ maxWidth: '78%', display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {/* Coach thinking — collapsible, shown before the reply */}
                 {m.role === 'model' && m.thought && (
                   <div className="mb-0.5">
                     <button
                       onClick={() => setExpandedThought(expandedThought === i ? null : i)}
-                      className="flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-lg transition-colors"
+                      className="flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 transition-colors"
                       style={{
+                        borderRadius: 6,
                         background: 'rgba(124,58,237,0.08)',
                         color: 'rgba(124,58,237,0.8)',
                         border: '1px solid rgba(124,58,237,0.2)',
@@ -721,8 +792,9 @@ const ChatContent: React.FC<ChatContentProps> = ({
                     </button>
                     {expandedThought === i && (
                       <div
-                        className="mt-1.5 px-3 py-2.5 rounded-xl text-[11px] leading-relaxed whitespace-pre-wrap"
+                        className="mt-1.5 px-3 py-2.5 text-[11px] leading-relaxed whitespace-pre-wrap"
                         style={{
+                          borderRadius: 8,
                           background: 'rgba(124,58,237,0.05)',
                           border: '1px solid rgba(124,58,237,0.15)',
                           color: 'var(--text-secondary)',
@@ -737,12 +809,15 @@ const ChatContent: React.FC<ChatContentProps> = ({
                 )}
                 {/* Main reply bubble */}
                 <div
-                  className="px-3.5 py-2.5 text-[13px] leading-relaxed"
+                  className="text-[13px] leading-[1.55] word-break"
                   style={{
+                    padding: '10px 13px',
                     background: m.role === 'user' ? 'var(--accent)' : 'var(--bg-elevated)',
                     color: m.role === 'user' ? '#000' : 'var(--text-primary)',
-                    borderRadius: m.role === 'user' ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                    fontWeight: m.role === 'user' ? 500 : 400,
+                    borderRadius: m.role === 'user' ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
                     border: m.role === 'model' ? '1px solid var(--border)' : 'none',
+                    wordBreak: 'break-word',
                   }}
                 >
                   {renderText(m.text)}
@@ -751,42 +826,55 @@ const ChatContent: React.FC<ChatContentProps> = ({
                   <button
                     onClick={() => onCopy(m.text, i)}
                     title="Copy response"
-                    className="self-start flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] transition-colors"
-                    style={{ color: copiedIdx === i ? 'var(--accent)' : 'var(--text-muted)' }}
+                    className="self-start flex items-center gap-1 transition-colors"
+                    style={{
+                      padding: '2px 4px',
+                      borderRadius: 4,
+                      fontSize: 10,
+                      color: copiedIdx === i ? 'var(--accent)' : 'var(--text-muted)',
+                      background: 'none',
+                      border: 'none',
+                    }}
                   >
                     {copiedIdx === i
-                      ? <><Check className="w-3 h-3" /> Copied</>
-                      : <><Copy className="w-3 h-3" /> Copy</>}
+                      ? <><Check className="w-[11px] h-[11px]" /> Copied</>
+                      : <><Copy className="w-[11px] h-[11px]" /> Copy</>}
                   </button>
                 )}
               </div>
             </div>
           ))}
 
-          {/* Loading indicator with cycling phase labels */}
+          {/* Loading indicator */}
           {loading && (
             <div className="flex gap-2 justify-start">
               <div
-                className="w-6 h-6 rounded-lg flex items-center justify-center shrink-0 mt-1"
-                style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}
+                className="ai-aurora-static flex items-center justify-center shrink-0"
+                style={{ width: 26, height: 26, borderRadius: 8, border: '1.5px solid transparent', marginTop: 2 }}
               >
-                <Sparkles className="w-3 h-3 text-white" />
+                <Sparkles className="w-[11px] h-[11px]" style={{ color: 'var(--accent)' }} />
               </div>
               <div
-                className="flex flex-col gap-1.5 px-3.5 py-2.5 rounded-[18px_18px_18px_4px]"
-                style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+                style={{
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '14px 14px 14px 4px',
+                  padding: 0,
+                }}
               >
-                <p className="text-[11px] text-[var(--text-muted)] animate-pulse">
-                  {LOADING_PHASES[loadingPhase]}
-                </p>
-                <div className="flex items-center gap-1.5">
-                  {[0, 1, 2].map((d) => (
-                    <span
-                      key={d}
-                      className="block w-1.5 h-1.5 rounded-full bg-[var(--text-muted)] animate-bounce"
-                      style={{ animationDelay: `${d * 0.15}s` }}
-                    />
-                  ))}
+                <div className="flex flex-col gap-1.5 px-3.5 py-2.5">
+                  <p className="text-[11px] animate-pulse" style={{ color: 'var(--text-muted)' }}>
+                    {LOADING_PHASES[loadingPhase]}
+                  </p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {[0, 1, 2].map((d) => (
+                      <span
+                        key={d}
+                        className="block rounded-full animate-bounce"
+                        style={{ width: 6, height: 6, background: 'var(--text-muted)', animationDelay: `${d * 0.15}s` }}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -796,31 +884,55 @@ const ChatContent: React.FC<ChatContentProps> = ({
 
         {/* Input bar */}
         <div
-          className="shrink-0 px-3 pt-2 pb-3 flex gap-2 items-center"
+          className="shrink-0 flex gap-2 items-center"
           style={{
             borderTop: '1px solid var(--border)',
-            paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+            padding: '10px 12px',
+            paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
           }}
         >
-          <input
-            ref={inputRef}
-            value={input}
-            onChange={(e) => onInput(e.target.value)}
-            onKeyDown={onKey}
-            disabled={loading}
-            placeholder="Ask about your training…"
-            className="flex-1 h-10 rounded-xl px-3.5 text-[13px] outline-none transition-colors placeholder:text-[var(--text-muted)] text-[var(--text-primary)]"
-            style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
-          />
+          <div
+            className="ai-input-wrap flex-1 flex items-center"
+            style={{
+              background: 'var(--bg-elevated)',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              padding: '0 12px',
+              height: 44,
+            }}
+          >
+            <input
+              ref={inputRef}
+              value={input}
+              onChange={(e) => onInput(e.target.value)}
+              onKeyDown={onKey}
+              disabled={loading}
+              placeholder="Ask about your training…"
+              className="flex-1 text-[14px] outline-none"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--text-primary)',
+                fontFamily: 'inherit',
+              }}
+            />
+          </div>
           <button
             onClick={onSend}
             disabled={loading || !input.trim()}
-            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 disabled:opacity-40 transition-opacity"
-            style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}
+            className="flex items-center justify-center shrink-0 disabled:opacity-35 active:scale-95 transition-all"
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 8,
+              border: 'none',
+              background: 'var(--accent)',
+              cursor: 'pointer',
+            }}
           >
             {loading
-              ? <Loader2 className="w-4 h-4 text-white animate-spin" />
-              : <Send className="w-4 h-4 text-white" />}
+              ? <Loader2 className="w-4 h-4 animate-spin" style={{ color: '#000' }} />
+              : <Send className="w-4 h-4" style={{ color: '#000' }} />}
           </button>
         </div>
       </>
