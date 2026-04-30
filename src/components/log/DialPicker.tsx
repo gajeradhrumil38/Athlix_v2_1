@@ -27,10 +27,10 @@ const ITEM_HEIGHT = 44;
 const VISIBLE_ROWS = 5;
 const VIEW_HEIGHT = ITEM_HEIGHT * VISIBLE_ROWS;
 const VIEW_PADDING = (VIEW_HEIGHT - ITEM_HEIGHT) / 2;
-// Increased from 120ms — iOS momentum scrolling can take 300-500ms to settle
 const SCROLL_SETTLE_MS = 280;
-// How long to wait after programmatic snap before re-enabling scroll reads
 const SNAP_ANIMATION_MS = 350;
+// Degrees of rotation per item slot — controls how "tight" the cylinder feels
+const THETA = 22;
 
 const clampIndex = (index: number, length: number) => Math.max(0, Math.min(length - 1, index));
 
@@ -198,7 +198,7 @@ const WheelColumn: React.FC<WheelColumnProps> = ({ values, format, initialIndex,
   const settleTimerRef = useRef<number | null>(null);
   const rafRef = useRef<number | null>(null);
   const snapAnimTimerRef = useRef<number | null>(null);
-  const isProgrammaticRef = useRef(false); // true while our own snap scroll is animating
+  const isProgrammaticRef = useRef(false);
   const mountedRef = useRef(false);
 
   const onChangeRef = useRef(onChange);
@@ -206,6 +206,9 @@ const WheelColumn: React.FC<WheelColumnProps> = ({ values, format, initialIndex,
 
   const [selectedIndex, setSelectedIndex] = useState(initialIndex);
   const selectedIndexRef = useRef(initialIndex);
+
+  // Tracks raw scrollTop for 3D transform computation — updated every scroll frame
+  const [scrollTopPx, setScrollTopPx] = useState(initialIndex * ITEM_HEIGHT);
 
   const selectIndex = useCallback(
     (nextIndex: number, withHaptic: boolean) => {
@@ -225,16 +228,13 @@ const WheelColumn: React.FC<WheelColumnProps> = ({ values, format, initialIndex,
       const node = scrollRef.current;
       if (!node) return;
       const nextIndex = clampIndex(Math.round(node.scrollTop / ITEM_HEIGHT), values.length);
-      // Update state immediately so the highlight tracks the landing position
       selectIndex(nextIndex, false);
       isProgrammaticRef.current = true;
       node.scrollTo({ top: nextIndex * ITEM_HEIGHT, behavior });
 
-      // Re-enable scroll event handling after animation completes
       if (snapAnimTimerRef.current) window.clearTimeout(snapAnimTimerRef.current);
       snapAnimTimerRef.current = window.setTimeout(() => {
         isProgrammaticRef.current = false;
-        // Final authoritative read after animation settles
         if (scrollRef.current) {
           const finalIndex = clampIndex(
             Math.round(scrollRef.current.scrollTop / ITEM_HEIGHT),
@@ -247,13 +247,13 @@ const WheelColumn: React.FC<WheelColumnProps> = ({ values, format, initialIndex,
     [values.length, selectIndex],
   );
 
-  // Initialise scroll position when column mounts or initialIndex changes
   useEffect(() => {
     const node = scrollRef.current;
     if (!node) return;
     const safeInitial = clampIndex(initialIndex, values.length);
     selectedIndexRef.current = safeInitial;
     setSelectedIndex(safeInitial);
+    setScrollTopPx(safeInitial * ITEM_HEIGHT);
     isProgrammaticRef.current = true;
     node.scrollTo({ top: safeInitial * ITEM_HEIGHT, behavior: 'auto' });
 
@@ -266,7 +266,6 @@ const WheelColumn: React.FC<WheelColumnProps> = ({ values, format, initialIndex,
     return () => window.clearTimeout(t1);
   }, [initialIndex, values]);
 
-  // Cleanup timers on unmount
   useEffect(() => () => {
     if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current);
     if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
@@ -274,7 +273,6 @@ const WheelColumn: React.FC<WheelColumnProps> = ({ values, format, initialIndex,
   }, []);
 
   const handleTouchStart = useCallback(() => {
-    // User grabbed the wheel — cancel any in-flight programmatic snap
     isProgrammaticRef.current = false;
     if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current);
     if (snapAnimTimerRef.current) window.clearTimeout(snapAnimTimerRef.current);
@@ -285,12 +283,13 @@ const WheelColumn: React.FC<WheelColumnProps> = ({ values, format, initialIndex,
     const node = scrollRef.current;
     if (!node) return;
 
-    // Hard-clamp: prevents rubber-band bounce from reading out-of-range position
     const maxScroll = (values.length - 1) * ITEM_HEIGHT;
     if (node.scrollTop < 0) { node.scrollTop = 0; return; }
     if (node.scrollTop > maxScroll) { node.scrollTop = maxScroll; return; }
 
-    // Ignore scroll events we triggered ourselves during a snap animation
+    // Update 3D scroll position every frame
+    setScrollTopPx(node.scrollTop);
+
     if (isProgrammaticRef.current) return;
 
     if (rafRef.current) window.cancelAnimationFrame(rafRef.current);
@@ -300,7 +299,6 @@ const WheelColumn: React.FC<WheelColumnProps> = ({ values, format, initialIndex,
       selectIndex(nextIndex, true);
     });
 
-    // Reset settle timer — only snap after scroll fully stops
     if (settleTimerRef.current) window.clearTimeout(settleTimerRef.current);
     settleTimerRef.current = window.setTimeout(() => {
       if (!isProgrammaticRef.current) snapToNearest('smooth');
@@ -308,14 +306,25 @@ const WheelColumn: React.FC<WheelColumnProps> = ({ values, format, initialIndex,
   }, [values.length, selectIndex, snapToNearest]);
 
   return (
-    <div className="relative min-w-0 flex-1" style={{ height: `${VIEW_HEIGHT}px` }}>
+    // Outer wrapper: perspective is fixed here so the vanishing point stays
+    // centred in the picker regardless of scroll position.
+    <div
+      className="relative min-w-0 flex-1"
+      style={{
+        height: VIEW_HEIGHT,
+        perspective: '280px',
+        perspectiveOrigin: '50% 50%',
+        overflow: 'hidden',
+      }}
+    >
       <div
         ref={scrollRef}
         onScroll={handleScroll}
         onTouchStart={handleTouchStart}
-        className="no-scrollbar overflow-y-auto [scrollbar-width:none]"
+        className="no-scrollbar [scrollbar-width:none]"
         style={{
-          height: `${VIEW_HEIGHT}px`,
+          height: VIEW_HEIGHT,
+          overflowY: 'auto',
           scrollSnapType: 'y mandatory',
           WebkitOverflowScrolling: 'touch',
           paddingTop: VIEW_PADDING,
@@ -325,21 +334,34 @@ const WheelColumn: React.FC<WheelColumnProps> = ({ values, format, initialIndex,
         }}
       >
         {values.map((value, index) => {
-          const dist = Math.abs(index - selectedIndex);
+          // Pixel offset of this item's centre from the selection-zone centre.
+          // pixelOffset > 0 → item is below centre (needs to tilt top toward viewer)
+          const pixelOffset = index * ITEM_HEIGHT - scrollTopPx;
+          const angle = -(pixelOffset / ITEM_HEIGHT) * THETA;
+          const absAngle = Math.abs(angle);
+          const isCenter = index === selectedIndex;
+
           return (
             <div
               key={`${value}-${index}`}
-              className={`font-victory relative flex w-full items-center justify-center text-center tabular-nums leading-none select-none ${
-                index === selectedIndex ? 'font-bold' : 'font-normal'
-              }`}
+              className="font-victory tabular-nums leading-none select-none"
               style={{
-                height: `${ITEM_HEIGHT}px`,
+                height: ITEM_HEIGHT,
                 scrollSnapAlign: 'center',
-                fontSize: index === selectedIndex ? '30px' : dist === 1 ? '22px' : '19px',
-                color: index === selectedIndex
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transform: `rotateX(${angle}deg)`,
+                transformOrigin: 'center center',
+                backfaceVisibility: 'hidden',
+                // Fade items as they rotate away; hide items almost edge-on
+                opacity: absAngle >= 88 ? 0 : Math.max(0, 1 - absAngle / 72),
+                fontSize: isCenter ? '32px' : absAngle < 28 ? '22px' : '18px',
+                fontWeight: isCenter ? 800 : 400,
+                color: isCenter
                   ? 'var(--text-primary)'
-                  : `rgba(134,146,164,${Math.max(0.18, 0.55 - dist * 0.18)})`,
-                transition: 'font-size 0.12s ease, color 0.12s ease',
+                  : `rgba(134,146,164,${Math.max(0.15, 0.5 - absAngle / 110)})`,
+                transition: 'color 0.1s',
               }}
             >
               {format(value)}
@@ -348,23 +370,30 @@ const WheelColumn: React.FC<WheelColumnProps> = ({ values, format, initialIndex,
         })}
       </div>
 
+      {/* Unit label — sits at the right edge of the selection zone */}
       {unitLabel && (
         <div
           className="pointer-events-none absolute top-1/2 -translate-y-1/2 text-[10px] font-bold tracking-[0.18em] text-[var(--text-muted)]"
-          style={{ right: '12px' }}
+          style={{ right: '10px' }}
         >
           {unitLabel}
         </div>
       )}
 
-      {/* Fade overlays — height matches VIEW_PADDING so no out-of-bounds values leak */}
+      {/* Fade overlays — mask items curving away at top & bottom */}
       <div
         className="pointer-events-none absolute inset-x-0 top-0"
-        style={{ height: VIEW_PADDING + 4, background: `linear-gradient(to bottom, var(--bg-elevated) 55%, transparent)` }}
+        style={{
+          height: VIEW_PADDING + 4,
+          background: 'linear-gradient(to bottom, var(--bg-elevated) 60%, transparent)',
+        }}
       />
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0"
-        style={{ height: VIEW_PADDING + 4, background: `linear-gradient(to top, var(--bg-elevated) 55%, transparent)` }}
+        style={{
+          height: VIEW_PADDING + 4,
+          background: 'linear-gradient(to top, var(--bg-elevated) 60%, transparent)',
+        }}
       />
     </div>
   );
@@ -419,6 +448,9 @@ export const DialPicker: React.FC<DialPickerProps> = ({
     return String(liveValue);
   })();
 
+  // Suppress unused-variable lint — title kept in props for caller compatibility
+  void title;
+
   return (
     <div className="fixed inset-0 z-[220]">
       <button
@@ -439,27 +471,25 @@ export const DialPicker: React.FC<DialPickerProps> = ({
         {/* Drag pill */}
         <div className="mx-auto mb-5 h-[3px] w-9 rounded-full bg-white/15" />
 
-        {/* Header: label + live value + dismiss */}
-        <div className="mb-4 flex items-start justify-between">
-          <div>
-            <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--text-muted)]">
-              {title}
-            </p>
-            <div className="flex items-baseline gap-1.5">
-              <span className="font-victory tabular-nums leading-none text-[var(--text-primary)]" style={{ fontSize: '42px', fontWeight: 700 }}>
-                {liveDisplay}
+        {/* Header: live value + dismiss (no "SELECT …" label) */}
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-baseline gap-1.5">
+            <span
+              className="font-victory tabular-nums leading-none text-[var(--text-primary)]"
+              style={{ fontSize: '42px', fontWeight: 700 }}
+            >
+              {liveDisplay}
+            </span>
+            {liveUnit && (
+              <span className="font-victory text-[15px] font-semibold text-[var(--text-secondary)] uppercase tracking-[0.12em]">
+                {liveUnit}
               </span>
-              {liveUnit && (
-                <span className="font-victory text-[15px] font-semibold text-[var(--text-secondary)] uppercase tracking-[0.12em]">
-                  {liveUnit}
-                </span>
-              )}
-            </div>
+            )}
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="mt-1 flex h-7 w-7 items-center justify-center rounded-full text-[var(--text-muted)]"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-[var(--text-muted)]"
             style={{ background: 'var(--bg-elevated)' }}
           >
             <X className="h-3.5 w-3.5" />
@@ -468,14 +498,14 @@ export const DialPicker: React.FC<DialPickerProps> = ({
 
         {/* Wheel container */}
         <div
-          className={`relative mb-5 flex overflow-hidden rounded-[18px] border border-[var(--border)]`}
-          style={{ height: `${VIEW_HEIGHT}px`, background: 'var(--bg-elevated)' }}
+          className="relative mb-5 flex overflow-hidden rounded-[18px] border border-[var(--border)]"
+          style={{ height: VIEW_HEIGHT, background: 'var(--bg-elevated)' }}
         >
           {columns.map((column, columnIndex) => (
             <div
               key={column.id}
-              className={`flex flex-col ${columnIndex > 0 ? 'border-l border-[var(--border)]' : ''}`}
-              style={{ flex: column.id === 'decimal' ? '0 0 30%' : '1 1 0%' }}
+              className={columnIndex > 0 ? 'border-l border-[var(--border)]' : ''}
+              style={{ flex: column.id === 'decimal' ? '0 0 30%' : '1 1 0%', display: 'flex', flexDirection: 'column' }}
             >
               <WheelColumn
                 values={column.values}
@@ -493,59 +523,30 @@ export const DialPicker: React.FC<DialPickerProps> = ({
             </div>
           ))}
 
-          {/* Selection zone — neutral tint + two hairline rules */}
+          {/* Selection zone — two hairline rules around the centre row */}
           <div
             className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2"
-            style={{ height: `${ITEM_HEIGHT}px` }}
+            style={{ height: ITEM_HEIGHT }}
           >
-            {/* faint fill */}
             <div className="absolute inset-0" style={{ background: 'rgba(255,255,255,0.035)' }} />
-            {/* top rule */}
             <div
               className="absolute inset-x-0 top-0 h-px"
-              style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 20%, rgba(255,255,255,0.18) 80%, transparent 100%)' }}
+              style={{ background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.18) 20%,rgba(255,255,255,0.18) 80%,transparent 100%)' }}
             />
-            {/* bottom rule */}
             <div
               className="absolute inset-x-0 bottom-0 h-px"
-              style={{ background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 20%, rgba(255,255,255,0.18) 80%, transparent 100%)' }}
+              style={{ background: 'linear-gradient(90deg,transparent 0%,rgba(255,255,255,0.18) 20%,rgba(255,255,255,0.18) 80%,transparent 100%)' }}
             />
           </div>
-
-          {/* Tick marks — left and right edges */}
-          {[...Array(9)].map((_, i) => (
-            <div
-              key={i}
-              className="pointer-events-none absolute left-0"
-              style={{
-                top: `${(i + 0.5) * (VIEW_HEIGHT / 9)}px`,
-                width: i === 4 ? '10px' : '5px',
-                height: '1px',
-                background: i === 4 ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.09)',
-              }}
-            />
-          ))}
-          {[...Array(9)].map((_, i) => (
-            <div
-              key={i}
-              className="pointer-events-none absolute right-0"
-              style={{
-                top: `${(i + 0.5) * (VIEW_HEIGHT / 9)}px`,
-                width: i === 4 ? '10px' : '5px',
-                height: '1px',
-                background: i === 4 ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.09)',
-              }}
-            />
-          ))}
         </div>
 
-        {/* Confirm button */}
+        {/* Confirm — just "Set", no repeated value/unit */}
         <button
           type="button"
           onClick={submit}
           className="h-[54px] w-full rounded-2xl text-[15px] font-bold tracking-[0.04em] transition-all active:scale-[0.98] bg-[var(--accent)] text-black"
         >
-          Set {liveDisplay} {liveUnit}
+          Set
         </button>
       </motion.div>
     </div>
