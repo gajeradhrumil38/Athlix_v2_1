@@ -556,25 +556,23 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
 
         {/* ── Timer Bar (visible when exercises exist) ──────────────── */}
         {workout.exercises.length > 0 && (
-          <div className="shrink-0 flex items-center gap-3 px-4 py-2.5 border-b border-white/5">
-            <span className="font-victory text-[18px] font-semibold text-[var(--text-primary)] tabular-nums">
+          <div className="shrink-0 flex items-center gap-3 px-4 border-b border-white/5" style={{ height: 48 }}>
+            <span className="font-victory text-[20px] font-bold text-[var(--text-primary)] tabular-nums" style={{ letterSpacing: 1 }}>
               {formatElapsedTime(workout.elapsedSeconds)}
             </span>
+            {/* Play/Pause — lime when running, surface when stopped */}
             <button
               type="button"
               onClick={() => setIsPaused((p) => !p)}
-              className="flex w-8 h-8 items-center justify-center rounded-lg border transition-colors"
-              style={{
-                background: !isPaused ? 'var(--accent)' : 'var(--bg-surface)',
-                borderColor: !isPaused ? 'transparent' : 'rgba(255,255,255,0.1)',
-              }}
+              className="flex w-7 h-7 items-center justify-center rounded-lg border-none transition-colors"
+              style={{ background: 'var(--accent)', flexShrink: 0 }}
             >
               {isPaused
-                ? <Play className="w-3 h-3 text-[var(--accent)] fill-current" />
-                : <Pause className="w-3 h-3 text-black" />}
+                ? <Play className="w-3 h-3 fill-black text-black" style={{ marginLeft: 1 }} />
+                : <Pause className="w-3 h-3 fill-black text-black" />}
             </button>
-            <div className="w-px h-4 bg-white/10" />
-            <span className="text-[12px] font-medium text-[var(--text-muted)]">
+            <div className="w-px h-5 bg-white/10" />
+            <span className="text-[13px] font-medium text-[var(--text-secondary)]">
               {totalDone}/{totalSets} sets done
             </span>
             {isPastDate && (
@@ -669,14 +667,17 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
                 {/* Exercise name header */}
                 <div className="shrink-0 px-4 py-3 border-b border-white/5 flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] mb-1.5">
+                    <p
+                      className="text-[11px] font-semibold uppercase mb-1"
+                      style={{ letterSpacing: '0.18em', color: '#5DCAA5' }}
+                    >
                       {currentExercise.muscleGroup || 'Exercise'}
                     </p>
-                    <p className="text-[22px] font-bold text-[var(--text-primary)] tracking-tight leading-none truncate">
+                    <p className="text-[26px] font-bold text-[var(--text-primary)] leading-[1.1] truncate">
                       {currentExercise.name}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0 mt-0.5">
+                  <div className="flex items-center gap-2 shrink-0 mt-1">
                     {/* Weight toggle: only shown for reps-only exercises */}
                     {resolveExerciseInputType(currentExercise.name) === 'reps_only' && (
                       <button
@@ -694,11 +695,16 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
                         {currentExercise.optionalWeight ? 'Weighted' : '+ Weight'}
                       </button>
                     )}
+                    {/* Delete button — red-tinted box matching design */}
                     <button
                       type="button"
                       onClick={() => handleRemoveExercise(activeIndex)}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg shrink-0 transition-colors"
-                      style={{ color: 'rgba(248,113,113,0.6)', background: 'rgba(248,113,113,0.08)' }}
+                      className="flex h-[34px] w-[34px] items-center justify-center rounded-lg shrink-0 transition-colors"
+                      style={{
+                        background: 'rgba(248,113,113,0.12)',
+                        border: '1px solid rgba(248,113,113,0.25)',
+                        color: '#f87171',
+                      }}
                       aria-label="Remove exercise"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

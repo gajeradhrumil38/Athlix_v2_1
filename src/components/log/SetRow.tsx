@@ -26,18 +26,15 @@ const ValueBox: React.FC<{
   return (
     <button
       onClick={onTap}
-      className="relative flex h-[82px] w-full flex-col items-center justify-center gap-[3px] overflow-hidden rounded-xl border text-center transition-all active:scale-[0.97]"
+      className="relative flex h-[82px] w-full flex-col items-center justify-center gap-[3px] overflow-hidden rounded-lg border text-center transition-all active:scale-[0.97]"
       style={{
         background: 'var(--bg-base)',
-        borderColor: isDone ? 'rgba(200,255,0,0.10)' : 'var(--border)',
+        borderColor: isDone ? 'rgba(200,255,0,0.12)' : 'var(--border)',
       }}
     >
       {/* faint top shimmer */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
-      <div
-        className="font-victory tabular-nums text-[36px] leading-none font-black"
-        style={{ color: isDone ? 'var(--text-primary)' : 'var(--text-primary)' }}
-      >
+      <div className="font-victory tabular-nums text-[36px] leading-none font-black text-[var(--text-primary)]">
         {field.displayValue}
       </div>
       <div className="text-[10px] font-bold tracking-[0.16em] uppercase text-[var(--text-muted)]">
@@ -57,18 +54,18 @@ export const SetRow: React.FC<SetRowProps> = ({
 }) => {
   return (
     <div
-      className="relative overflow-hidden rounded-2xl border transition-all duration-200"
+      className="relative overflow-hidden rounded-xl border transition-all duration-200"
       style={{
         background: 'var(--bg-base)',
-        borderColor: 'var(--border)',
+        borderColor: set.done ? 'rgba(200,255,0,0.12)' : 'var(--border)',
       }}
     >
-      {/* Left accent bar — accent when done, muted when not */}
+      {/* Left accent bar */}
       <div
         className="absolute left-0 top-0 bottom-0 w-[3px] transition-all duration-300"
         style={{
           background: set.done ? 'var(--accent)' : 'var(--border)',
-          boxShadow: set.done ? '2px 0 8px rgba(200,255,0,0.25)' : 'none',
+          boxShadow: set.done ? '2px 0 10px rgba(200,255,0,0.30)' : 'none',
         }}
       />
 
@@ -86,24 +83,24 @@ export const SetRow: React.FC<SetRowProps> = ({
             Set {index}
           </div>
           {set.done && (
-            <span className="text-[10px] font-semibold tracking-[0.08em] uppercase" style={{ color: 'rgba(200,255,0,0.7)' }}>
+            <span className="text-[10px] font-semibold tracking-[0.08em] uppercase" style={{ color: 'rgba(200,255,0,0.70)' }}>
               Done
             </span>
           )}
         </div>
 
-        {/* Checkmark — glow only on the button itself when done */}
+        {/* Check button — square (8px radius) matching design */}
         <button
           onClick={onMarkDone}
           aria-label={set.done ? `Mark set ${index} incomplete` : `Mark set ${index} complete`}
-          className="h-[42px] w-[42px] rounded-full border flex items-center justify-center transition-all duration-200 active:scale-95"
+          className="h-10 w-10 rounded-lg border flex items-center justify-center transition-all duration-200 active:scale-95"
           style={
             set.done
               ? {
                   background: 'rgba(200,255,0,0.10)',
                   borderColor: 'rgba(200,255,0,0.50)',
                   color: 'var(--accent)',
-                  boxShadow: '0 0 14px rgba(200,255,0,0.30), inset 0 0 8px rgba(200,255,0,0.08)',
+                  boxShadow: '0 0 14px rgba(200,255,0,0.25)',
                 }
               : {
                   background: 'var(--bg-elevated)',

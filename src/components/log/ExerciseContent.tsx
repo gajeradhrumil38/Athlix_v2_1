@@ -88,7 +88,7 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = (props) => {
   return (
     <div className="h-full overflow-y-auto bg-transparent pb-24">
       <div className="sticky top-0 z-20 border-b border-[var(--border)] bg-[var(--bg-base)]/90 px-4 pb-3 pt-3 backdrop-blur-xl">
-        <div className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--bg-surface)]/92">
+        <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-surface)]">
           <div className="grid grid-cols-3">
             {/* Sets */}
             <div className="flex flex-col gap-0.5 px-3 py-2.5">
@@ -159,7 +159,7 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = (props) => {
 
       <div className="space-y-3 px-4 pt-3">
         {showPrefillBanner && exercise.lastSession && (
-          <div className="flex items-center justify-between gap-2 rounded-xl border border-[var(--accent)]/20 bg-[var(--accent)]/8 px-3 py-2.5">
+          <div className="flex items-center justify-between gap-2 rounded-lg border border-[var(--accent)]/20 bg-[var(--accent)]/8 px-3 py-2.5">
             <div className="flex items-center gap-2">
               <div className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
               <span className="text-[12px] font-medium text-[var(--text-primary)]">
@@ -208,7 +208,7 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = (props) => {
 
         <button
           onClick={onAddSet}
-          className="h-14 w-full rounded-xl border border-dashed border-[var(--border)] bg-[var(--bg-surface)]/45 text-[14px] font-semibold tracking-[0.06em] text-[var(--text-secondary)] transition-all hover:border-[var(--accent)]/35 hover:text-[var(--accent)] active:scale-[0.99]"
+          className="h-[52px] w-full rounded-xl border border-dashed border-[var(--border)] bg-[var(--bg-surface)]/45 text-[14px] font-semibold tracking-[0.06em] text-[var(--text-secondary)] transition-all hover:border-[var(--accent)]/35 hover:text-[var(--accent)] active:scale-[0.99]"
         >
           + Add Set
         </button>
