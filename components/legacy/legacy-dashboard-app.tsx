@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createClient } from '@/lib/supabase';
+import { consumeDashboardSessionTokens } from '@/lib/dashboard-session-bridge';
 
 interface Props {
   accessToken: string;
@@ -22,6 +23,13 @@ export function LegacyDashboardApp({ accessToken, refreshToken }: Props) {
   const [showFallbackHint, setShowFallbackHint] = useState(false);
 
   const hasTokens = Boolean(sessionTokens.accessToken && sessionTokens.refreshToken);
+
+  useEffect(() => {
+    if (hasTokens) return;
+    const bridgedTokens = consumeDashboardSessionTokens();
+    if (!bridgedTokens) return;
+    setSessionTokens(bridgedTokens);
+  }, [hasTokens]);
 
   useEffect(() => {
     if (accessToken && refreshToken) {

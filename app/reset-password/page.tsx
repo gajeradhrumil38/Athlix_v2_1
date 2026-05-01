@@ -3,10 +3,10 @@
 export const dynamic = 'force-dynamic';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Loader2, CheckCircle2 } from 'lucide-react';
 import { FormEvent, useMemo, useState } from 'react';
 import { createClient } from '@/lib/supabase';
+import { stashDashboardSessionTokens } from '@/lib/dashboard-session-bridge';
 
 const inputStyle: React.CSSProperties = {
   caretColor: '#C8FF00',
@@ -25,8 +25,12 @@ const getPasswordStrength = (value: string) => {
   return             { label: 'Strong', color: '#4dff91', segments: 3 };
 };
 
+type SessionTokens = {
+  accessToken: string;
+  refreshToken: string;
+};
+
 export default function ResetPasswordPage() {
-  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
 
   const [newPassword, setNewPassword]           = useState('');
@@ -38,6 +42,27 @@ export default function ResetPasswordPage() {
   const [successMessage, setSuccessMessage]     = useState<string | null>(null);
 
   const strength = useMemo(() => getPasswordStrength(newPassword), [newPassword]);
+
+  const waitForSessionTokens = async (): Promise<SessionTokens | null> => {
+    const deadline = Date.now() + 2500;
+    while (Date.now() < deadline) {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.access_token && data.session?.refresh_token) {
+        return {
+          accessToken: data.session.access_token,
+          refreshToken: data.session.refresh_token,
+        };
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 120));
+    }
+    return null;
+  };
+
+  const redirectToDashboard = async () => {
+    const tokens = await waitForSessionTokens();
+    stashDashboardSessionTokens(tokens);
+    window.location.replace('/dashboard');
+  };
 
   const updatePassword = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -58,7 +83,7 @@ export default function ResetPasswordPage() {
 
     setLoading(false);
     setSuccessMessage('Password updated! Redirecting you in…');
-    setTimeout(() => { router.replace('/dashboard'); router.refresh(); }, 2500);
+    setTimeout(() => { void redirectToDashboard(); }, 2500);
   };
 
   return (

@@ -8,6 +8,7 @@ import { CheckCircle2, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase';
+import { stashDashboardSessionTokens } from '@/lib/dashboard-session-bridge';
 
 const emailSchema = z.string().trim().email();
 const fullNameSchema = z.string().trim().min(2).max(80);
@@ -102,11 +103,22 @@ export default function SignupPage() {
   useEffect(() => {
     if (!supabase) return;
     let cancelled = false;
-    supabase.auth.getUser().then(({ data }) => {
-      if (!cancelled && data.user) router.replace(redirectPath);
+    void supabase.auth.getUser().then(async ({ data }) => {
+      if (cancelled || !data.user) return;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const session = sessionData.session;
+      stashDashboardSessionTokens(
+        session?.access_token && session?.refresh_token
+          ? {
+              accessToken: session.access_token,
+              refreshToken: session.refresh_token,
+            }
+          : null,
+      );
+      if (!cancelled) window.location.replace(redirectPath);
     });
     return () => { cancelled = true; };
-  }, [router, redirectPath, supabase]);
+  }, [redirectPath, supabase]);
 
   return (
     <div className="flex min-h-screen bg-[#0a0a0a]">

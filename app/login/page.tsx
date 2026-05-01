@@ -8,6 +8,7 @@ import { CheckCircle2, Eye, EyeOff, Loader2, X } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
 import { createClient, createPasswordResetClient } from '@/lib/supabase';
+import { stashDashboardSessionTokens } from '@/lib/dashboard-session-bridge';
 
 const ATTEMPT_STORAGE_KEY = 'athlix_login_guard_v2';
 const REMEMBER_EMAIL_KEY = 'athlix_login_remember_email_v2';
@@ -44,6 +45,11 @@ const FEATURES = [
   'Monitor recovery & readiness',
   'Analyze performance over time',
 ];
+
+type SessionTokens = {
+  accessToken: string;
+  refreshToken: string;
+};
 
 export default function LoginPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -108,18 +114,25 @@ export default function LoginPage() {
     }
   };
 
-  const waitForSessionTokens = async () => {
+  const waitForSessionTokens = async (): Promise<SessionTokens | null> => {
     const deadline = Date.now() + 2500;
     while (Date.now() < deadline) {
       const { data } = await supabase.auth.getSession();
-      if (data.session?.access_token && data.session?.refresh_token) return;
+      if (data.session?.access_token && data.session?.refresh_token) {
+        return {
+          accessToken: data.session.access_token,
+          refreshToken: data.session.refresh_token,
+        };
+      }
       await new Promise((resolve) => window.setTimeout(resolve, 120));
     }
+    return null;
   };
 
   const redirectAfterSuccess = async (path: string) => {
     await new Promise((resolve) => window.setTimeout(resolve, 450));
-    await waitForSessionTokens();
+    const tokens = await waitForSessionTokens();
+    stashDashboardSessionTokens(tokens);
     // Use a full navigation so the server reads fresh auth cookies on first load.
     window.location.replace(path);
   };
@@ -259,8 +272,19 @@ export default function LoginPage() {
   useEffect(() => {
     if (!supabase) return;
     let cancelled = false;
-    supabase.auth.getUser().then(({ data }) => {
-      if (!cancelled && data.user) window.location.replace(redirectPath);
+    void supabase.auth.getUser().then(async ({ data }) => {
+      if (cancelled || !data.user) return;
+      const { data: sessionData } = await supabase.auth.getSession();
+      const session = sessionData.session;
+      stashDashboardSessionTokens(
+        session?.access_token && session?.refresh_token
+          ? {
+              accessToken: session.access_token,
+              refreshToken: session.refresh_token,
+            }
+          : null,
+      );
+      if (!cancelled) window.location.replace(redirectPath);
     });
     return () => { cancelled = true; };
   }, [redirectPath, supabase]);

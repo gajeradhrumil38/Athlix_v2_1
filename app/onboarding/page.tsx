@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useMemo } from 'react';
 import { ChevronLeft, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
+import { stashDashboardSessionTokens } from '@/lib/dashboard-session-bridge';
 
 /* ─── Step 1 — Sport ──────────────────────────────── */
 const SPORTS = [
@@ -60,6 +61,20 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const redirectToDashboardWithBridge = async () => {
+    const { data } = await supabase.auth.getSession();
+    const session = data.session;
+    stashDashboardSessionTokens(
+      session?.access_token && session?.refresh_token
+        ? {
+            accessToken: session.access_token,
+            refreshToken: session.refresh_token,
+          }
+        : null,
+    );
+    window.location.replace('/dashboard');
+  };
+
   const finish = async () => {
     if (!supabase) return;
     setSaving(true);
@@ -78,7 +93,7 @@ export default function OnboardingPage() {
       setError('Unable to save preferences. Please try again.');
       return;
     }
-    router.replace('/dashboard');
+    await redirectToDashboardWithBridge();
   };
 
   return (
@@ -250,7 +265,7 @@ export default function OnboardingPage() {
         <div className="mt-4 text-center">
           <button
             type="button"
-            onClick={() => router.replace('/dashboard')}
+            onClick={() => { void redirectToDashboardWithBridge(); }}
             className="text-[12px] text-[#444] underline-offset-4 hover:text-[#888] hover:underline"
           >
             Skip for now

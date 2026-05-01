@@ -18,7 +18,7 @@ import {
 } from 'date-fns';
 
 import { LineChart, AreaChart, ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
-import { Trophy, TrendingUp, Activity, Scale, ChevronDown, Heart, Bluetooth, PlugZap, Unplug, Info } from 'lucide-react';
+import { Trophy, TrendingUp, Activity, Scale, ChevronDown, Heart, Bluetooth, PlugZap, Unplug, Info, Zap, Flame } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { ExerciseImage } from '../components/shared/ExerciseImage';
@@ -71,7 +71,6 @@ const getHeartRateZoneColor = (bpm: number | null) => {
   return HEART_RATE_ZONES[getHeartRateZoneIndex(bpm)].color;
 };
 
-/** Convert a color (hex or CSS var) + alpha [0-1] to a CSS color-mix() string. */
 const withAlpha = (color: string, alpha: number): string => {
   if (alpha <= 0) return 'transparent';
   const pct = Math.round(alpha * 100);
@@ -199,14 +198,12 @@ export const Progress: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'overload' | 'prs' | 'weight' | 'livehr'>('livehr');
   const [loading, setLoading] = useState(true);
 
-  // Data states
   const [prs, setPrs] = useState<any[]>([]);
   const [weightLogs, setWeightLogs] = useState<any[]>([]);
   const [workouts, setWorkouts] = useState<any[]>([]);
   const [exercises, setExercises] = useState<any[]>([]);
   const [selectedExerciseForOverload, setSelectedExerciseForOverload] = useState<string>('');
 
-  // New weight log state
   const [newWeight, setNewWeight] = useState('');
   const [weightDate, setWeightDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [heightCm, setHeightCm] = useState('');
@@ -277,22 +274,25 @@ export const Progress: React.FC = () => {
     if (currentBpm < 175) return { label: 'Hard', color: '#FF9F1C' };
     return { label: 'Peak', color: '#FF5A5F' };
   }, [currentBpm]);
+
   const isIOSBrowser = useMemo(() => {
     if (typeof navigator === 'undefined') return false;
     const ua = navigator.userAgent || '';
     const touchMac = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
     return /iPhone|iPad|iPod/i.test(ua) || touchMac;
   }, []);
+
   const unsupportedBluetoothHint = useMemo(() => {
     if (supportsWebBluetooth) return null;
     if (typeof window !== 'undefined' && !window.isSecureContext) {
-      return 'Live pairing requires HTTPS. Open Athlix(TM) on a secure URL.';
+      return 'Live pairing requires HTTPS. Open Athlix™ on a secure URL.';
     }
     if (isIOSBrowser) {
       return 'iOS browsers currently limit Web Bluetooth pairing. Use Android Chrome or desktop Chrome/Edge for live connection.';
     }
     return 'This browser does not support Web Bluetooth. Use a compatible Chrome/Edge browser.';
   }, [isIOSBrowser, supportsWebBluetooth]);
+
   const bluetoothSupportHint = useMemo(() => {
     if (typeof navigator === 'undefined') return null;
     const ua = navigator.userAgent || '';
@@ -301,6 +301,7 @@ export const Progress: React.FC = () => {
     }
     return null;
   }, []);
+
   const currentZoneIndex = useMemo(() => (currentBpm ? getHeartRateZoneIndex(currentBpm) : -1), [currentBpm]);
   const zoneDistribution = useMemo(() => {
     const counts = HEART_RATE_ZONES.map(() => 0);
@@ -314,6 +315,7 @@ export const Progress: React.FC = () => {
       percent: Math.round((counts[idx] / total) * 100),
     }));
   }, [hrSamples]);
+
   const useCompactZoneLabels = viewportWidth < 640;
   const activeWaveColor = useMemo(() => {
     if (selectedZoneFilter === null) return '#59D9C6';
@@ -325,6 +327,7 @@ export const Progress: React.FC = () => {
   const activeWaveAreaBottom = useMemo(() => withAlpha(activeWaveColor, 0), [activeWaveColor]);
   const activeWaveStroke = useMemo(() => withAlpha(activeWaveColor, 0.96), [activeWaveColor]);
   const activeWaveGlow = useMemo(() => withAlpha(activeWaveColor, 0.18), [activeWaveColor]);
+
   const heroWavePoints = useMemo(() => {
     const recent = hrSamples.slice(-48).map((sample) => sample.bpm);
     if (recent.length < 6) {
@@ -333,33 +336,23 @@ export const Progress: React.FC = () => {
         .map((y, idx) => `${((idx / (fallback.length - 1)) * 100).toFixed(2)},${y.toFixed(2)}`)
         .join(' ');
     }
-
-    // Remove slow drift so the line keeps passing through the center of the icon,
-    // then keep only small live up/down movement from incoming HR samples.
     const residuals = recent.map((value, idx) => {
       const start = Math.max(0, idx - 2);
       const end = Math.min(recent.length - 1, idx + 2);
       let sum = 0;
-      for (let i = start; i <= end; i++) {
-        sum += recent[i];
-      }
+      for (let i = start; i <= end; i++) { sum += recent[i]; }
       const localMean = sum / (end - start + 1);
       return value - localMean;
     });
-
     const smoothed = residuals.map((value, idx) => {
       const start = Math.max(0, idx - 1);
       const end = Math.min(residuals.length - 1, idx + 1);
       let sum = 0;
-      for (let i = start; i <= end; i++) {
-        sum += residuals[i];
-      }
+      for (let i = start; i <= end; i++) { sum += residuals[i]; }
       return sum / (end - start + 1);
     });
-
     const rms = Math.sqrt(smoothed.reduce((sum, value) => sum + value * value, 0) / smoothed.length);
     const scale = rms > 0.001 ? 2.35 / rms : 0;
-
     return smoothed
       .map((value, idx) => {
         const x = (idx / (smoothed.length - 1)) * 100;
@@ -398,55 +391,34 @@ export const Progress: React.FC = () => {
   const waveformVisibleEndTs = useMemo(() => {
     if (!isLineHeartRateView) return lineScopeEndTs;
     if (heartRateView === 'live' && waveformAtLive) return lineScopeEndTs;
-
     const fallbackEnd = waveformViewportEndTs ?? lineScopeEndTs;
     return Math.min(lineScopeEndTs, Math.max(lineScopeStartTs + effectiveWaveformDurationMs, fallbackEnd));
-  }, [
-    effectiveWaveformDurationMs,
-    heartRateView,
-    isLineHeartRateView,
-    lineScopeEndTs,
-    lineScopeStartTs,
-    waveformAtLive,
-    waveformViewportEndTs,
-  ]);
+  }, [effectiveWaveformDurationMs, heartRateView, isLineHeartRateView, lineScopeEndTs, lineScopeStartTs, waveformAtLive, waveformViewportEndTs]);
   const waveformVisibleStartTs = Math.max(lineScopeStartTs, waveformVisibleEndTs - effectiveWaveformDurationMs);
   const visibleHeartRateSamples = useMemo(
-    () =>
-      allHeartRateSamples.filter(
-        (sample) => sample.ts >= waveformVisibleStartTs && sample.ts <= waveformVisibleEndTs,
-      ),
+    () => allHeartRateSamples.filter((sample) => sample.ts >= waveformVisibleStartTs && sample.ts <= waveformVisibleEndTs),
     [allHeartRateSamples, waveformVisibleEndTs, waveformVisibleStartTs],
   );
   const waveformVisibleData = useMemo(
-    () =>
-      isLineHeartRateView
-        ? buildHeartRateChartRows(
-            visibleHeartRateSamples,
-            waveformVisibleStartTs,
-            waveformVisibleEndTs,
-            MAX_WAVEFORM_CHART_POINTS,
-          )
-        : [],
+    () => isLineHeartRateView
+      ? buildHeartRateChartRows(visibleHeartRateSamples, waveformVisibleStartTs, waveformVisibleEndTs, MAX_WAVEFORM_CHART_POINTS)
+      : [],
     [isLineHeartRateView, visibleHeartRateSamples, waveformVisibleEndTs, waveformVisibleStartTs],
   );
   const waveformVisibleActualData = useMemo(
     () => waveformVisibleData.filter((item) => typeof item.bpm === 'number'),
     [waveformVisibleData],
   );
-  const waveformHasGapSegments = useMemo(
-    () => waveformVisibleData.some((item) => item.isGap),
-    [waveformVisibleData],
-  );
+  const waveformHasGapSegments = useMemo(() => waveformVisibleData.some((item) => item.isGap), [waveformVisibleData]);
+
   const weekHeartRateData = useMemo(() => {
     const now = new Date();
     const weekStart = startOfWeek(now, { weekStartsOn: 1 });
     const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
-
     return eachDayOfInterval({ start: weekStart, end: weekEnd }).map((day) => {
       const dayStart = startOfDay(day).getTime();
       const dayEnd = addDays(startOfDay(day), 1).getTime();
-      const samples = allHeartRateSamples.filter((sample) => sample.ts >= dayStart && sample.ts < dayEnd);
+      const samples = allHeartRateSamples.filter((s) => s.ts >= dayStart && s.ts < dayEnd);
       const avgBpm = averageHeartRateSamples(samples);
       return {
         label: format(day, 'EEE'),
@@ -457,20 +429,17 @@ export const Progress: React.FC = () => {
       };
     });
   }, [allHeartRateSamples]);
+
   const monthHeartRateData = useMemo(() => {
     const now = new Date();
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
-
     return eachWeekOfInterval({ start: monthStart, end: monthEnd }, { weekStartsOn: 1 }).map(
       (weekStart, index, allWeeks) => {
-        const weekEnd =
-          index === allWeeks.length - 1
-            ? addDays(monthEnd, 1)
-            : allWeeks[index + 1];
+        const weekEnd = index === allWeeks.length - 1 ? addDays(monthEnd, 1) : allWeeks[index + 1];
         const startTs = weekStart.getTime();
         const endTs = weekEnd.getTime();
-        const samples = allHeartRateSamples.filter((sample) => sample.ts >= startTs && sample.ts < endTs);
+        const samples = allHeartRateSamples.filter((s) => s.ts >= startTs && s.ts < endTs);
         const avgBpm = averageHeartRateSamples(samples);
         return {
           label: `W${index + 1}`,
@@ -482,32 +451,22 @@ export const Progress: React.FC = () => {
       },
     );
   }, [allHeartRateSamples]);
+
   const periodHeartRateBars = heartRateView === 'month' ? monthHeartRateData : weekHeartRateData;
   const hasPeriodBarData = periodHeartRateBars.some((item) => item.avgBpm !== null);
 
   useEffect(() => {
-    if (!user) {
-      setStoredHeartRateSamples([]);
-      return;
-    }
-
+    if (!user) { setStoredHeartRateSamples([]); return; }
     let cancelled = false;
-    const loadHeartRateHistory = async () => {
+    const load = async () => {
       const sinceTs = Date.now() - HEART_RATE_HISTORY_LOOKBACK_DAYS * 24 * 60 * 60 * 1000;
       const rows = await getHeartRateSamples(user.id, { sinceTs });
       if (cancelled) return;
-      setStoredHeartRateSamples(rows.map((sample) => ({ ts: sample.ts, bpm: sample.bpm })));
+      setStoredHeartRateSamples(rows.map((s) => ({ ts: s.ts, bpm: s.bpm })));
     };
-
-    void loadHeartRateHistory();
-    const intervalId = window.setInterval(() => {
-      void loadHeartRateHistory();
-    }, hrConnected ? 15000 : 45000);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-    };
+    void load();
+    const id = window.setInterval(() => void load(), hrConnected ? 15000 : 45000);
+    return () => { cancelled = true; window.clearInterval(id); };
   }, [hrConnected, user]);
 
   useEffect(() => {
@@ -527,31 +486,16 @@ export const Progress: React.FC = () => {
   const updateWaveformViewport = useCallback(
     (nextEndTs: number, nextDurationMs?: number) => {
       if (!isLineHeartRateView) return;
-
       const scopeSpan = Math.max(1, lineScopeEndTs - lineScopeStartTs);
       const maxDuration = Math.min(scopeSpan, maxWaveformDurationMs);
       const minDuration = Math.min(MIN_WAVEFORM_WINDOW_MS, maxDuration);
-      const clampedDuration = Math.min(
-        maxDuration,
-        Math.max(minDuration, nextDurationMs ?? effectiveWaveformDurationMs),
-      );
-      const clampedEnd = Math.min(
-        lineScopeEndTs,
-        Math.max(lineScopeStartTs + clampedDuration, nextEndTs),
-      );
-
+      const clampedDuration = Math.min(maxDuration, Math.max(minDuration, nextDurationMs ?? effectiveWaveformDurationMs));
+      const clampedEnd = Math.min(lineScopeEndTs, Math.max(lineScopeStartTs + clampedDuration, nextEndTs));
       setWaveformWindowDurationMs(clampedDuration);
       setWaveformViewportEndTs(clampedEnd);
       setWaveformAtLive(heartRateView === 'live' && clampedEnd >= lineScopeEndTs - 1000);
     },
-    [
-      effectiveWaveformDurationMs,
-      heartRateView,
-      isLineHeartRateView,
-      lineScopeEndTs,
-      lineScopeStartTs,
-      maxWaveformDurationMs,
-    ],
+    [effectiveWaveformDurationMs, heartRateView, isLineHeartRateView, lineScopeEndTs, lineScopeStartTs, maxWaveformDurationMs],
   );
 
   const jumpWaveformLive = useCallback(() => {
@@ -564,19 +508,14 @@ export const Progress: React.FC = () => {
   const handleWaveformWheel = useCallback(
     (event: React.WheelEvent<HTMLDivElement>) => {
       if (!isLineHeartRateView) return;
-
-      const dominantDelta =
-        Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      const dominantDelta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
       if (Math.abs(dominantDelta) < 2) return;
-
       event.preventDefault();
-
       if (event.ctrlKey || event.metaKey) {
         const zoomRatio = dominantDelta > 0 ? 1.14 : 0.86;
         updateWaveformViewport(waveformVisibleEndTs, effectiveWaveformDurationMs * zoomRatio);
         return;
       }
-
       const panMs = (effectiveWaveformDurationMs * dominantDelta) / 360;
       updateWaveformViewport(waveformVisibleEndTs + panMs);
     },
@@ -588,30 +527,18 @@ export const Progress: React.FC = () => {
       if (!isLineHeartRateView) return;
       const container = event.currentTarget;
       container.setPointerCapture(event.pointerId);
-
       if (event.pointerType === 'touch') {
         waveformTouchPointsRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
         if (waveformTouchPointsRef.current.size >= 2) {
-          const [first, second] = Array.from(
-            waveformTouchPointsRef.current.values(),
-          ) as Array<{ x: number; y: number }>;
+          const [first, second] = Array.from(waveformTouchPointsRef.current.values()) as Array<{ x: number; y: number }>;
           if (!first || !second) return;
-          waveformPinchRef.current = {
-            startDistance: Math.hypot(first.x - second.x, first.y - second.y),
-            startDuration: effectiveWaveformDurationMs,
-          };
+          waveformPinchRef.current = { startDistance: Math.hypot(first.x - second.x, first.y - second.y), startDuration: effectiveWaveformDurationMs };
           waveformDragRef.current = null;
           return;
         }
       }
-
       const rect = container.getBoundingClientRect();
-      waveformDragRef.current = {
-        pointerId: event.pointerId,
-        startX: event.clientX,
-        startEndTs: waveformVisibleEndTs,
-        width: rect.width || 1,
-      };
+      waveformDragRef.current = { pointerId: event.pointerId, startX: event.clientX, startEndTs: waveformVisibleEndTs, width: rect.width || 1 };
     },
     [effectiveWaveformDurationMs, isLineHeartRateView, waveformVisibleEndTs],
   );
@@ -621,126 +548,69 @@ export const Progress: React.FC = () => {
       if (event.pointerType === 'touch' && waveformTouchPointsRef.current.has(event.pointerId)) {
         waveformTouchPointsRef.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
       }
-
       if (waveformPinchRef.current && waveformTouchPointsRef.current.size >= 2) {
-        const [first, second] = Array.from(
-          waveformTouchPointsRef.current.values(),
-        ) as Array<{ x: number; y: number }>;
+        const [first, second] = Array.from(waveformTouchPointsRef.current.values()) as Array<{ x: number; y: number }>;
         if (!first || !second) return;
         const nextDistance = Math.hypot(first.x - second.x, first.y - second.y);
         if (nextDistance > 0) {
-          const scale = waveformPinchRef.current.startDistance / nextDistance;
-          updateWaveformViewport(
-            waveformVisibleEndTs,
-            waveformPinchRef.current.startDuration * scale,
-          );
+          updateWaveformViewport(waveformVisibleEndTs, waveformPinchRef.current.startDuration * (waveformPinchRef.current.startDistance / nextDistance));
         }
         return;
       }
-
       const dragState = waveformDragRef.current;
       if (!dragState || dragState.pointerId !== event.pointerId) return;
-
       const deltaRatio = (dragState.startX - event.clientX) / Math.max(1, dragState.width);
-      const panMs = effectiveWaveformDurationMs * deltaRatio;
-      updateWaveformViewport(dragState.startEndTs + panMs);
+      updateWaveformViewport(dragState.startEndTs + effectiveWaveformDurationMs * deltaRatio);
     },
     [effectiveWaveformDurationMs, updateWaveformViewport, waveformVisibleEndTs],
   );
 
   const clearWaveformDrag = useCallback((pointerId?: number) => {
-    if (pointerId !== undefined) {
-      waveformTouchPointsRef.current.delete(pointerId);
-    }
-    if (waveformTouchPointsRef.current.size < 2) {
-      waveformPinchRef.current = null;
-    }
+    if (pointerId !== undefined) waveformTouchPointsRef.current.delete(pointerId);
+    if (waveformTouchPointsRef.current.size < 2) waveformPinchRef.current = null;
     if (!waveformDragRef.current) return;
     if (pointerId !== undefined && waveformDragRef.current.pointerId !== pointerId) return;
     waveformDragRef.current = null;
   }, []);
 
   const clearZoneHintTimers = useCallback(() => {
-    if (zoneHintShowTimerRef.current) {
-      window.clearTimeout(zoneHintShowTimerRef.current);
-      zoneHintShowTimerRef.current = null;
-    }
-    if (zoneHintHideTimerRef.current) {
-      window.clearTimeout(zoneHintHideTimerRef.current);
-      zoneHintHideTimerRef.current = null;
-    }
+    if (zoneHintShowTimerRef.current) { window.clearTimeout(zoneHintShowTimerRef.current); zoneHintShowTimerRef.current = null; }
+    if (zoneHintHideTimerRef.current) { window.clearTimeout(zoneHintHideTimerRef.current); zoneHintHideTimerRef.current = null; }
   }, []);
 
-  const handleZoneHintStart = useCallback(
-    (label: string) => {
-      clearZoneHintTimers();
-      zoneHintShowTimerRef.current = window.setTimeout(() => {
-        setZoneHintLabel(label);
-      }, 420);
-    },
-    [clearZoneHintTimers],
-  );
-
-  const handleZoneHintEnd = useCallback(() => {
-    if (zoneHintShowTimerRef.current) {
-      window.clearTimeout(zoneHintShowTimerRef.current);
-      zoneHintShowTimerRef.current = null;
-    }
-    zoneHintHideTimerRef.current = window.setTimeout(() => {
-      setZoneHintLabel(null);
-      zoneHintHideTimerRef.current = null;
-    }, 650);
-  }, []);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setViewportWidth(window.innerWidth);
-    };
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-    };
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      clearZoneHintTimers();
-    };
+  const handleZoneHintStart = useCallback((label: string) => {
+    clearZoneHintTimers();
+    zoneHintShowTimerRef.current = window.setTimeout(() => setZoneHintLabel(label), 420);
   }, [clearZoneHintTimers]);
 
+  const handleZoneHintEnd = useCallback(() => {
+    if (zoneHintShowTimerRef.current) { window.clearTimeout(zoneHintShowTimerRef.current); zoneHintShowTimerRef.current = null; }
+    zoneHintHideTimerRef.current = window.setTimeout(() => { setZoneHintLabel(null); zoneHintHideTimerRef.current = null; }, 650);
+  }, []);
+
   useEffect(() => {
-    if (user) {
-      fetchData();
-    }
-  }, [user, displayUnit]);
+    const handleResize = () => setViewportWidth(window.innerWidth);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  useEffect(() => () => clearZoneHintTimers(), [clearZoneHintTimers]);
+  useEffect(() => { if (user) fetchData(); }, [user, displayUnit]);
 
   useEffect(() => {
     if (heightCm && weightLogs.length > 0) {
       const currentWeight = weightLogs[weightLogs.length - 1].weight;
       const heightM = parseFloat(heightCm) / 100;
-      if (heightM > 0) {
-        const bmi = currentWeight / (heightM * heightM);
-        setBmiValue(bmi.toFixed(1));
-      } else {
-        setBmiValue(null);
-      }
-    } else {
-      setBmiValue(null);
-    }
+      if (heightM > 0) setBmiValue((currentWeight / (heightM * heightM)).toFixed(1));
+      else setBmiValue(null);
+    } else setBmiValue(null);
   }, [heightCm, weightLogs]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      if (!user) {
-        setPrs([]);
-        setWeightLogs([]);
-        setWorkouts([]);
-        setExercises([]);
-        return;
-      }
-
+      if (!user) { setPrs([]); setWeightLogs([]); setWorkouts([]); setExercises([]); return; }
       const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
       const [prData, weightData, workoutData, exerciseData] = await Promise.all([
         getPersonalRecords(user.id),
@@ -748,81 +618,46 @@ export const Progress: React.FC = () => {
         getWorkouts(user.id, { startDate: thirtyDaysAgo }),
         getExerciseRowsWithWorkoutDates(user.id),
       ]);
-
       const targetUnit = displayUnit as WeightUnit;
       setPrs((prData || []).map((pr: any) => ({
         ...pr,
-        best_weight: convertWeight(
-          Number(pr.best_weight || 0),
-          (pr.unit || targetUnit) as WeightUnit,
-          targetUnit,
-          0.1,
-        ),
+        best_weight: convertWeight(Number(pr.best_weight || 0), (pr.unit || targetUnit) as WeightUnit, targetUnit, 0.1),
         unit: targetUnit,
       })));
       setWeightLogs(
         (weightData || [])
           .map((log: any) => ({
             ...log,
-            weight: convertWeight(
-              Number(log.weight || 0),
-              (log.unit || targetUnit) as WeightUnit,
-              targetUnit,
-              0.1,
-            ),
+            weight: convertWeight(Number(log.weight || 0), (log.unit || targetUnit) as WeightUnit, targetUnit, 0.1),
             unit: targetUnit,
           }))
-          // Sort ascending by date so the area chart reads left→right
           .sort((a: any, b: any) => (a.date > b.date ? 1 : -1)),
       );
       setWorkouts(workoutData || []);
-
       if (exerciseData) {
-        setExercises(
-          exerciseData.map((exercise: any) => ({
-            ...exercise,
-            weight:
-              !exercise.unit || isWeightUnit(exercise.unit)
-                ? convertWeight(
-                    Number(exercise.weight || 0),
-                    isWeightUnit(exercise.unit) ? exercise.unit : targetUnit,
-                    targetUnit,
-                    0.1,
-                  )
-                : Number(exercise.weight || 0),
-            unit:
-              !exercise.unit || isWeightUnit(exercise.unit)
-                ? targetUnit
-                : exercise.unit,
-          })),
-        );
-        // Set default selected exercise for overload
-        const uniqueNames = Array.from(new Set(exerciseData.map(ex => ex.name)));
-        if (uniqueNames.length > 0) {
-          setSelectedExerciseForOverload(uniqueNames[0] as string);
-        }
+        setExercises(exerciseData.map((exercise: any) => ({
+          ...exercise,
+          weight: !exercise.unit || isWeightUnit(exercise.unit)
+            ? convertWeight(Number(exercise.weight || 0), isWeightUnit(exercise.unit) ? exercise.unit : targetUnit, targetUnit, 0.1)
+            : Number(exercise.weight || 0),
+          unit: !exercise.unit || isWeightUnit(exercise.unit) ? targetUnit : exercise.unit,
+        })));
+        const uniqueNames = Array.from(new Set(exerciseData.map((ex: any) => ex.name)));
+        if (uniqueNames.length > 0) setSelectedExerciseForOverload(uniqueNames[0] as string);
       }
-
     } catch (error) {
       console.error('Error fetching progress data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, displayUnit]);
 
   const handleLogWeight = async () => {
     if (!newWeight || !user) return;
     const weightNum = parseFloat(newWeight);
     if (isNaN(weightNum)) return;
-
     try {
-      await logBodyWeight(user.id, {
-        date: weightDate,
-        weight: weightNum,
-        unit: displayUnit,
-        notes: null,
-      });
-
+      await logBodyWeight(user.id, { date: weightDate, weight: weightNum, unit: displayUnit, notes: null });
       setNewWeight('');
       setWeightDate(format(new Date(), 'yyyy-MM-dd'));
       toast.success('Weight logged');
@@ -832,65 +667,41 @@ export const Progress: React.FC = () => {
     }
   };
 
-  // Prepare Heatmap Data
-  const last30Days = Array.from({ length: 30 }, (_, i) => {
-    const d = subDays(new Date(), 29 - i);
-    return format(d, 'yyyy-MM-dd');
-  });
-
+  const last30Days = Array.from({ length: 30 }, (_, i) => format(subDays(new Date(), 29 - i), 'yyyy-MM-dd'));
   const heatmapData = last30Days.map(dateStr => {
     const dayWorkouts = workouts.filter(w => w.date === dateStr);
     return {
       date: dateStr,
       count: dayWorkouts.length,
-      intensity: dayWorkouts.length > 0 ? Math.min(dayWorkouts.reduce((acc, w) => acc + w.duration_minutes, 0) / 30, 4) : 0 // 0-4 scale
+      intensity: dayWorkouts.length > 0 ? Math.min(dayWorkouts.reduce((acc, w) => acc + w.duration_minutes, 0) / 30, 4) : 0,
     };
   });
 
-  // Calculate Streak
   let currentStreak = 0;
   let maxStreak = 0;
   let tempStreak = 0;
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const yesterdayStr = format(subDays(new Date(), 1), 'yyyy-MM-dd');
-  
-  // Sort workouts by date descending
-  const sortedWorkouts = [...workouts].sort(
-    (a, b) =>
-      (parseDateAtStartOfDay(b.date)?.getTime() ?? 0) - (parseDateAtStartOfDay(a.date)?.getTime() ?? 0),
-  );
+  const sortedWorkouts = [...workouts].sort((a, b) => (parseDateAtStartOfDay(b.date)?.getTime() ?? 0) - (parseDateAtStartOfDay(a.date)?.getTime() ?? 0));
   const workoutDates = Array.from(new Set(sortedWorkouts.map(w => w.date)));
-
   if (workoutDates.includes(todayStr) || workoutDates.includes(yesterdayStr)) {
     let checkDate = workoutDates.includes(todayStr) ? new Date() : subDays(new Date(), 1);
-    while (workoutDates.includes(format(checkDate, 'yyyy-MM-dd'))) {
-      currentStreak++;
-      checkDate = subDays(checkDate, 1);
-    }
+    while (workoutDates.includes(format(checkDate, 'yyyy-MM-dd'))) { currentStreak++; checkDate = subDays(checkDate, 1); }
   }
-
-  // Calculate max streak (simple version for last 30 days)
   heatmapData.forEach(day => {
-    if (day.count > 0) {
-      tempStreak++;
-      if (tempStreak > maxStreak) maxStreak = tempStreak;
-    } else {
-      tempStreak = 0;
-    }
+    if (day.count > 0) { tempStreak++; if (tempStreak > maxStreak) maxStreak = tempStreak; } else tempStreak = 0;
   });
 
-  // Prepare Volume Data (Per Muscle Group)
   const today = new Date();
   const currentWeekStart = startOfWeek(today, { weekStartsOn: 1 });
   const previousWeekStart = subWeeks(currentWeekStart, 1);
-
   const currentWeekWorkouts = workouts.filter((w) => {
-    const workoutDate = parseDateAtStartOfDay(w.date);
-    return Boolean(workoutDate && workoutDate >= currentWeekStart);
+    const d = parseDateAtStartOfDay(w.date);
+    return Boolean(d && d >= currentWeekStart);
   });
   const previousWeekWorkouts = workouts.filter((w) => {
-    const workoutDate = parseDateAtStartOfDay(w.date);
-    return Boolean(workoutDate && workoutDate >= previousWeekStart && workoutDate < currentWeekStart);
+    const d = parseDateAtStartOfDay(w.date);
+    return Boolean(d && d >= previousWeekStart && d < currentWeekStart);
   });
 
   const calculateMuscleVolume = (workoutList: any[]) => {
@@ -899,13 +710,10 @@ export const Progress: React.FC = () => {
       const wExercises = exercises.filter(ex => ex.workout_id === w.id);
       wExercises.forEach(ex => {
         const vol = ex.sets * ex.reps * ex.weight;
-        if (ex.muscle_group) {
-          volumeMap[ex.muscle_group] = (volumeMap[ex.muscle_group] || 0) + vol;
-        } else if (Array.isArray(w.muscle_groups) && w.muscle_groups.length > 0) {
+        if (ex.muscle_group) volumeMap[ex.muscle_group] = (volumeMap[ex.muscle_group] || 0) + vol;
+        else if (Array.isArray(w.muscle_groups) && w.muscle_groups.length > 0) {
           const volPerMuscle = vol / w.muscle_groups.length;
-          w.muscle_groups.forEach((m: string) => {
-            volumeMap[m] = (volumeMap[m] || 0) + volPerMuscle;
-          });
+          w.muscle_groups.forEach((m: string) => { volumeMap[m] = (volumeMap[m] || 0) + volPerMuscle; });
         }
       });
     });
@@ -914,21 +722,21 @@ export const Progress: React.FC = () => {
 
   const currentWeekVolume = calculateMuscleVolume(currentWeekWorkouts);
   const previousWeekVolume = calculateMuscleVolume(previousWeekWorkouts);
-
   const allMuscles = Array.from(new Set([...Object.keys(currentWeekVolume), ...Object.keys(previousWeekVolume)]));
-  
-  const volumeData = allMuscles.map(muscle => ({
-    muscle,
-    current: currentWeekVolume[muscle] || 0,
-    previous: previousWeekVolume[muscle] || 0,
-  })).sort((a, b) => b.current - a.current);
+  const totalVolume = Object.values(currentWeekVolume).reduce((a, b) => a + b, 0);
+  let balanceScore = 100;
+  if (totalVolume > 0 && allMuscles.length > 0) {
+    const idealVolumePerMuscle = totalVolume / allMuscles.length;
+    const deviations = allMuscles.map(m => Math.abs((currentWeekVolume[m] || 0) - idealVolumePerMuscle));
+    const avgDeviation = deviations.reduce((a, b) => a + b, 0) / allMuscles.length;
+    balanceScore = Math.max(0, 100 - (avgDeviation / idealVolumePerMuscle) * 100);
+  }
 
-  // ── Set-count per muscle per week (last 6 weeks) for sparklines ──────────
   const setsByMuscleWeek = useMemo(() => {
     const result: Record<string, number[]> = {};
     const weeks = Array.from({ length: 6 }, (_, i) => {
       const start = startOfWeek(subWeeks(new Date(), 5 - i), { weekStartsOn: 1 });
-      const end   = endOfWeek(subWeeks(new Date(), 5 - i), { weekStartsOn: 1 });
+      const end = endOfWeek(subWeeks(new Date(), 5 - i), { weekStartsOn: 1 });
       return { start, end };
     });
     exercises.forEach((ex) => {
@@ -944,7 +752,6 @@ export const Progress: React.FC = () => {
     return result;
   }, [exercises]);
 
-  // ── Set-count totals per muscle for the Rows chart (current & previous week) ──
   const setVolumeData = useMemo(() => {
     const computeSets = (wList: any[]) => {
       const map: Record<string, number> = {};
@@ -956,239 +763,256 @@ export const Progress: React.FC = () => {
       });
       return map;
     };
-    const cur  = computeSets(currentWeekWorkouts);
+    const cur = computeSets(currentWeekWorkouts);
     const prev = computeSets(previousWeekWorkouts);
     const muscles = Array.from(new Set([...Object.keys(cur), ...Object.keys(prev)]));
-    return muscles
-      .map((m) => ({ muscle: m, current: cur[m] || 0, previous: prev[m] || 0 }))
-      .sort((a, b) => b.current - a.current);
+    return muscles.map((m) => ({ muscle: m, current: cur[m] || 0, previous: prev[m] || 0 })).sort((a, b) => b.current - a.current);
   }, [exercises, currentWeekWorkouts, previousWeekWorkouts]);
-
-  // Calculate balance score (0-100)
-  const totalVolume = Object.values(currentWeekVolume).reduce((a, b) => a + b, 0);
-  let balanceScore = 100;
-  if (totalVolume > 0 && allMuscles.length > 0) {
-    const idealVolumePerMuscle = totalVolume / allMuscles.length;
-    const deviations = allMuscles.map(m => Math.abs((currentWeekVolume[m] || 0) - idealVolumePerMuscle));
-    const avgDeviation = deviations.reduce((a, b) => a + b, 0) / allMuscles.length;
-    balanceScore = Math.max(0, 100 - (avgDeviation / idealVolumePerMuscle) * 100);
-  }
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[var(--accent)]"></div>
+      <div className="flex flex-col justify-center items-center h-64 gap-4">
+        <div className="relative">
+          <div className="w-12 h-12 rounded-full border-2 border-[var(--accent)]/20 animate-pulse" />
+          <div className="absolute inset-0 animate-spin rounded-full border-t-2 border-[var(--accent)]" />
+        </div>
+        <p className="text-[12px] uppercase tracking-[0.2em] text-[var(--text-muted)] animate-pulse">Loading analytics</p>
       </div>
     );
   }
 
+  /* ── Tab config ─────────────────────────────── */
+  const TABS = [
+    { id: 'overview',  label: 'Overview',  Icon: Activity  },
+    { id: 'overload',  label: 'Overload',  Icon: TrendingUp },
+    { id: 'prs',       label: 'Records',   Icon: Trophy    },
+    { id: 'weight',    label: 'Weight',    Icon: Scale     },
+  ] as const;
+
   return (
-    <div className="space-y-6 pb-24 md:pb-8 max-w-4xl mx-auto">
-      <header>
-        <h1 className="text-2xl font-bold text-white mb-4">Progress & Analytics</h1>
-        
-        {/* Tabs */}
-        <div className="relative">
-          <div className="rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,#1B1C20_0%,#17181C_100%)] px-2 py-2 pb-7">
-            <div className="grid grid-cols-4 gap-1">
-              {[
-                { id: 'overview', label: 'Overview', icon: Activity },
-                { id: 'overload', label: 'Overload', icon: TrendingUp },
-                { id: 'prs', label: 'Records', icon: Trophy },
-                { id: 'weight', label: 'Weight', icon: Scale },
-              ].map((tab) => (
+    <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] pb-28 md:pb-10">
+      <div className="max-w-4xl mx-auto px-4 pt-6">
+
+        {/* ── Page Header ─────────────────────────────────── */}
+        <div className="mb-7 flex items-end justify-between">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)] mb-1">Athlix™</p>
+            <h1 className="text-[26px] font-black tracking-tight text-white leading-none">Progress</h1>
+          </div>
+          <div className="text-right">
+            <p className="text-[11px] text-[var(--text-muted)]">{format(new Date(), 'EEE, MMM d')}</p>
+            <p className="text-[11px] font-semibold text-[var(--text-secondary)]">{workouts.length} sessions · 30 days</p>
+          </div>
+        </div>
+
+        {/* ── Tab Nav ─────────────────────────────────────── */}
+        <div className="mb-6 relative">
+          {/* Glass pill container */}
+          <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-[var(--bg-elevated)] border border-white/8 relative">
+            {TABS.map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`h-14 rounded-[14px] flex flex-col items-center justify-center gap-0.5 text-[11px] font-semibold transition-all duration-200 ${
-                    activeTab === tab.id
-                      ? 'bg-[var(--accent)] text-black shadow-[0_8px_24px_var(--accent-glow)]'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-elevated)]'
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`relative flex-1 h-10 rounded-[10px] flex items-center justify-center gap-1.5 text-[11px] font-bold tracking-[0.04em] uppercase transition-all duration-200 ${
+                    isActive
+                      ? 'bg-[var(--accent)] text-black shadow-[0_4px_14px_rgba(200,255,0,0.35)]'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-white/5'
                   }`}
-                  title={tab.label}
                 >
-                  <tab.icon className="w-[15px] h-[15px]" />
-                  <span className="leading-none">{tab.label}</span>
+                  <tab.Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="hidden sm:block">{tab.label}</span>
                 </button>
-              ))}
-            </div>
+              );
+            })}
+
+            {/* Divider + HR heart button spacer */}
+            <div className="w-px h-6 bg-white/10 flex-shrink-0" />
+
+            <button
+              onClick={() => setActiveTab('livehr')}
+              className={`relative flex-shrink-0 w-10 h-10 rounded-[10px] flex items-center justify-center transition-all duration-200 ${
+                activeTab === 'livehr'
+                  ? 'bg-[#19CCF0] text-black shadow-[0_4px_14px_rgba(25,204,240,0.40)]'
+                  : 'text-[#9AA4B2] hover:text-white hover:bg-white/5'
+              }`}
+              title="Live Heart Rate"
+            >
+              {hrConnected && (
+                <motion.span
+                  className="absolute inset-0 rounded-[10px] border border-[#19CCF0]/50"
+                  animate={{ scale: [1, 1.18], opacity: [0.6, 0] }}
+                  transition={{ duration: 1.4, repeat: Infinity }}
+                />
+              )}
+              <Heart className="w-4 h-4" />
+            </button>
           </div>
-
-          <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-0 translate-y-[56%] w-[84px] h-[38px] rounded-t-full bg-[#060A14]" />
-          <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 bottom-0 translate-y-[56%] w-[84px] h-[38px] rounded-t-full border-t border-white/10" />
-
-          <button
-            onClick={() => setActiveTab('livehr')}
-            className={`absolute left-1/2 -translate-x-1/2 bottom-0 translate-y-1/2 h-14 w-14 rounded-full border transition-all duration-200 flex items-center justify-center ${
-              activeTab === 'livehr'
-                ? 'bg-[#19CCF0] border-[#67E6FF] text-black shadow-[0_10px_22px_rgba(200,255,0,0.30)]'
-                : 'bg-[linear-gradient(180deg,#151B25_0%,#101720_100%)] border-white/16 text-[#9AA4B2] hover:text-white hover:border-white/28'
-            }`}
-            title="Live Heart Rate"
-          >
-            <Heart className="w-5 h-5" />
-          </button>
         </div>
-      </header>
 
-      <motion.div
-        key={activeTab}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2 }}
-      >
-        {activeTab === 'overview' && (
-          <div className="space-y-6">
-            {/* Heatmap */}
-            <div className="glass-card p-5">
-              <div className="flex justify-between items-center mb-4">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[1.4px] text-[var(--text-muted)]">
-                    Workout Frequency · 30 Days
-                  </p>
-                </div>
-                <div className="flex gap-5 text-right">
+        {/* ── Tab Content ─────────────────────────────────── */}
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.18 }}
+          className="space-y-5"
+        >
+
+          {/* ════════════════════════════════════════════════
+              OVERVIEW
+          ════════════════════════════════════════════════ */}
+          {activeTab === 'overview' && (
+            <>
+              {/* Heatmap card */}
+              <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] p-5 overflow-hidden">
+                {/* Header */}
+                <div className="flex items-start justify-between mb-5">
                   <div>
-                    <p className="text-[10px] uppercase tracking-[1.2px] text-[var(--text-muted)]">Streak</p>
-                    <p className="font-victory text-[15px] font-bold text-[var(--accent)] tabular-nums">{currentStreak}d</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)] mb-1">Workout Frequency</p>
+                    <p className="text-[13px] font-semibold text-[var(--text-secondary)]">Last 30 days</p>
                   </div>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[1.2px] text-[var(--text-muted)]">Best</p>
-                    <p className="font-victory text-[15px] font-bold text-[var(--text-primary)] tabular-nums">{maxStreak}d</p>
+                  <div className="flex gap-4">
+                    <div className="text-right">
+                      <div className="flex items-center justify-end gap-1 mb-0.5">
+                        <Flame className="w-3 h-3 text-[var(--accent)]" />
+                        <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Streak</p>
+                      </div>
+                      <p className="text-[22px] font-black text-[var(--accent)] tabular-nums leading-none">{currentStreak}<span className="text-[13px] font-bold ml-0.5">d</span></p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] mb-0.5">Best</p>
+                      <p className="text-[22px] font-black text-[var(--text-primary)] tabular-nums leading-none">{maxStreak}<span className="text-[13px] font-bold ml-0.5">d</span></p>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="flex flex-wrap gap-1.5">
-                {heatmapData.map((day) => {
-                  let bgColor = 'bg-[var(--bg-elevated)]';
-                  if (day.intensity > 0) bgColor = 'bg-[var(--accent)]/20';
-                  if (day.intensity > 1) bgColor = 'bg-[var(--accent)]/40';
-                  if (day.intensity > 2) bgColor = 'bg-[var(--accent)]/70';
-                  if (day.intensity > 3) bgColor = 'bg-[var(--accent)]';
 
-                  return (
-                    <div
-                      key={day.date}
-                      title={`${day.date}: ${day.count} workout${day.count !== 1 ? 's' : ''}`}
-                      className={`w-[calc(14.28%-6px)] aspect-square rounded-sm ${bgColor} transition-colors`}
-                    />
-                  );
-                })}
-              </div>
-              <div className="flex items-center justify-end gap-2 mt-3 text-[10px] text-[var(--text-muted)]">
-                <span>Less</span>
-                <div className="flex gap-1">
-                  <div className="w-3 h-3 rounded-sm bg-[var(--bg-elevated)]" />
-                  <div className="w-3 h-3 rounded-sm bg-[var(--accent)]/20" />
-                  <div className="w-3 h-3 rounded-sm bg-[var(--accent)]/40" />
-                  <div className="w-3 h-3 rounded-sm bg-[var(--accent)]/70" />
-                  <div className="w-3 h-3 rounded-sm bg-[var(--accent)]" />
-                </div>
-                <span>More</span>
-              </div>
-            </div>
-
-            {/* Volume Chart — Rows style */}
-            <div className="glass-card p-5">
-              <div className="flex justify-between items-start mb-4">
-                <div>
-                  <p className="text-[11px] font-bold uppercase tracking-[1.4px] text-[var(--text-muted)]">
-                    Weekly Volume · by muscle
-                  </p>
-                  {setVolumeData.length > 0 && (
-                    <p className="font-victory text-[22px] font-bold text-[var(--text-primary)] mt-1 tabular-nums">
-                      {setVolumeData.reduce((a, d) => a + d.current, 0)}
-                      <span className="font-victory text-[14px] font-medium text-[var(--text-muted)] ml-1">sets this week</span>
-                    </p>
-                  )}
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] uppercase tracking-[1.2px] text-[var(--text-muted)]">Balance</p>
-                  <p className={`text-[15px] font-bold tabular-nums ${
-                    balanceScore > 80 ? 'text-[var(--accent)]' : balanceScore > 50 ? 'text-[var(--yellow)]' : 'text-[var(--red)]'
-                  }`}>{balanceScore.toFixed(0)}</p>
-                </div>
-              </div>
-
-              {setVolumeData.length === 0 ? (
-                <p className="text-[13px] text-[var(--text-muted)] py-4 text-center">Log workouts this week to see volume.</p>
-              ) : (
-                <>
-                  {/* Column headers */}
-                  <div
-                    className="grid text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)] border-b border-[var(--border)] pb-2 mb-1"
-                    style={{ gridTemplateColumns: '80px 1fr 88px 36px', gap: '12px' }}
-                  >
-                    <div>Group</div>
-                    <div>Sets</div>
-                    <div>6-week</div>
-                    <div className="text-right">Δ</div>
-                  </div>
-
-                  {setVolumeData.map((item, idx) => {
-                    const isTop = idx === 0;
-                    const maxSets = setVolumeData[0]?.current || 1;
-                    const pct = item.current / maxSets;
-                    const sparkData: number[] = setsByMuscleWeek[item.muscle] || new Array(6).fill(0);
-                    const delta = item.current - item.previous;
-                    const sw = 80, sh = 22;
-                    const sMax = Math.max(...sparkData, 1);
-                    const sx = (i: number) => (i / Math.max(sparkData.length - 1, 1)) * sw;
-                    const sy = (v: number) => sh - (v / sMax) * (sh - 2) - 1;
-                    const sparkPath = sparkData.map((v, i) => `${i ? 'L' : 'M'}${sx(i).toFixed(1)} ${sy(v).toFixed(1)}`).join(' ');
-                    const areaPath = `${sparkPath} L ${sw} ${sh} L 0 ${sh} Z`;
-
+                {/* Heat tiles */}
+                <div className="grid gap-[5px]" style={{ gridTemplateColumns: 'repeat(30, 1fr)' }}>
+                  {heatmapData.map((day) => {
+                    const alpha = day.intensity === 0 ? 0 : day.intensity < 1 ? 0.22 : day.intensity < 2 ? 0.45 : day.intensity < 3 ? 0.72 : 1;
                     return (
                       <div
-                        key={item.muscle}
-                        className="grid items-center py-3 border-b border-[var(--border)] last:border-0"
-                        style={{ gridTemplateColumns: '80px 1fr 88px 36px', gap: '12px' }}
-                      >
-                        <div className={`text-[13px] font-semibold truncate ${isTop ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]'}`}>
-                          {item.muscle}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 h-2 bg-[var(--bg-elevated)] rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all duration-500"
-                              style={{
-                                width: `${pct * 100}%`,
-                                background: isTop ? 'var(--accent)' : 'var(--text-secondary)',
-                                opacity: isTop ? 1 : 0.55,
-                              }}
-                            />
-                          </div>
-                          <span className="text-[13px] font-bold text-[var(--text-primary)] tabular-nums w-5 text-right">{item.current}</span>
-                        </div>
-                        <svg viewBox={`0 0 ${sw} ${sh}`} width={sw} height={sh} style={{ display: 'block', flexShrink: 0 }}>
-                          <path d={areaPath} fill={isTop ? 'var(--accent)' : 'var(--text-secondary)'} fillOpacity={isTop ? 0.15 : 0.06} />
-                          <path d={sparkPath} fill="none" stroke={isTop ? 'var(--accent)' : 'var(--text-secondary)'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                          <circle cx={sx(sparkData.length - 1).toFixed(1)} cy={sy(sparkData[sparkData.length - 1]).toFixed(1)} r="2" fill={isTop ? 'var(--accent)' : 'var(--text-secondary)'} />
-                        </svg>
-                        <div className={`text-right text-[12px] font-semibold tabular-nums ${delta >= 0 ? 'text-[var(--accent)]' : 'text-[var(--red)]'}`}>
-                          {delta > 0 ? '+' : ''}{delta}
-                        </div>
-                      </div>
+                        key={day.date}
+                        title={`${day.date}: ${day.count} workout${day.count !== 1 ? 's' : ''}`}
+                        className="rounded-[3px] transition-all duration-200 hover:scale-125"
+                        style={{
+                          aspectRatio: '1',
+                          background: day.intensity === 0
+                            ? 'rgba(255,255,255,0.06)'
+                            : `rgba(200,255,0,${alpha})`,
+                        }}
+                      />
                     );
                   })}
-                </>
-              )}
-            </div>
-          </div>
-        )}
+                </div>
 
-        {activeTab === 'overload' && (
-          <div className="space-y-6">
-            <div className="glass-card p-5">
-              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-4">
-                <p className="text-[11px] font-bold uppercase tracking-[1.4px] text-[var(--text-muted)]">
-                  Progressive Overload
-                </p>
-                <div className="relative w-full md:w-64">
+                {/* Legend */}
+                <div className="flex items-center justify-end gap-2 mt-3">
+                  <span className="text-[10px] text-[var(--text-muted)]">Less</span>
+                  {[0.06, 0.22, 0.45, 0.72, 1].map((a, i) => (
+                    <div key={i} className="w-3 h-3 rounded-[3px]"
+                      style={{ background: i === 0 ? 'rgba(255,255,255,0.06)' : `rgba(200,255,0,${a})` }}
+                    />
+                  ))}
+                  <span className="text-[10px] text-[var(--text-muted)]">More</span>
+                </div>
+              </div>
+
+              {/* Volume rows card */}
+              <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] p-5">
+                <div className="flex items-start justify-between mb-5">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)] mb-1">Weekly Volume</p>
+                    {setVolumeData.length > 0 && (
+                      <p className="text-[26px] font-black text-white tabular-nums leading-none">
+                        {setVolumeData.reduce((a, d) => a + d.current, 0)}
+                        <span className="text-[13px] font-medium text-[var(--text-muted)] ml-1.5">sets this week</span>
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Balance</p>
+                    <div className="flex items-baseline gap-1">
+                      <span className={`text-[20px] font-black tabular-nums leading-none ${
+                        balanceScore > 80 ? 'text-[var(--accent)]' : balanceScore > 50 ? 'text-[var(--yellow)]' : 'text-[var(--red)]'
+                      }`}>{balanceScore.toFixed(0)}</span>
+                      <span className="text-[11px] text-[var(--text-muted)]">/100</span>
+                    </div>
+                  </div>
+                </div>
+
+                {setVolumeData.length === 0 ? (
+                  <div className="py-10 text-center">
+                    <Activity className="w-8 h-8 mx-auto mb-3 text-[var(--text-muted)] opacity-30" />
+                    <p className="text-[13px] text-[var(--text-muted)]">Log workouts this week to see volume.</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--text-muted)] border-b border-white/8 pb-2 mb-1"
+                      style={{ gridTemplateColumns: '88px 1fr 88px 36px', gap: '12px' }}>
+                      <div>Group</div><div>Sets</div><div>6-week</div><div className="text-right">Δ</div>
+                    </div>
+
+                    {setVolumeData.map((item, idx) => {
+                      const isTop = idx === 0;
+                      const maxSets = setVolumeData[0]?.current || 1;
+                      const pct = item.current / maxSets;
+                      const sparkData: number[] = setsByMuscleWeek[item.muscle] || new Array(6).fill(0);
+                      const delta = item.current - item.previous;
+                      const sw = 80, sh = 22;
+                      const sMax = Math.max(...sparkData, 1);
+                      const sx = (i: number) => (i / Math.max(sparkData.length - 1, 1)) * sw;
+                      const sy = (v: number) => sh - (v / sMax) * (sh - 2) - 1;
+                      const sparkPath = sparkData.map((v, i) => `${i ? 'L' : 'M'}${sx(i).toFixed(1)} ${sy(v).toFixed(1)}`).join(' ');
+                      const areaPath = `${sparkPath} L ${sw} ${sh} L 0 ${sh} Z`;
+
+                      return (
+                        <div key={item.muscle} className="grid items-center py-3 border-b border-white/6 last:border-0"
+                          style={{ gridTemplateColumns: '88px 1fr 88px 36px', gap: '12px' }}>
+                          <div className={`text-[13px] font-semibold truncate ${isTop ? 'text-white' : 'text-[var(--text-secondary)]'}`}>
+                            {item.muscle}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-1.5 bg-white/8 rounded-full overflow-hidden">
+                              <div className="h-full rounded-full transition-all duration-500"
+                                style={{ width: `${pct * 100}%`, background: isTop ? 'var(--accent)' : 'rgba(255,255,255,0.28)' }} />
+                            </div>
+                            <span className="text-[13px] font-bold text-white tabular-nums w-5 text-right">{item.current}</span>
+                          </div>
+                          <svg viewBox={`0 0 ${sw} ${sh}`} width={sw} height={sh} style={{ display: 'block', flexShrink: 0 }}>
+                            <path d={areaPath} fill={isTop ? 'var(--accent)' : 'rgba(255,255,255,0.15)'} fillOpacity={isTop ? 0.15 : 1} />
+                            <path d={sparkPath} fill="none" stroke={isTop ? 'var(--accent)' : 'rgba(255,255,255,0.3)'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            <circle cx={sx(sparkData.length - 1).toFixed(1)} cy={sy(sparkData[sparkData.length - 1]).toFixed(1)} r="2" fill={isTop ? 'var(--accent)' : 'rgba(255,255,255,0.5)'} />
+                          </svg>
+                          <div className={`text-right text-[12px] font-bold tabular-nums ${delta >= 0 ? 'text-[var(--accent)]' : 'text-[var(--red)]'}`}>
+                            {delta > 0 ? '+' : ''}{delta}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ════════════════════════════════════════════════
+              OVERLOAD
+          ════════════════════════════════════════════════ */}
+          {activeTab === 'overload' && (
+            <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] p-5">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-5 gap-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)] mb-1">Progressive Overload</p>
+                  <p className="text-[13px] text-[var(--text-secondary)]">Track weight progression over time</p>
+                </div>
+                <div className="relative w-full md:w-60">
                   <select
                     value={selectedExerciseForOverload}
                     onChange={(e) => setSelectedExerciseForOverload(e.target.value)}
-                    className="w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-4 py-2 text-[var(--text-primary)] appearance-none focus:outline-none focus:border-[var(--accent)] text-[14px]"
+                    className="w-full bg-white/5 border border-white/12 rounded-xl px-4 py-2.5 text-[var(--text-primary)] appearance-none focus:outline-none focus:border-[var(--accent)] text-[13px] font-medium transition-colors"
                   >
                     {Array.from(new Set(exercises.map(ex => ex.name))).map(name => (
                       <option key={name as string} value={name as string}>{name as string}</option>
@@ -1199,18 +1023,14 @@ export const Progress: React.FC = () => {
               </div>
 
               {selectedExerciseForOverload ? (() => {
-                // Collect all sets for the selected exercise, sorted by date
                 const rawRows = exercises
                   .filter(ex => ex.name === selectedExerciseForOverload && ex.weight > 0)
                   .sort((a, b) => (parseDateAtStartOfDay(a.workouts.date)?.getTime() ?? 0) - (parseDateAtStartOfDay(b.workouts.date)?.getTime() ?? 0));
-
-                // Group by date → min / max / middle set weight
                 const byDate: Record<string, number[]> = {};
                 rawRows.forEach(ex => {
                   if (!byDate[ex.workouts.date]) byDate[ex.workouts.date] = [];
                   byDate[ex.workouts.date].push(ex.weight);
                 });
-
                 const chartData = Object.entries(byDate).map(([date, weights]) => {
                   const sorted = [...weights].sort((a, b) => a - b);
                   const mn = sorted[0];
@@ -1220,95 +1040,72 @@ export const Progress: React.FC = () => {
 
                 if (chartData.length < 2) {
                   return (
-                    <div className="text-center py-12 text-[var(--text-muted)]">
-                      <p>Not enough data to show progression.</p>
-                      <p className="text-sm mt-1">Log this exercise at least twice.</p>
+                    <div className="py-14 text-center">
+                      <TrendingUp className="w-10 h-10 mx-auto mb-3 text-[var(--text-muted)] opacity-25" />
+                      <p className="text-[14px] font-semibold text-[var(--text-secondary)]">Not enough data yet</p>
+                      <p className="text-[12px] text-[var(--text-muted)] mt-1">Log this exercise at least twice to see progression.</p>
                     </div>
                   );
                 }
 
                 const firstMax = chartData[0].max;
-                const lastMax  = chartData[chartData.length - 1].max;
+                const lastMax = chartData[chartData.length - 1].max;
                 const percentChange = firstMax > 0 ? ((lastMax - firstMax) / firstMax) * 100 : 0;
                 const trendColor = percentChange > 0 ? 'var(--accent)' : percentChange < 0 ? 'var(--red)' : 'var(--yellow)';
 
                 return (
                   <>
-                    {/* Stat strip */}
                     <div className="grid grid-cols-2 gap-3 mb-5">
-                      <div className="bg-[var(--bg-elevated)] rounded-xl p-4 border border-[var(--border)]">
-                        <p className="text-[11px] uppercase tracking-[1.2px] text-[var(--text-muted)] mb-1">Progression</p>
-                        <p className="text-[22px] font-bold tabular-nums" style={{ color: trendColor }}>
-                          {percentChange > 0 ? '+' : ''}{percentChange.toFixed(1)}%
+                      <div className="rounded-xl bg-white/4 border border-white/8 p-4">
+                        <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] mb-2">Progression</p>
+                        <p className="text-[26px] font-black tabular-nums leading-none" style={{ color: trendColor }}>
+                          {percentChange > 0 ? '+' : ''}{percentChange.toFixed(1)}<span className="text-[14px] font-medium ml-0.5">%</span>
                         </p>
                       </div>
-                      <div className="bg-[var(--bg-elevated)] rounded-xl p-4 border border-[var(--border)] text-right">
-                        <p className="text-[11px] uppercase tracking-[1.2px] text-[var(--text-muted)] mb-1">Top set</p>
-                        <p className="text-[22px] font-bold text-[var(--text-primary)] tabular-nums">
-                          {lastMax} <span className="text-[14px] font-medium text-[var(--text-muted)]">{displayUnit}</span>
+                      <div className="rounded-xl bg-white/4 border border-white/8 p-4 text-right">
+                        <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] mb-2">Top set</p>
+                        <p className="text-[26px] font-black text-white tabular-nums leading-none">
+                          {lastMax}<span className="text-[13px] font-medium text-[var(--text-muted)] ml-1">{displayUnit}</span>
                         </p>
                       </div>
                     </div>
 
-                    {/* ABR Chart — median line with min/max band */}
-                    <div className="h-64">
+                    <div className="h-60">
                       <ResponsiveContainer width="100%" height="100%">
                         <ComposedChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                           <defs>
                             <linearGradient id="abrBand" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%"   stopColor="var(--accent)" stopOpacity={0.20} />
+                              <stop offset="0%" stopColor="var(--accent)" stopOpacity={0.20} />
                               <stop offset="100%" stopColor="var(--accent)" stopOpacity={0.04} />
                             </linearGradient>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                          <XAxis
-                            dataKey="date"
-                            tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                            axisLine={false}
-                            tickLine={false}
-                            tickFormatter={(val) => formatStoredDate(val, 'MMM d')}
-                            interval="preserveStartEnd"
-                          />
-                          <YAxis
-                            domain={['auto', 'auto']}
-                            tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                            axisLine={false}
-                            tickLine={false}
-                            width={36}
-                          />
-                          <Tooltip
-                            content={({ active, payload, label }) => {
-                              if (!active || !payload?.length) return null;
-                              const minV  = payload.find(p => p.dataKey === 'min')?.value as number | undefined;
-                              const rangeV = payload.find(p => p.dataKey === 'range')?.value as number | undefined;
-                              const midV  = payload.find(p => p.dataKey === 'mid')?.value as number | undefined;
-                              const maxV  = minV != null && rangeV != null ? (minV + rangeV).toFixed(1) : '—';
-                              return (
-                                <div style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: 'var(--text-primary)' }}>
-                                  <p style={{ color: 'var(--text-muted)', marginBottom: 4, fontSize: 11 }}>{formatStoredDate(label, 'EEE, MMM d yyyy')}</p>
-                                  {midV != null && <p>Top set: <strong>{midV.toFixed(1)} {displayUnit}</strong></p>}
-                                  {minV != null && <p style={{ color: 'var(--text-muted)', fontSize: 11 }}>Range: {minV.toFixed(1)}–{maxV} {displayUnit}</p>}
-                                </div>
-                              );
-                            }}
-                          />
-                          {/* Invisible base to lift the band to min height */}
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                          <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false}
+                            tickFormatter={(val) => formatStoredDate(val, 'MMM d')} interval="preserveStartEnd" />
+                          <YAxis domain={['auto', 'auto']} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} width={36} />
+                          <Tooltip content={({ active, payload, label }) => {
+                            if (!active || !payload?.length) return null;
+                            const minV = payload.find(p => p.dataKey === 'min')?.value as number | undefined;
+                            const rangeV = payload.find(p => p.dataKey === 'range')?.value as number | undefined;
+                            const midV = payload.find(p => p.dataKey === 'mid')?.value as number | undefined;
+                            const maxV = minV != null && rangeV != null ? (minV + rangeV).toFixed(1) : '—';
+                            return (
+                              <div style={{ background: '#1A1D24', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 12px', fontSize: 12, color: '#fff' }}>
+                                <p style={{ color: 'var(--text-muted)', marginBottom: 4, fontSize: 11 }}>{formatStoredDate(label, 'EEE, MMM d yyyy')}</p>
+                                {midV != null && <p>Top set: <strong>{midV.toFixed(1)} {displayUnit}</strong></p>}
+                                {minV != null && <p style={{ color: 'var(--text-muted)', fontSize: 11 }}>Range: {minV.toFixed(1)}–{maxV} {displayUnit}</p>}
+                              </div>
+                            );
+                          }} />
                           <Area type="monotone" dataKey="min" stackId="band" fill="transparent" stroke="none" dot={false} legendType="none" isAnimationActive={false} />
-                          {/* The band (range = max − min) */}
                           <Area type="monotone" dataKey="range" stackId="band" fill="url(#abrBand)" stroke="none" dot={false} legendType="none" />
-                          {/* Median line */}
-                          <Line
-                            type="monotone"
-                            dataKey="mid"
-                            stroke="var(--accent)"
-                            strokeWidth={2.2}
+                          <Line type="monotone" dataKey="mid" stroke="var(--accent)" strokeWidth={2.2}
                             dot={{ fill: 'var(--accent)', r: 3, strokeWidth: 0 }}
-                            activeDot={{ r: 5, fill: 'var(--accent)', stroke: 'var(--bg-base)', strokeWidth: 2 }}
-                          />
+                            activeDot={{ r: 5, fill: 'var(--accent)', stroke: '#111419', strokeWidth: 2 }} />
                         </ComposedChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="flex items-center gap-6 mt-3 px-1">
+                    <div className="flex items-center gap-5 mt-3 px-1">
                       <div className="flex items-center gap-2 text-[11px] text-[var(--text-muted)]">
                         <div className="w-4 h-0.5 bg-[var(--accent)]" />
                         <span>Median set weight</span>
@@ -1321,757 +1118,564 @@ export const Progress: React.FC = () => {
                   </>
                 );
               })() : (
-                <div className="text-center py-12 text-[var(--text-muted)]">
+                <div className="py-14 text-center text-[var(--text-muted)]">
                   <p>Select an exercise to view progression.</p>
                 </div>
               )}
             </div>
-          </div>
-        )}
+          )}
 
-        {activeTab === 'prs' && (
-          <div className="space-y-4">
-            {prs.length === 0 ? (
-              <div className="glass-card flex flex-col items-center justify-center py-16 text-center">
-                <Trophy className="w-10 h-10 mb-3 text-[var(--text-muted)] opacity-40" />
-                <p className="text-[15px] font-semibold text-[var(--text-primary)] mb-1">No records yet</p>
-                <p className="text-[13px] text-[var(--text-muted)]">Keep training — PRs will appear here.</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {prs.map(pr => (
-                  <div key={pr.id} className="glass-card p-5 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="flex-shrink-0">
-                        <ExerciseImage
-                          exerciseId={pr.exercise_db_id}
-                          exerciseName={pr.exercise_name}
-                          size="md"
-                        />
-                      </div>
-                      <div>
-                        <h3 className="text-[var(--text-primary)] font-bold text-[15px]">{pr.exercise_name}</h3>
-                        <p className="text-[12px] text-[var(--text-muted)] mt-0.5">
-                          {formatStoredDate(pr.achieved_date, 'MMM d, yyyy')}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right flex-shrink-0">
-                      <div className="text-[20px] font-black text-[var(--accent)] tabular-nums">
-                        {pr.best_weight}
-                        <span className="text-[12px] font-medium text-[var(--text-muted)] ml-1">{displayUnit}</span>
-                      </div>
-                      <div className="text-[12px] text-[var(--text-muted)]">{pr.best_reps} reps</div>
-                    </div>
+          {/* ════════════════════════════════════════════════
+              PERSONAL RECORDS
+          ════════════════════════════════════════════════ */}
+          {activeTab === 'prs' && (
+            <>
+              {prs.length === 0 ? (
+                <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] flex flex-col items-center justify-center py-20 text-center">
+                  <div className="w-16 h-16 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
+                    <Trophy className="w-7 h-7 text-[var(--text-muted)] opacity-40" />
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'weight' && (
-          <div className="space-y-5 animate-fade-in">
-
-            {/* ── Log weight ──────────────────────────── */}
-            <div className="glass-card p-5 space-y-3">
-              <p className="text-[11px] font-bold uppercase tracking-[1.4px] text-[var(--text-muted)]">
-                Log Weight
-              </p>
-              {/* Date row */}
-              <input
-                type="date"
-                max={format(new Date(), 'yyyy-MM-dd')}
-                value={weightDate}
-                onChange={(e) => setWeightDate(e.target.value)}
-                className="w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-[14px] font-medium focus:outline-none focus:border-[var(--accent)] transition-colors [color-scheme:dark]"
-              />
-              {/* Weight + save row */}
-              <div className="flex gap-3">
-                <input
-                  type="number"
-                  step="0.1"
-                  min="20"
-                  max="500"
-                  value={newWeight}
-                  onChange={(e) => setNewWeight(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleLogWeight()}
-                  placeholder={`e.g. ${weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weight : '75.0'}`}
-                  className="flex-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-[15px] font-semibold focus:outline-none focus:border-[var(--accent)] transition-colors"
-                />
-                <span className="flex items-center text-[13px] font-semibold text-[var(--text-muted)] pr-1">{displayUnit}</span>
-                <button
-                  onClick={handleLogWeight}
-                  disabled={!newWeight}
-                  className="bg-[var(--accent)] text-black px-6 py-3 rounded-xl font-bold text-[14px] hover:opacity-90 active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-
-            {/* ── Stats row ───────────────────────────── */}
-            {weightLogs.length > 0 && (() => {
-              const weights = weightLogs.map(l => l.weight);
-              const current = weights[weights.length - 1];
-              const lowest = Math.min(...weights);
-              const highest = Math.max(...weights);
-              const avg = (weights.reduce((a, b) => a + b, 0) / weights.length);
-              const change = weights.length > 1 ? current - weights[0] : null;
-
-              return (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {[
-                    { label: 'Current', value: current, accent: true },
-                    { label: 'Start', value: weights[0], accent: false },
-                    { label: 'Lowest', value: lowest, accent: false },
-                    { label: 'Avg', value: avg, accent: false },
-                  ].map(({ label, value, accent }) => (
-                    <div key={label} className="glass-card p-4 text-center">
-                      <p className="text-[10px] font-semibold uppercase tracking-[1.2px] text-[var(--text-muted)] mb-1">{label}</p>
-                      <p className={`text-[18px] font-extrabold tabular-nums ${accent ? 'text-[var(--accent)]' : 'text-[var(--text-primary)]'}`}>
-                        {value.toFixed(1)}
-                      </p>
-                      <p className="text-[10px] text-[var(--text-muted)]">{displayUnit}</p>
-                    </div>
+                  <p className="text-[16px] font-bold text-white mb-1">No records yet</p>
+                  <p className="text-[13px] text-[var(--text-muted)]">Keep training — PRs will appear here.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {prs.map((pr, idx) => (
+                    <motion.div
+                      key={pr.id}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.04 }}
+                      className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] p-4 flex items-center gap-4 hover:border-white/14 transition-colors"
+                    >
+                      <div className="flex-shrink-0">
+                        <ExerciseImage exerciseId={pr.exercise_db_id} exerciseName={pr.exercise_name} size="md" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[14px] font-bold text-white truncate">{pr.exercise_name}</p>
+                        <p className="text-[11px] text-[var(--text-muted)] mt-0.5">{formatStoredDate(pr.achieved_date, 'MMM d, yyyy')}</p>
+                      </div>
+                      <div className="flex-shrink-0 text-right">
+                        <div className="inline-flex items-baseline gap-1">
+                          <span className="text-[22px] font-black text-[var(--accent)] tabular-nums leading-none">{pr.best_weight}</span>
+                          <span className="text-[11px] font-medium text-[var(--text-muted)]">{displayUnit}</span>
+                        </div>
+                        <div className="flex items-center justify-end gap-1 mt-0.5">
+                          <span className="text-[11px] text-[var(--text-muted)]">{pr.best_reps} reps</span>
+                        </div>
+                      </div>
+                    </motion.div>
                   ))}
-                  {change !== null && (
-                    <div className="glass-card p-4 text-center col-span-2 sm:col-span-4 flex items-center justify-center gap-2">
-                      <span className="text-[12px] text-[var(--text-muted)]">Total change</span>
-                      <span className={`text-[16px] font-bold tabular-nums ${change < 0 ? 'text-[var(--green)]' : change > 0 ? 'text-[var(--red)]' : 'text-[var(--text-secondary)]'}`}>
-                        {change > 0 ? '+' : ''}{change.toFixed(1)} {displayUnit}
-                      </span>
-                    </div>
-                  )}
                 </div>
-              );
-            })()}
-
-            {/* ── Mountain chart ───────────────────────── */}
-            {weightLogs.length > 0 ? (
-              <div className="glass-card p-5">
-                <p className="text-[11px] font-bold uppercase tracking-[1.4px] text-[var(--text-muted)] mb-4">
-                  Weight Trend
-                </p>
-                <div className="h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={weightLogs} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                      <defs>
-                        <linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%"   stopColor="#C8FF00" stopOpacity={0.35} />
-                          <stop offset="60%"  stopColor="#C8FF00" stopOpacity={0.10} />
-                          <stop offset="100%" stopColor="#C8FF00" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                        axisLine={false}
-                        tickLine={false}
-                        tickFormatter={(val) => formatStoredDate(val, 'MMM d')}
-                        interval="preserveStartEnd"
-                      />
-                      <YAxis
-                        domain={['auto', 'auto']}
-                        tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                        axisLine={false}
-                        tickLine={false}
-                        width={36}
-                        tickFormatter={(v) => `${v}`}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'var(--bg-elevated)',
-                          border: '1px solid var(--border)',
-                          borderRadius: '10px',
-                          color: 'var(--text-primary)',
-                          fontSize: '12px',
-                          padding: '8px 12px',
-                        }}
-                        cursor={{ stroke: 'var(--accent)', strokeWidth: 1, strokeDasharray: '4 2' }}
-                        labelFormatter={(val) => formatStoredDate(val, 'EEE, MMM d yyyy')}
-                        formatter={(value: number) => [`${value.toFixed(1)} ${displayUnit}`, 'Weight']}
-                      />
-                      <Area
-                        type="monotone"
-                        dataKey="weight"
-                        stroke="var(--accent)"
-                        strokeWidth={2.5}
-                        fill="url(#weightGrad)"
-                        dot={weightLogs.length <= 20 ? { fill: 'var(--accent)', strokeWidth: 0, r: 3 } : false}
-                        activeDot={{ r: 5, fill: 'var(--accent)', stroke: 'var(--bg-base)', strokeWidth: 2 }}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
-                <p className="text-[10px] text-[var(--text-muted)] mt-2 text-right">
-                  {weightLogs.length} {weightLogs.length === 1 ? 'entry' : 'entries'} recorded
-                </p>
-              </div>
-            ) : (
-              <div className="glass-card flex flex-col items-center justify-center py-16 text-center">
-                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--bg-elevated)] border border-[var(--border)]">
-                  <Scale className="w-6 h-6 text-[var(--text-muted)]" />
-                </div>
-                <p className="text-[15px] font-semibold text-[var(--text-primary)] mb-1">No weight logs yet</p>
-                <p className="text-[13px] text-[var(--text-muted)]">Log your first entry above to see your trend.</p>
-              </div>
-            )}
-
-            {/* ── BMI Calculator ───────────────────────── */}
-            <div className="glass-card p-5">
-              <p className="text-[11px] font-bold uppercase tracking-[1.4px] text-[var(--text-muted)] mb-3">
-                BMI Calculator
-              </p>
-              <div className="flex gap-3 items-center">
-                <div className="flex-1">
-                  <input
-                    type="number"
-                    value={heightCm}
-                    onChange={(e) => setHeightCm(e.target.value)}
-                    placeholder="Height (cm)"
-                    className="w-full bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-4 py-3 text-[var(--text-primary)] text-[15px] focus:outline-none focus:border-[var(--accent)] transition-colors"
-                  />
-                </div>
-                <div className="flex-1 bg-[var(--bg-elevated)] border border-[var(--border)] rounded-xl px-4 py-3 flex items-center justify-between">
-                  <span className="text-[var(--text-muted)] text-[13px]">BMI</span>
-                  <span className={`font-bold text-[18px] tabular-nums ${
-                    bmiValue
-                      ? parseFloat(bmiValue) < 18.5 ? 'text-[var(--ring-volume)]'
-                      : parseFloat(bmiValue) < 25   ? 'text-[var(--green)]'
-                      : parseFloat(bmiValue) < 30   ? 'text-[var(--yellow)]'
-                      : 'text-[var(--red)]'
-                      : 'text-[var(--text-muted)]'
-                  }`}>
-                    {bmiValue || '--'}
-                  </span>
-                </div>
-              </div>
-              {bmiValue && (
-                <p className="mt-2 text-[11px] text-[var(--text-muted)]">
-                  {parseFloat(bmiValue) < 18.5 ? 'Underweight'
-                    : parseFloat(bmiValue) < 25 ? 'Healthy weight'
-                    : parseFloat(bmiValue) < 30 ? 'Overweight'
-                    : 'Obese'} · {bmiValue}
-                </p>
               )}
-            </div>
+            </>
+          )}
 
-          </div>
-        )}
-
-        {activeTab === 'livehr' && (
-          <div className="space-y-5">
-            <div className="bg-[linear-gradient(180deg,#171A21_0%,#111722_100%)] p-5 md:p-6 rounded-3xl border border-white/10">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                  <h2 className="text-lg font-bold text-white flex items-center">
-                    <Heart className="w-5 h-5 mr-2 text-[var(--accent)]" />
-                    Live Heart Rate
-                  </h2>
-                  <p className="text-sm text-[#97A3B6] mt-1">
-                    Real-time wearable broadcast with live trend and zone tracking in Athlix(TM).
-                  </p>
+          {/* ════════════════════════════════════════════════
+              WEIGHT
+          ════════════════════════════════════════════════ */}
+          {activeTab === 'weight' && (
+            <>
+              {/* Log weight */}
+              <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] p-5 space-y-3">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Log Weight</p>
+                <input
+                  type="date"
+                  max={format(new Date(), 'yyyy-MM-dd')}
+                  value={weightDate}
+                  onChange={(e) => setWeightDate(e.target.value)}
+                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[var(--text-primary)] text-[13px] font-medium focus:outline-none focus:border-[var(--accent)] transition-colors [color-scheme:dark]"
+                />
+                <div className="flex gap-2">
+                  <input
+                    type="number" step="0.1" min="20" max="500" value={newWeight}
+                    onChange={(e) => setNewWeight(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleLogWeight()}
+                    placeholder={`e.g. ${weightLogs.length > 0 ? weightLogs[weightLogs.length - 1].weight : '75.0'}`}
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-[15px] font-semibold focus:outline-none focus:border-[var(--accent)] transition-colors placeholder:text-white/20"
+                  />
+                  <span className="flex items-center text-[12px] font-semibold text-[var(--text-muted)]">{displayUnit}</span>
+                  <button
+                    onClick={handleLogWeight}
+                    disabled={!newWeight}
+                    className="bg-[var(--accent)] text-black px-5 py-3 rounded-xl font-bold text-[13px] hover:opacity-90 active:scale-95 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    Save
+                  </button>
                 </div>
-                {!hrConnected ? (
-                  <button
-                    onClick={supportsWebBluetooth ? connectHeartRate : undefined}
-                    disabled={hrConnecting || !supportsWebBluetooth}
-                    title={!supportsWebBluetooth && unsupportedBluetoothHint ? unsupportedBluetoothHint : undefined}
-                    className={`inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition-colors disabled:cursor-not-allowed ${
-                      supportsWebBluetooth
-                        ? 'bg-[var(--accent)] text-black disabled:opacity-50'
-                        : 'border border-white/15 bg-white/5 text-[#98A6B8] opacity-85'
-                    }`}
-                  >
-                    <PlugZap className="w-4 h-4" />
-                    {!supportsWebBluetooth ? (isIOSBrowser ? 'Unavailable on iOS' : 'Unsupported browser') : hrConnecting ? 'Connecting...' : 'Connect device'}
-                  </button>
-                ) : (
-                  <button
-                    onClick={disconnectHeartRate}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white"
-                  >
-                    <Unplug className="w-4 h-4" />
-                    Disconnect
-                  </button>
+              </div>
+
+              {/* Stats row */}
+              {weightLogs.length > 0 && (() => {
+                const weights = weightLogs.map(l => l.weight);
+                const current = weights[weights.length - 1];
+                const lowest = Math.min(...weights);
+                const avg = weights.reduce((a, b) => a + b, 0) / weights.length;
+                const change = weights.length > 1 ? current - weights[0] : null;
+                return (
+                  <>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {[
+                        { label: 'Current', value: current, accent: true },
+                        { label: 'Start', value: weights[0], accent: false },
+                        { label: 'Lowest', value: lowest, accent: false },
+                        { label: 'Avg', value: avg, accent: false },
+                      ].map(({ label, value, accent }) => (
+                        <div key={label} className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] p-4 text-center">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)] mb-2">{label}</p>
+                          <p className={`text-[20px] font-black tabular-nums leading-none ${accent ? 'text-[var(--accent)]' : 'text-white'}`}>{value.toFixed(1)}</p>
+                          <p className="text-[10px] text-[var(--text-muted)] mt-1">{displayUnit}</p>
+                        </div>
+                      ))}
+                    </div>
+                    {change !== null && (
+                      <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] p-4 flex items-center justify-center gap-3">
+                        <span className="text-[13px] text-[var(--text-muted)]">Total change</span>
+                        <span className={`text-[18px] font-black tabular-nums ${change < 0 ? 'text-[var(--accent)]' : change > 0 ? 'text-[var(--red)]' : 'text-[var(--text-secondary)]'}`}>
+                          {change > 0 ? '+' : ''}{change.toFixed(1)} {displayUnit}
+                        </span>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+
+              {/* Chart */}
+              {weightLogs.length > 0 ? (
+                <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Weight Trend</p>
+                    <p className="text-[11px] text-[var(--text-muted)]">{weightLogs.length} {weightLogs.length === 1 ? 'entry' : 'entries'}</p>
+                  </div>
+                  <div className="h-52">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={weightLogs} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                        <defs>
+                          <linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#C8FF00" stopOpacity={0.30} />
+                            <stop offset="100%" stopColor="#C8FF00" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                        <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false}
+                          tickFormatter={(val) => formatStoredDate(val, 'MMM d')} interval="preserveStartEnd" />
+                        <YAxis domain={['auto', 'auto']} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} width={36} />
+                        <Tooltip
+                          contentStyle={{ backgroundColor: '#1A1D24', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontSize: 12, padding: '8px 12px' }}
+                          cursor={{ stroke: 'var(--accent)', strokeWidth: 1, strokeDasharray: '4 2' }}
+                          labelFormatter={(val) => formatStoredDate(val, 'EEE, MMM d yyyy')}
+                          formatter={(value: number) => [`${value.toFixed(1)} ${displayUnit}`, 'Weight']}
+                        />
+                        <Area type="monotone" dataKey="weight" stroke="var(--accent)" strokeWidth={2.5} fill="url(#weightGrad)"
+                          dot={weightLogs.length <= 20 ? { fill: 'var(--accent)', strokeWidth: 0, r: 3 } : false}
+                          activeDot={{ r: 5, fill: 'var(--accent)', stroke: '#111419', strokeWidth: 2 }} />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              ) : (
+                <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] flex flex-col items-center justify-center py-16 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
+                    <Scale className="w-6 h-6 text-[var(--text-muted)] opacity-40" />
+                  </div>
+                  <p className="text-[15px] font-bold text-white mb-1">No weight logs yet</p>
+                  <p className="text-[13px] text-[var(--text-muted)]">Log your first entry above to see your trend.</p>
+                </div>
+              )}
+
+              {/* BMI Calculator */}
+              <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] p-5">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)] mb-4">BMI Calculator</p>
+                <div className="flex gap-3">
+                  <input
+                    type="number" value={heightCm} onChange={(e) => setHeightCm(e.target.value)}
+                    placeholder="Height (cm)"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-[14px] focus:outline-none focus:border-[var(--accent)] transition-colors placeholder:text-white/20"
+                  />
+                  <div className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between">
+                    <span className="text-[var(--text-muted)] text-[12px]">BMI</span>
+                    <span className={`font-black text-[20px] tabular-nums ${
+                      bmiValue
+                        ? parseFloat(bmiValue) < 18.5 ? 'text-sky-400'
+                        : parseFloat(bmiValue) < 25 ? 'text-[var(--accent)]'
+                        : parseFloat(bmiValue) < 30 ? 'text-yellow-400'
+                        : 'text-[var(--red)]'
+                        : 'text-[var(--text-muted)]'
+                    }`}>{bmiValue || '--'}</span>
+                  </div>
+                </div>
+                {bmiValue && (
+                  <p className="mt-3 text-[11px] text-[var(--text-muted)]">
+                    {parseFloat(bmiValue) < 18.5 ? 'Underweight'
+                      : parseFloat(bmiValue) < 25 ? 'Healthy weight'
+                      : parseFloat(bmiValue) < 30 ? 'Overweight'
+                      : 'Obese'} · BMI {bmiValue}
+                  </p>
                 )}
               </div>
-            </div>
+            </>
+          )}
 
-            <div className="bg-[linear-gradient(180deg,#121A2A_0%,#0D1522_100%)] p-6 rounded-3xl border border-white/10 overflow-hidden">
-              <div className="relative flex flex-col items-center justify-center">
-                <div
-                  className="pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 h-16 opacity-75"
-                  style={{ maskImage: 'linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%)' }}
-                >
-                  <svg viewBox="0 0 100 32" preserveAspectRatio="none" className="h-full w-full">
+          {/* ════════════════════════════════════════════════
+              LIVE HEART RATE
+          ════════════════════════════════════════════════ */}
+          {activeTab === 'livehr' && (
+            <>
+              {/* Connect banner */}
+              <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#0F1520_0%,#0A1018_100%)] p-5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Heart className="w-4 h-4 text-[#19CCF0]" />
+                      <h2 className="text-[15px] font-bold text-white">Live Heart Rate</h2>
+                    </div>
+                    <p className="text-[12px] text-[#8EA0B8]">Real-time wearable broadcast with zone tracking.</p>
+                  </div>
+                  {!hrConnected ? (
+                    <button
+                      onClick={supportsWebBluetooth ? connectHeartRate : undefined}
+                      disabled={hrConnecting || !supportsWebBluetooth}
+                      title={!supportsWebBluetooth && unsupportedBluetoothHint ? unsupportedBluetoothHint : undefined}
+                      className={`inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-[13px] font-bold transition-all ${
+                        supportsWebBluetooth
+                          ? 'bg-[#19CCF0] text-black hover:opacity-90 disabled:opacity-50'
+                          : 'border border-white/15 bg-white/5 text-[#98A6B8] opacity-70'
+                      }`}
+                    >
+                      <PlugZap className="w-4 h-4" />
+                      {!supportsWebBluetooth ? (isIOSBrowser ? 'Unavailable on iOS' : 'Unsupported') : hrConnecting ? 'Connecting…' : 'Connect device'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={disconnectHeartRate}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-2.5 text-[13px] font-semibold text-white hover:bg-white/8 transition-colors"
+                    >
+                      <Unplug className="w-4 h-4" />
+                      Disconnect · {hrDeviceName || 'Device'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* BPM hero */}
+              <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#0F1520_0%,#0A1018_100%)] overflow-hidden">
+                {/* Decorative waveform strip */}
+                <div className="relative h-14 border-b border-white/6 overflow-hidden"
+                  style={{ maskImage: 'linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%)' }}>
+                  <svg viewBox="0 0 100 32" preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
                     <defs>
-                      <linearGradient id="heroWaveGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="rgba(93,202,165,0.2)" />
-                        <stop offset="28%" stopColor="#00BCE8" />
-                        <stop offset="65%" stopColor="var(--accent)" />
-                        <stop offset="100%" stopColor="rgba(123,210,255,0.2)" />
+                      <linearGradient id="heroWaveGrad2" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="rgba(25,204,240,0.15)" />
+                        <stop offset="40%" stopColor="#19CCF0" />
+                        <stop offset="70%" stopColor="var(--accent)" />
+                        <stop offset="100%" stopColor="rgba(200,255,0,0.15)" />
                       </linearGradient>
                     </defs>
-                    <path d="M0 16 H100" stroke="rgba(255,255,255,0.06)" strokeDasharray="2 5" />
-                    <motion.polyline
-                      fill="none"
-                      stroke="rgba(200,255,0,0.26)"
-                      strokeWidth="4"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      points={heroWavePoints}
-                      animate={hrConnected ? { opacity: [0.18, 0.42, 0.18] } : { opacity: 0.22 }}
-                      transition={hrConnected ? { duration: 1.25, repeat: Infinity } : { duration: 0.2 }}
-                    />
-                    <polyline
-                      fill="none"
-                      stroke="url(#heroWaveGradient)"
-                      strokeWidth="1.9"
-                      strokeOpacity="0.95"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      points={heroWavePoints}
-                    />
+                    <motion.polyline fill="none" stroke="rgba(200,255,0,0.15)" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round" points={heroWavePoints}
+                      animate={hrConnected ? { opacity: [0.1, 0.3, 0.1] } : { opacity: 0.1 }}
+                      transition={hrConnected ? { duration: 1.2, repeat: Infinity } : { duration: 0.2 }} />
+                    <polyline fill="none" stroke="url(#heroWaveGrad2)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" points={heroWavePoints} />
                   </svg>
                 </div>
 
-                <div className="relative h-40 w-40 flex items-center justify-center mt-1">
-                  <motion.div
-                    className="absolute inset-0 rounded-full border border-[var(--accent)]/20"
-                    animate={hrConnected ? { scale: [1, 1.22], opacity: [0.45, 0] } : { scale: 1, opacity: 0.2 }}
-                    transition={hrConnected ? { duration: 1.8, ease: 'easeOut', repeat: Infinity } : { duration: 0.2 }}
-                  />
-                  <motion.div
-                    className="absolute inset-0 rounded-full border border-[var(--accent)]/16"
-                    animate={hrConnected ? { scale: [1, 1.13], opacity: [0.35, 0] } : { scale: 1, opacity: 0.16 }}
-                    transition={hrConnected ? { duration: 1.8, ease: 'easeOut', repeat: Infinity, delay: 0.55 } : { duration: 0.2 }}
-                  />
-                  <motion.div
-                    className="relative z-10 h-24 w-24 rounded-[26px] border border-[var(--accent)]/35 bg-[linear-gradient(180deg,rgba(200,255,0,0.16)_0%,rgba(200,255,0,0.07)_100%)] flex items-center justify-center"
-                    animate={hrConnected ? { scale: [1, 1.055, 1] } : { scale: 1 }}
-                    transition={hrConnected ? { duration: 0.95, repeat: Infinity, ease: 'easeInOut' } : { duration: 0.2 }}
-                  >
-                    <motion.div
-                      className="absolute inset-0 rounded-[26px]"
-                      animate={hrConnected ? { opacity: [0.2, 0.45, 0.2] } : { opacity: 0.18 }}
-                      transition={hrConnected ? { duration: 1.2, repeat: Infinity } : { duration: 0.2 }}
-                      style={{
-                        background:
-                          'radial-gradient(circle at 50% 44%, rgba(200,255,0,0.24) 0%, rgba(200,255,0,0.05) 48%, rgba(200,255,0,0) 76%)',
-                      }}
-                    />
-                    <Heart
-                      className={`relative z-10 w-11 h-11 ${hrConnected ? 'text-[var(--accent)]' : 'text-[#6E7E95]'}`}
-                      style={{ fill: hrConnected ? 'rgba(200,255,0,0.12)' : 'transparent' }}
-                      strokeWidth={2.25}
-                    />
-                  </motion.div>
-                </div>
+                <div className="p-6">
+                  {/* BPM display */}
+                  <div className="flex items-end justify-between mb-6">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#8EA0B8] mb-2">Beats Per Minute</p>
+                      <div className="flex items-end gap-3">
+                        <motion.span
+                          className="text-[72px] font-black text-white tabular-nums leading-none"
+                          key={currentBpm}
+                          initial={{ opacity: 0.6, scale: 0.97 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.15 }}
+                        >
+                          {currentBpm ?? '--'}
+                        </motion.span>
+                        <div className="mb-2">
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[12px] font-semibold"
+                            style={{ borderColor: `${hrZone.color}55`, background: `${hrZone.color}18`, color: hrZone.color }}>
+                            {hrZone.label}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-                <div className="font-victory text-5xl font-black text-white tabular-nums leading-none mt-1">{currentBpm ?? '--'}</div>
-                <div className="text-[11px] tracking-[0.2em] uppercase text-[#8EA0B8] mt-1">Beats Per Minute</div>
-                <div
-                  className="mt-3 px-3 py-1.5 rounded-full border text-sm font-semibold"
-                  style={{ borderColor: `${hrZone.color}66`, backgroundColor: `${hrZone.color}1A`, color: hrZone.color }}
-                >
-                  {hrZone.label}
-                </div>
-              </div>
+                    {/* Pulsing heart icon */}
+                    <div className="relative flex items-center justify-center w-20 h-20">
+                      {hrConnected && (
+                        <>
+                          <motion.div className="absolute inset-0 rounded-full border border-[var(--accent)]/20"
+                            animate={{ scale: [1, 1.3], opacity: [0.4, 0] }}
+                            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeOut' }} />
+                          <motion.div className="absolute inset-0 rounded-full border border-[var(--accent)]/15"
+                            animate={{ scale: [1, 1.18], opacity: [0.3, 0] }}
+                            transition={{ duration: 1.6, repeat: Infinity, ease: 'easeOut', delay: 0.4 }} />
+                        </>
+                      )}
+                      <motion.div
+                        className="relative w-14 h-14 rounded-[18px] flex items-center justify-center border border-[var(--accent)]/25"
+                        style={{ background: 'rgba(200,255,0,0.08)' }}
+                        animate={hrConnected ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+                        transition={hrConnected ? { duration: 0.9, repeat: Infinity } : { duration: 0.2 }}
+                      >
+                        <Heart className={`w-6 h-6 ${hrConnected ? 'text-[var(--accent)]' : 'text-[#5A6577]'}`}
+                          style={{ fill: hrConnected ? 'rgba(200,255,0,0.15)' : 'transparent' }} strokeWidth={2} />
+                      </motion.div>
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-3 gap-2 mt-6">
-                <div className="rounded-xl border border-white/7 bg-black/20 p-3 text-center backdrop-blur-sm">
-                  <div className="text-xs text-[#7F8EA3] uppercase tracking-[0.14em] mb-1">Trend</div>
-                  <div className="text-sm font-semibold text-white">{hrTrend || 'Waiting'}</div>
-                </div>
-                <div className="rounded-xl border border-white/7 bg-black/20 p-3 text-center backdrop-blur-sm">
-                  <div className="text-xs text-[#7F8EA3] uppercase tracking-[0.14em] mb-1">Average</div>
-                  <div className="text-sm font-semibold text-white tabular-nums">{hrRollingAvg ?? '--'} bpm</div>
-                </div>
-                <div className="rounded-xl border border-white/7 bg-black/20 p-3 text-center backdrop-blur-sm">
-                  <div className="text-xs text-[#7F8EA3] uppercase tracking-[0.14em] mb-1">Min - Max</div>
-                  <div className="text-sm font-semibold text-white tabular-nums">
-                    {hrSessionMin ?? '--'} / {hrSessionMax ?? '--'}
+                  {/* Intensity bar */}
+                  <div className="mb-5">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8EA0B8]">Intensity</span>
+                      <span className="text-[10px] font-semibold text-[#8EA0B8]">{hrIntensityPercent.toFixed(0)}%</span>
+                    </div>
+                    <div className="h-2 rounded-full overflow-hidden bg-white/8">
+                      <motion.div className="h-full rounded-full"
+                        style={{ background: 'linear-gradient(90deg, #5DCAA5 0%, var(--accent) 40%, #FFCC00 72%, #FF5A5F 100%)' }}
+                        animate={{ width: `${hrIntensityPercent}%` }}
+                        transition={{ duration: 0.25 }} />
+                    </div>
+                  </div>
+
+                  {/* Stat pills */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { label: 'Trend', value: hrTrend || 'Waiting' },
+                      { label: 'Avg 30s', value: hrRollingAvg ? `${hrRollingAvg} bpm` : '--' },
+                      { label: 'Min / Max', value: hrSessionMin && hrSessionMax ? `${hrSessionMin} / ${hrSessionMax}` : '--' },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="rounded-xl bg-white/5 border border-white/8 p-3 text-center">
+                        <p className="text-[10px] text-[#7F8EA3] uppercase tracking-[0.14em] mb-1">{label}</p>
+                        <p className="text-[12px] font-semibold text-white tabular-nums">{value}</p>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
 
-              <div className="h-2.5 rounded-full bg-white/10 overflow-hidden mt-4">
-                <motion.div
-                  className="h-full rounded-full"
-                  style={{
-                    background: 'linear-gradient(90deg, #5DCAA5 0%, var(--accent) 35%, #FFCC00 70%, #FF5A5F 100%)',
-                  }}
-                  animate={{ width: `${hrIntensityPercent}%` }}
-                  transition={{ duration: 0.2 }}
-                />
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-white/10 bg-[linear-gradient(180deg,#131A26_0%,#0F1622_100%)] p-5">
-              <div className="flex flex-col gap-3 mb-3">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-semibold text-white">
-                      {heartRateView === 'week'
-                        ? 'Weekly Heart Rate'
-                        : heartRateView === 'month'
-                          ? 'Monthly Heart Rate'
-                          : 'Live Waveform'}
-                    </div>
-                    <div className="text-[11px] text-[#8EA0B8] mt-1">
-                      {heartRateView === 'week'
-                        ? 'Daily average heart rate for the current week.'
-                        : heartRateView === 'month'
-                          ? 'Weekly average heart rate for the current month.'
+              {/* Waveform card */}
+              <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#0F1520_0%,#0A1018_100%)] p-5">
+                {/* Waveform header */}
+                <div className="flex flex-col gap-3 mb-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="text-[14px] font-bold text-white">
+                        {heartRateView === 'week' ? 'Weekly HR' : heartRateView === 'month' ? 'Monthly HR' : 'Live Waveform'}
+                      </div>
+                      <div className="text-[11px] text-[#8EA0B8] mt-0.5">
+                        {heartRateView === 'week' ? 'Daily avg heart rate this week'
+                          : heartRateView === 'month' ? 'Weekly avg heart rate this month'
                           : waveformVisibleActualData.length > 1
-                            ? `${format(new Date(waveformVisibleActualData[0].ts), 'h:mm:ss a')} - ${format(new Date(waveformVisibleActualData[waveformVisibleActualData.length - 1].ts), 'h:mm:ss a')}`
-                            : 'Waiting for data'}
+                            ? `${format(new Date(waveformVisibleActualData[0].ts), 'h:mm a')} – ${format(new Date(waveformVisibleActualData[waveformVisibleActualData.length - 1].ts), 'h:mm a')}`
+                            : 'Waiting for data…'}
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-xs text-gray-400 inline-flex items-center gap-2 flex-wrap justify-end">
-                    {selectedZoneFilter !== null && isLineHeartRateView && (
-                      <span
-                        className="px-2 py-0.5 rounded-full border text-[10px] font-semibold"
-                        style={{
+                    <div className="flex items-center gap-2 flex-wrap justify-end">
+                      {selectedZoneFilter !== null && isLineHeartRateView && (
+                        <span className="px-2.5 py-1 rounded-full border text-[10px] font-bold" style={{
                           borderColor: `${HEART_RATE_ZONES[selectedZoneFilter].color}66`,
                           color: HEART_RATE_ZONES[selectedZoneFilter].color,
-                          backgroundColor: `${HEART_RATE_ZONES[selectedZoneFilter].color}1A`,
-                        }}
-                      >
-                        {HEART_RATE_ZONES[selectedZoneFilter].name}
+                          background: `${HEART_RATE_ZONES[selectedZoneFilter].color}18`,
+                        }}>
+                          {HEART_RATE_ZONES[selectedZoneFilter].name}
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-1.5 text-[11px] text-[#8EA0B8]">
+                        <Bluetooth className="w-3.5 h-3.5" />
+                        {hrConnected ? (hrDeviceName || 'Connected') : 'Disconnected'}
                       </span>
-                    )}
-                    <span className="inline-flex items-center gap-1.5">
-                      <Bluetooth className="w-3.5 h-3.5" />
-                      {hrConnected ? (hrDeviceName || 'Connected') : 'Disconnected'}
-                    </span>
-                    <button
-                      onClick={jumpWaveformLive}
-                      className={`h-7 px-2.5 rounded-lg border text-[10px] font-semibold ${
-                        heartRateView === 'live' && waveformAtLive
-                          ? 'bg-[var(--accent)]/18 border-[var(--accent)]/45 text-[#7EE7FF]'
-                          : 'bg-black/30 border-white/15 text-[#AFC0D8]'
-                      }`}
-                      title="Jump to live"
-                    >
-                      Live
-                    </button>
+                      <button
+                        onClick={jumpWaveformLive}
+                        className={`h-7 px-3 rounded-lg border text-[10px] font-bold transition-colors ${
+                          heartRateView === 'live' && waveformAtLive
+                            ? 'bg-[var(--accent)]/15 border-[var(--accent)]/40 text-[var(--accent)]'
+                            : 'bg-black/30 border-white/15 text-[#AFC0D8] hover:text-white'
+                        }`}
+                      >
+                        Live
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Mode tabs */}
+                  <div className="flex gap-1 p-1 rounded-xl bg-black/20 border border-white/8 self-start">
+                    {(['live', 'day', 'week', 'month'] as HeartRateViewMode[]).map((mode) => (
+                      <button key={mode} onClick={() => setHeartRateView(mode)}
+                        className={`h-8 px-3.5 rounded-lg text-[10px] font-bold uppercase tracking-[0.14em] transition-colors ${
+                          heartRateView === mode
+                            ? 'bg-[var(--accent)]/15 text-[var(--accent)] border border-[var(--accent)]/30'
+                            : 'text-[#9AACBF] border border-transparent hover:text-white hover:bg-white/5'
+                        }`}>
+                        {mode}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-white/8 bg-black/15 p-1 inline-flex gap-1 self-start">
-                  {(['live', 'day', 'week', 'month'] as HeartRateViewMode[]).map((mode) => (
-                    <button
-                      key={mode}
-                      onClick={() => setHeartRateView(mode)}
-                      className={`h-9 px-4 rounded-xl text-xs font-semibold uppercase tracking-[0.16em] transition-colors ${
-                        heartRateView === mode
-                          ? 'bg-[var(--accent)]/18 text-[#7EE7FF] border border-[var(--accent)]/35'
-                          : 'text-[#9AACBF] border border-transparent hover:text-white hover:bg-white/5'
-                      }`}
+                {isLineHeartRateView ? (
+                  <>
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[11px] text-[#7F8EA3]">
+                        {heartRateView === 'live' ? 'Drag to pan · pinch to zoom up to 12h' : 'Current day timeline · pinch to zoom'}
+                      </p>
+                      <p className="text-[11px] font-medium text-[#9FB2C8]">
+                        {Math.max(1, Math.round(effectiveWaveformDurationMs / (60 * 1000)))} min window
+                      </p>
+                    </div>
+
+                    <div
+                      className="h-60 rounded-xl border border-white/8 bg-black/20 px-2 py-3 cursor-grab active:cursor-grabbing overflow-hidden"
+                      onWheel={handleWaveformWheel}
+                      onPointerDown={handleWaveformPointerDown}
+                      onPointerMove={handleWaveformPointerMove}
+                      onPointerUp={(e) => clearWaveformDrag(e.pointerId)}
+                      onPointerCancel={(e) => clearWaveformDrag(e.pointerId)}
+                      onPointerLeave={(e) => clearWaveformDrag(e.pointerId)}
                     >
-                      {mode}
-                    </button>
+                      {waveformVisibleActualData.length > 1 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={waveformVisibleData} margin={{ top: 8, right: 8, left: 0, bottom: 12 }}>
+                            <defs>
+                              <linearGradient id="liveWaveFill2" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stopColor={activeWaveAreaTop} />
+                                <stop offset="42%" stopColor={activeWaveAreaMid} />
+                                <stop offset="100%" stopColor={activeWaveAreaBottom} />
+                              </linearGradient>
+                            </defs>
+                            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                            <XAxis dataKey="ts" type="number" domain={[waveformVisibleStartTs, waveformVisibleEndTs]}
+                              tickFormatter={(v: number) => format(new Date(v), 'h:mm a')}
+                              stroke="#748095" tick={{ fill: '#748095', fontSize: 10 }} axisLine={false} tickLine={false} tickMargin={8} minTickGap={34} />
+                            <YAxis stroke="#748095" tick={{ fill: '#748095', fontSize: 10 }} axisLine={false} tickLine={false} width={36}
+                              domain={[(min: number) => Math.max(0, Math.floor(min - 6)), (max: number) => Math.ceil(max + 6)]} />
+                            <Tooltip
+                              contentStyle={{ backgroundColor: '#0F1520', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff' }}
+                              formatter={(value: number, name: string, payload: any) => {
+                                if (name === 'gapGuide' || payload?.payload?.isGap) return ['No data', 'Gap'];
+                                return [value == null ? 'No data' : `${value} bpm`, payload?.payload?.zoneLabel || 'Heart Rate'];
+                              }}
+                              labelFormatter={(v: number) => format(new Date(v), 'h:mm:ss a')} />
+                            <Area type="monotone" dataKey={activeWaveDataKey} stroke="none" fill="url(#liveWaveFill2)" connectNulls={false} isAnimationActive={false} />
+                            <Line type="linear" dataKey="gapGuide" stroke="rgba(143,157,177,0.3)" strokeWidth={1.5} strokeDasharray="4 4" dot={false} connectNulls={false} isAnimationActive={false} />
+                            <Line type="monotone" dataKey="bpm" stroke="rgba(255,255,255,0.12)" strokeWidth={1.5} dot={false} connectNulls={false} isAnimationActive={false} />
+                            <Line type="monotone" dataKey={activeWaveDataKey} stroke={activeWaveStroke} strokeWidth={3} dot={false} connectNulls={false} isAnimationActive={false} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="h-full flex items-center justify-center text-center text-[13px] text-[#748095]">
+                          {hrConnected ? 'Waiting for incoming data…' : supportsWebBluetooth ? 'Connect device to start stream.' : 'Unsupported in this browser.'}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Zone filter */}
+                    <div className="mt-4 rounded-xl border border-white/8 bg-black/15 p-3">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] text-[#8EA0B8]">Zone filter {waveformHasGapSegments ? '· dashed = no data' : ''}</span>
+                        <span className="text-[11px]">Now: <span style={{ color: hrZone.color }} className="font-semibold">{hrZone.label}</span></span>
+                      </div>
+                      <div className="relative">
+                        {zoneHintLabel && useCompactZoneLabels && (
+                          <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-lg border border-white/20 bg-[#0D1828]/95 text-[11px] font-medium text-[#DCEAFF] whitespace-nowrap z-10">
+                            {zoneHintLabel}
+                          </div>
+                        )}
+                        <div className="grid grid-cols-6 gap-1">
+                          <button onClick={() => setSelectedZoneFilter(null)}
+                            onPointerDown={() => handleZoneHintStart('All zones')} onPointerUp={handleZoneHintEnd} onPointerLeave={handleZoneHintEnd} onPointerCancel={handleZoneHintEnd}
+                            className={`h-9 rounded-lg border text-[10px] font-bold transition-colors ${
+                              selectedZoneFilter === null
+                                ? 'bg-[var(--accent)]/18 border-[var(--accent)]/45 text-[var(--accent)]'
+                                : 'bg-transparent border-white/10 text-[#9DB0C6] hover:text-white hover:bg-white/5'
+                            }`}>
+                            All
+                          </button>
+                          {zoneDistribution.map((zone, idx) => (
+                            <button key={zone.id}
+                              onClick={() => setSelectedZoneFilter((prev) => (prev === idx ? null : idx))}
+                              onPointerDown={() => handleZoneHintStart(`${zone.name} (${zone.range} bpm)`)} onPointerUp={handleZoneHintEnd} onPointerLeave={handleZoneHintEnd} onPointerCancel={handleZoneHintEnd}
+                              className={`h-9 rounded-lg border text-[10px] font-bold transition-colors ${
+                                selectedZoneFilter === idx ? 'text-white' : currentZoneIndex === idx ? 'text-white bg-black/25' : 'text-[#9DB0C6] hover:text-white hover:bg-white/5'
+                              }`}
+                              style={{
+                                borderColor: selectedZoneFilter === idx ? `${zone.color}CC` : currentZoneIndex === idx ? `${zone.color}66` : 'rgba(255,255,255,0.1)',
+                                background: selectedZoneFilter === idx ? `linear-gradient(180deg, ${zone.color}22 0%, rgba(8,14,23,0.85) 100%)` : undefined,
+                              }}>
+                              {useCompactZoneLabels ? (ZONE_SHORT_LABEL_BY_ID[zone.id] || zone.name) : zone.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="h-60 rounded-xl border border-white/8 bg-black/15 overflow-hidden">
+                    {hasPeriodBarData ? (
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={periodHeartRateBars} margin={{ top: 12, right: 8, left: 0, bottom: 8 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+                          <XAxis dataKey="label" stroke="#748095" tick={{ fill: '#9AACC3', fontSize: 11 }} axisLine={false} tickLine={false} />
+                          <YAxis stroke="#748095" tick={{ fill: '#748095', fontSize: 10 }} axisLine={false} tickLine={false} width={34} />
+                          <Tooltip cursor={{ fill: 'rgba(255,255,255,0.03)' }}
+                            contentStyle={{ backgroundColor: '#0F1520', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff' }}
+                            formatter={(value: number, _name: string, payload: any) => [
+                              payload?.payload?.avgBpm ? `${value} bpm` : 'No data', payload?.payload?.longLabel || 'Average HR',
+                            ]} />
+                          <Bar dataKey={(entry) => entry.avgBpm ?? 0} radius={[8, 8, 3, 3]}>
+                            {periodHeartRateBars.map((entry, i) => (
+                              <Cell key={`${entry.label}-${i}`} fill={entry.avgBpm == null ? 'rgba(255,255,255,0.07)' : entry.color} fillOpacity={entry.avgBpm == null ? 1 : 0.9} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-[13px] text-[#748095]">
+                        No heart-rate history for this {heartRateView}.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {hrError && (
+                <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-[13px] text-red-200">{hrError}</div>
+              )}
+
+              {/* Setup guide */}
+              <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] p-5">
+                <p className="text-[13px] font-bold text-white mb-3">Device Setup</p>
+                <div className="space-y-2">
+                  {[
+                    'On your wearable, enable Heart Rate Broadcast mode.',
+                    'Keep the wearable nearby, charged, and ready to pair.',
+                    supportsWebBluetooth ? 'Open this Live HR view and tap Connect device.' : 'Use Android Chrome or desktop Chrome/Edge for live pairing.',
+                  ].map((step, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-white/8 border border-white/14 flex items-center justify-center text-[10px] font-bold text-[var(--text-muted)]">{i + 1}</span>
+                      <p className="text-[12px] text-[var(--text-secondary)] leading-relaxed">{step}</p>
+                    </div>
                   ))}
                 </div>
               </div>
 
-              {isLineHeartRateView ? (
-                <>
-                  <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-                    <div className="text-[11px] text-[#7F8EA3]">
-                      {heartRateView === 'live'
-                        ? 'Starts at last 15 min. Drag or swipe to pan and pinch to zoom up to 12h.'
-                        : 'Current day timeline. Drag to move and pinch to zoom into denser sections.'}
-                    </div>
-                    <div className="text-[11px] font-medium text-[#9FB2C8]">
-                      Window: {Math.max(1, Math.round(effectiveWaveformDurationMs / (60 * 1000)))} min
-                    </div>
-                  </div>
-
-                  <div
-                    className="h-64 rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(7,15,25,0.84)_0%,rgba(10,18,30,0.94)_100%)] px-2 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] cursor-grab active:cursor-grabbing"
-                    onWheel={handleWaveformWheel}
-                    onPointerDown={handleWaveformPointerDown}
-                    onPointerMove={handleWaveformPointerMove}
-                    onPointerUp={(event) => clearWaveformDrag(event.pointerId)}
-                    onPointerCancel={(event) => clearWaveformDrag(event.pointerId)}
-                    onPointerLeave={(event) => clearWaveformDrag(event.pointerId)}
-                  >
-                    {waveformVisibleActualData.length > 1 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={waveformVisibleData} margin={{ top: 8, right: 8, left: 0, bottom: 12 }}>
-                          <defs>
-                            <linearGradient id="liveWaveMountainFill" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="0%" stopColor={activeWaveAreaTop} />
-                              <stop offset="42%" stopColor={activeWaveAreaMid} />
-                              <stop offset="100%" stopColor={activeWaveAreaBottom} />
-                            </linearGradient>
-                            <linearGradient id="liveWaveMountainGlow" x1="0" y1="0" x2="1" y2="0">
-                              <stop offset="0%" stopColor={activeWaveGlow} />
-                              <stop offset="50%" stopColor={withAlpha(activeWaveColor, 0.24)} />
-                              <stop offset="100%" stopColor={withAlpha(activeWaveColor, 0.08)} />
-                            </linearGradient>
-                          </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#2A3240" vertical={false} />
-                          <XAxis
-                            dataKey="ts"
-                            type="number"
-                            domain={[waveformVisibleStartTs, waveformVisibleEndTs]}
-                            tickFormatter={(value: number) => format(new Date(value), 'h:mm:ss a')}
-                            stroke="#748095"
-                            tick={{ fill: '#748095', fontSize: 10 }}
-                            axisLine={false}
-                            tickLine={false}
-                            tickMargin={8}
-                            minTickGap={34}
-                          />
-                          <YAxis
-                            stroke="#748095"
-                            tick={{ fill: '#748095', fontSize: 10 }}
-                            axisLine={false}
-                            tickLine={false}
-                            width={36}
-                            domain={[
-                              (dataMin: number) => Math.max(0, Math.floor(dataMin - 6)),
-                              (dataMax: number) => Math.ceil(dataMax + 6),
-                            ]}
-                          />
-                          <Tooltip
-                            contentStyle={{
-                              backgroundColor: '#141A22',
-                              border: '1px solid rgba(255,255,255,0.1)',
-                              borderRadius: '10px',
-                              color: '#fff',
-                            }}
-                            formatter={(value: number, name: string, payload: any) => {
-                              if (name === 'gapGuide' || payload?.payload?.isGap) {
-                                return ['No data', 'Gap'];
-                              }
-                              return [
-                                value == null ? 'No data' : `${value} bpm`,
-                                payload?.payload?.zoneLabel || 'Heart Rate',
-                              ];
-                            }}
-                            labelFormatter={(value: number) => format(new Date(value), 'h:mm:ss a')}
-                          />
-                          <Area
-                            type="monotone"
-                            dataKey={activeWaveDataKey}
-                            stroke="none"
-                            fill="url(#liveWaveMountainFill)"
-                            connectNulls={false}
-                            isAnimationActive={false}
-                          />
-                          <Area
-                            type="monotone"
-                            dataKey={activeWaveDataKey}
-                            stroke="none"
-                            fill="url(#liveWaveMountainGlow)"
-                            fillOpacity={0.22}
-                            connectNulls={false}
-                            isAnimationActive={false}
-                          />
-                          <Line
-                            type="linear"
-                            dataKey="gapGuide"
-                            stroke="rgba(143,157,177,0.35)"
-                            strokeWidth={1.8}
-                            strokeDasharray="5 5"
-                            dot={false}
-                            connectNulls={false}
-                            isAnimationActive={false}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="bpm"
-                            stroke="rgba(111,130,158,0.28)"
-                            strokeWidth={2}
-                            dot={false}
-                            connectNulls={false}
-                            isAnimationActive={false}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey={activeWaveDataKey}
-                            stroke={activeWaveStroke}
-                            strokeWidth={3.6}
-                            dot={false}
-                            connectNulls={false}
-                            isAnimationActive={false}
-                          />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="h-full flex flex-col items-center justify-center text-center text-sm text-gray-400 gap-2">
-                        <div>
-                          {hrConnected
-                            ? 'Waiting for incoming heart-rate packets...'
-                            : supportsWebBluetooth
-                              ? 'Connect device to start live heart-rate stream.'
-                              : 'Live pairing is unavailable in this browser.'}
-                        </div>
-                        {waveformHasGapSegments && (
-                          <div className="text-[11px] text-[#7F8EA3]">Dashed bridge means there was no data in that section.</div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="mt-4 rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,rgba(10,17,28,0.72)_0%,rgba(8,14,23,0.92)_100%)] p-3">
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <div className="text-[11px] text-[#8EA0B8]">
-                        Zone track linked to waveform
-                        {waveformHasGapSegments ? ' • dashed line = no data gap' : ''}
-                      </div>
-                      <div className="text-[11px]">
-                        Current: <span style={{ color: hrZone.color }} className="font-semibold">{hrZone.label}</span>
-                      </div>
-                    </div>
-
-                    <div className="relative rounded-xl border border-white/10 bg-black/20 p-1">
-                      {zoneHintLabel && useCompactZoneLabels && (
-                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 px-2.5 py-1 rounded-lg border border-white/20 bg-[#0D1828]/95 text-[11px] font-medium text-[#DCEAFF] whitespace-nowrap z-10 shadow-[0_6px_24px_rgba(0,0,0,0.35)]">
-                          {zoneHintLabel}
-                        </div>
-                      )}
-                      <div className="grid grid-cols-6 gap-1">
-                        <button
-                          onClick={() => setSelectedZoneFilter(null)}
-                          onPointerDown={() => handleZoneHintStart('Theme signal (all zones)')}
-                          onPointerUp={handleZoneHintEnd}
-                          onPointerLeave={handleZoneHintEnd}
-                          onPointerCancel={handleZoneHintEnd}
-                          title="Theme signal (all zones)"
-                          className={`h-10 rounded-lg border text-[10px] sm:text-xs font-semibold ${useCompactZoneLabels ? '' : 'tracking-[0.1em] uppercase'} transition-colors ${
-                            selectedZoneFilter === null
-                              ? 'bg-[var(--accent)]/22 border-[var(--accent)]/55 text-[#9BEAFF]'
-                              : 'bg-transparent border-white/10 text-[#9DB0C6] hover:text-white hover:bg-white/5'
-                          }`}
-                        >
-                          {useCompactZoneLabels ? 'All' : 'Theme'}
-                        </button>
-                        {zoneDistribution.map((zone, idx) => (
-                          <button
-                            key={zone.id}
-                            onClick={() => setSelectedZoneFilter((prev) => (prev === idx ? null : idx))}
-                            onPointerDown={() => handleZoneHintStart(`${zone.name} (${zone.range} bpm)`)}
-                            onPointerUp={handleZoneHintEnd}
-                            onPointerLeave={handleZoneHintEnd}
-                            onPointerCancel={handleZoneHintEnd}
-                            title={`${zone.name} (${zone.range} bpm)`}
-                            className={`h-10 rounded-lg border text-[10px] sm:text-xs font-semibold transition-colors ${
-                              selectedZoneFilter === idx
-                                ? 'text-white'
-                                : currentZoneIndex === idx
-                                  ? 'text-white bg-black/25'
-                                  : 'text-[#9DB0C6] hover:text-white hover:bg-white/5'
-                            }`}
-                            style={{
-                              borderColor:
-                                selectedZoneFilter === idx
-                                  ? `${zone.color}CC`
-                                  : currentZoneIndex === idx
-                                    ? `${zone.color}77`
-                                    : 'rgba(255,255,255,0.12)',
-                              background:
-                                selectedZoneFilter === idx
-                                  ? `linear-gradient(180deg, ${zone.color}28 0%, rgba(8,14,23,0.85) 100%)`
-                                  : undefined,
-                            }}
-                          >
-                            {useCompactZoneLabels ? (ZONE_SHORT_LABEL_BY_ID[zone.id] || zone.name) : zone.name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="h-64 rounded-2xl border border-white/6 bg-black/10 px-2 py-3">
-                  {hasPeriodBarData ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={periodHeartRateBars} margin={{ top: 12, right: 8, left: 0, bottom: 8 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#2A3240" vertical={false} />
-                        <XAxis
-                          dataKey="label"
-                          stroke="#748095"
-                          tick={{ fill: '#9AACC3', fontSize: 11 }}
-                          axisLine={false}
-                          tickLine={false}
-                        />
-                        <YAxis
-                          stroke="#748095"
-                          tick={{ fill: '#748095', fontSize: 10 }}
-                          axisLine={false}
-                          tickLine={false}
-                          width={34}
-                        />
-                        <Tooltip
-                          cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                          contentStyle={{
-                            backgroundColor: '#141A22',
-                            border: '1px solid rgba(255,255,255,0.1)',
-                            borderRadius: '10px',
-                            color: '#fff',
-                          }}
-                          formatter={(value: number, _name: string, payload: any) => [
-                            payload?.payload?.avgBpm ? `${value} bpm` : 'No data',
-                            payload?.payload?.longLabel || 'Average HR',
-                          ]}
-                        />
-                        <Bar dataKey={(entry) => entry.avgBpm ?? 0} radius={[10, 10, 4, 4]}>
-                          {periodHeartRateBars.map((entry, index) => (
-                            <Cell
-                              key={`${entry.label}-${index}`}
-                              fill={entry.avgBpm == null ? 'rgba(255,255,255,0.08)' : entry.color}
-                              fillOpacity={entry.avgBpm == null ? 1 : 0.92}
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="h-full flex items-center justify-center text-center text-sm text-gray-400">
-                      No heart-rate history yet for this {heartRateView}.
-                    </div>
-                  )}
+              {!supportsWebBluetooth && unsupportedBluetoothHint && (
+                <div className="rounded-xl border border-yellow-400/25 bg-yellow-400/8 p-4 text-[12px] text-yellow-100 flex items-start gap-2">
+                  <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />{unsupportedBluetoothHint}
                 </div>
               )}
-            </div>
 
-            {hrError && (
-              <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
-                {hrError}
-              </div>
-            )}
-
-            <div className="rounded-xl border border-white/10 bg-black/20 p-4 text-sm text-gray-300">
-              <div className="text-white font-semibold mb-2">Athlix(TM) device setup</div>
-              <p>1. On your wearable, enable Heart Rate Broadcast mode.</p>
-              <p>2. Keep the wearable nearby, charged, and ready to pair.</p>
-              <p>3. {supportsWebBluetooth ? 'Open this Live HR view and tap Connect device.' : 'Use Android Chrome or desktop Chrome/Edge for live pairing.'}</p>
-            </div>
-
-            {!supportsWebBluetooth && unsupportedBluetoothHint && (
-              <div className="rounded-xl border border-yellow-400/30 bg-yellow-400/10 p-3 text-sm text-yellow-100 inline-flex items-start gap-2">
-                <Info className="w-4 h-4 mt-0.5" />
-                {unsupportedBluetoothHint}
-              </div>
-            )}
-
-            {bluetoothSupportHint && (
-              <div className="rounded-xl border border-sky-400/30 bg-sky-400/10 p-3 text-sm text-sky-100 inline-flex items-start gap-2">
-                <Info className="w-4 h-4 mt-0.5" />
-                {bluetoothSupportHint}
-              </div>
-            )}
-          </div>
-        )}
-      </motion.div>
+              {bluetoothSupportHint && (
+                <div className="rounded-xl border border-sky-400/25 bg-sky-400/8 p-4 text-[12px] text-sky-100 flex items-start gap-2">
+                  <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />{bluetoothSupportHint}
+                </div>
+              )}
+            </>
+          )}
+        </motion.div>
+      </div>
     </div>
   );
 };
