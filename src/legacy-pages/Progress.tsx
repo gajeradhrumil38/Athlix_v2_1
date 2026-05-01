@@ -670,12 +670,19 @@ export const Progress: React.FC = () => {
   const last30Days = Array.from({ length: 30 }, (_, i) => format(subDays(new Date(), 29 - i), 'yyyy-MM-dd'));
   const heatmapData = last30Days.map(dateStr => {
     const dayWorkouts = workouts.filter(w => w.date === dateStr);
+    const totalMinutes = dayWorkouts.reduce((acc, workout) => acc + Number(workout.duration_minutes || 0), 0);
     return {
       date: dateStr,
       count: dayWorkouts.length,
-      intensity: dayWorkouts.length > 0 ? Math.min(dayWorkouts.reduce((acc, w) => acc + w.duration_minutes, 0) / 30, 4) : 0,
+      minutes: totalMinutes,
+      intensity: dayWorkouts.length > 0 ? Math.min(dayWorkouts.length, 4) : 0,
     };
   });
+  const activeDaysInLast30 = heatmapData.filter((day) => day.count > 0).length;
+  const totalMinutesInLast30 = heatmapData.reduce((sum, day) => sum + day.minutes, 0);
+  const averageSessionsPerWeek = workouts.length / (30 / 7);
+  const last30StartLabel = format(subDays(new Date(), 29), 'MMM d');
+  const last30EndLabel = format(new Date(), 'MMM d');
 
   let currentStreak = 0;
   let maxStreak = 0;
@@ -797,7 +804,7 @@ export const Progress: React.FC = () => {
         <div className="mb-7 flex items-end justify-between">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)] mb-1">Athlix™</p>
-            <h1 className="text-[26px] font-black tracking-tight text-white leading-none">Progress</h1>
+            <p className="text-[12px] font-semibold tracking-[0.06em] text-[var(--text-secondary)]">Performance analytics</p>
           </div>
           <div className="text-right">
             <p className="text-[11px] text-[var(--text-muted)]">{format(new Date(), 'EEE, MMM d')}</p>
@@ -868,55 +875,86 @@ export const Progress: React.FC = () => {
               {/* Heatmap card */}
               <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] p-5 overflow-hidden">
                 {/* Header */}
-                <div className="flex items-start justify-between mb-5">
+                <div className="mb-5 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div>
                     <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)] mb-1">Workout Frequency</p>
-                    <p className="text-[13px] font-semibold text-[var(--text-secondary)]">Last 30 days</p>
+                    <p className="text-[14px] font-semibold text-[var(--text-secondary)]">Last 30 days</p>
+                    <p className="mt-1 text-[11px] text-[var(--text-muted)]">{last30StartLabel} to {last30EndLabel}</p>
                   </div>
-                  <div className="flex gap-4">
-                    <div className="text-right">
-                      <div className="flex items-center justify-end gap-1 mb-0.5">
-                        <Flame className="w-3 h-3 text-[var(--accent)]" />
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                    <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2 text-right">
+                      <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Sessions</p>
+                      <p className="mt-1 text-[18px] font-black leading-none text-white tabular-nums">{workouts.length}</p>
+                    </div>
+                    <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2 text-right">
+                      <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Active days</p>
+                      <p className="mt-1 text-[18px] font-black leading-none text-white tabular-nums">{activeDaysInLast30}<span className="ml-0.5 text-[12px] font-semibold text-[var(--text-muted)]">/30</span></p>
+                    </div>
+                    <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2 text-right">
+                      <div className="mb-0.5 flex items-center justify-end gap-1">
+                        <Flame className="h-3 w-3 text-[var(--accent)]" />
                         <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Streak</p>
                       </div>
-                      <p className="text-[22px] font-black text-[var(--accent)] tabular-nums leading-none">{currentStreak}<span className="text-[13px] font-bold ml-0.5">d</span></p>
+                      <p className="text-[18px] font-black leading-none text-[var(--accent)] tabular-nums">{currentStreak}<span className="ml-0.5 text-[12px] font-bold">d</span></p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)] mb-0.5">Best</p>
-                      <p className="text-[22px] font-black text-[var(--text-primary)] tabular-nums leading-none">{maxStreak}<span className="text-[13px] font-bold ml-0.5">d</span></p>
+                    <div className="rounded-xl border border-white/8 bg-white/[0.03] px-3 py-2 text-right">
+                      <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">Best</p>
+                      <p className="mt-1 text-[18px] font-black leading-none text-[var(--text-primary)] tabular-nums">{maxStreak}<span className="ml-0.5 text-[12px] font-bold">d</span></p>
                     </div>
                   </div>
                 </div>
 
                 {/* Heat tiles */}
-                <div className="grid gap-[5px]" style={{ gridTemplateColumns: 'repeat(30, 1fr)' }}>
-                  {heatmapData.map((day) => {
-                    const alpha = day.intensity === 0 ? 0 : day.intensity < 1 ? 0.22 : day.intensity < 2 ? 0.45 : day.intensity < 3 ? 0.72 : 1;
-                    return (
-                      <div
-                        key={day.date}
-                        title={`${day.date}: ${day.count} workout${day.count !== 1 ? 's' : ''}`}
-                        className="rounded-[3px] transition-all duration-200 hover:scale-125"
-                        style={{
-                          aspectRatio: '1',
-                          background: day.intensity === 0
-                            ? 'rgba(255,255,255,0.06)'
-                            : `rgba(200,255,0,${alpha})`,
-                        }}
-                      />
-                    );
-                  })}
+                <div className="rounded-xl border border-white/8 bg-black/20 p-3">
+                  <div className="overflow-x-auto pb-1">
+                    <div className="flex min-w-[660px] items-center gap-1.5 pr-2">
+                      {heatmapData.map((day, idx) => {
+                        const alpha =
+                          day.intensity === 0 ? 0.06 :
+                          day.intensity === 1 ? 0.32 :
+                          day.intensity === 2 ? 0.52 :
+                          day.intensity === 3 ? 0.74 : 1;
+                        const isToday = day.date === todayStr;
+                        return (
+                          <React.Fragment key={day.date}>
+                            {idx > 0 && idx % 7 === 0 && <span className="h-5 w-px bg-white/12" />}
+                            <div
+                              title={`${formatStoredDate(day.date, 'EEE, MMM d')}: ${day.count} workout${day.count !== 1 ? 's' : ''}${day.minutes > 0 ? ` • ${day.minutes} min` : ''}`}
+                              className="h-5 w-5 rounded-[4px] border transition-all duration-150 hover:-translate-y-0.5"
+                              style={{
+                                borderColor: isToday ? 'rgba(200,255,0,0.95)' : 'rgba(255,255,255,0.06)',
+                                background: day.intensity === 0
+                                  ? 'rgba(255,255,255,0.07)'
+                                  : `rgba(200,255,0,${alpha})`,
+                                boxShadow: isToday ? '0 0 0 1px rgba(200,255,0,0.35)' : 'none',
+                              }}
+                            />
+                          </React.Fragment>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-[10px] text-[var(--text-muted)]">
+                    <span>{last30StartLabel}</span>
+                    <span className="font-semibold tracking-[0.08em] text-[var(--text-secondary)]">LAST 30 DAYS</span>
+                    <span>{last30EndLabel}</span>
+                  </div>
                 </div>
 
                 {/* Legend */}
-                <div className="flex items-center justify-end gap-2 mt-3">
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-[11px] text-[var(--text-muted)]">
+                    {averageSessionsPerWeek.toFixed(1)} sessions/week average · {Math.round(totalMinutesInLast30)} min tracked
+                  </p>
+                  <div className="flex items-center gap-2">
                   <span className="text-[10px] text-[var(--text-muted)]">Less</span>
-                  {[0.06, 0.22, 0.45, 0.72, 1].map((a, i) => (
+                  {[0.06, 0.32, 0.52, 0.74, 1].map((a, i) => (
                     <div key={i} className="w-3 h-3 rounded-[3px]"
                       style={{ background: i === 0 ? 'rgba(255,255,255,0.06)' : `rgba(200,255,0,${a})` }}
                     />
                   ))}
                   <span className="text-[10px] text-[var(--text-muted)]">More</span>
+                  </div>
                 </div>
               </div>
 
