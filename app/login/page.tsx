@@ -3,7 +3,6 @@
 export const dynamic = 'force-dynamic';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, Eye, EyeOff, Loader2, X } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
@@ -47,7 +46,6 @@ const FEATURES = [
 ];
 
 export default function LoginPage() {
-  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const emailRef = useRef<HTMLInputElement>(null);
 
@@ -110,8 +108,20 @@ export default function LoginPage() {
     }
   };
 
-  const redirectAfterSuccess = (path: string) => {
-    setTimeout(() => { router.replace(path); router.refresh(); }, 650);
+  const waitForSessionTokens = async () => {
+    const deadline = Date.now() + 2500;
+    while (Date.now() < deadline) {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.access_token && data.session?.refresh_token) return;
+      await new Promise((resolve) => window.setTimeout(resolve, 120));
+    }
+  };
+
+  const redirectAfterSuccess = async (path: string) => {
+    await new Promise((resolve) => window.setTimeout(resolve, 450));
+    await waitForSessionTokens();
+    // Use a full navigation so the server reads fresh auth cookies on first load.
+    window.location.replace(path);
   };
 
   const sendResetEmail = async (event?: FormEvent) => {
@@ -173,7 +183,7 @@ export default function LoginPage() {
     clearFailedAttempts();
     setSubmitting(false);
     setSuccessMessage('Welcome back!');
-    redirectAfterSuccess(redirectPath);
+    void redirectAfterSuccess(redirectPath);
   };
 
   const handleOAuthLogin = async (provider: 'google' | 'apple') => {
@@ -250,10 +260,10 @@ export default function LoginPage() {
     if (!supabase) return;
     let cancelled = false;
     supabase.auth.getUser().then(({ data }) => {
-      if (!cancelled && data.user) router.replace(redirectPath);
+      if (!cancelled && data.user) window.location.replace(redirectPath);
     });
     return () => { cancelled = true; };
-  }, [router, redirectPath, supabase]);
+  }, [redirectPath, supabase]);
 
   return (
     <div className="flex min-h-screen bg-[#0a0a0a]">
