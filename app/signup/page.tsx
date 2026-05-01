@@ -66,12 +66,13 @@ export default function SignupPage() {
     setLoading(true);
     setAlreadyExists(false);
     setErrorMessage(null);
+    const emailRedirectTo = `${window.location.origin}/auth/callback`;
     const { error } = await supabase.auth.signUp({
       email: sanitizedEmail,
       password,
       options: {
         data: { full_name: sanitizedName },
-        emailRedirectTo: 'https://athlix-v2-1.vercel.app/auth/callback',
+        emailRedirectTo,
       },
     });
     if (error) {

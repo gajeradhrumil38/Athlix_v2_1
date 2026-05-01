@@ -31,10 +31,11 @@ export default function VerifyEmailPage() {
     if (!supabase || !email || countdown > 0 || busy) return;
     setBusy(true);
     setMessage(null);
+    const emailRedirectTo = `${window.location.origin}/auth/callback`;
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email,
-      options: { emailRedirectTo: 'https://athlix-v2-1.vercel.app/auth/callback' },
+      options: { emailRedirectTo },
     });
     setBusy(false);
     if (error) { setMessage('Unable to resend right now. Please try again.'); return; }

@@ -147,7 +147,7 @@ export const Auth: React.FC = () => {
 
     if (isSignUp && !trimmedName) { setErr('Please enter your full name.'); return; }
     if (!trimmedEmail.includes('@')) { setErr('Enter a valid email address.'); return; }
-    if (trimmedPassword.length < 6) { setErr('Password must be at least 6 characters.'); return; }
+    if (trimmedPassword.length < 8) { setErr('Password must be at least 8 characters.'); return; }
     if (isSignUp && !agreed) { setErr('Please agree to the Terms and Privacy Policy.'); return; }
 
     setLoading(true);

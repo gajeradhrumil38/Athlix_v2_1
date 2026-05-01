@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 import type { Database } from '@/lib/database.types';
 
-const protectedRoutes = ['/dashboard'];
+const protectedRoutes = ['/dashboard', '/onboarding'];
 const DEFAULT_SUPABASE_URL = 'https://mrntwydykqsdawpklumf.supabase.co';
 const DEFAULT_SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_h8Mv7ku_c2I9XIS1tzarYQ_ozj9Dkxw';
 

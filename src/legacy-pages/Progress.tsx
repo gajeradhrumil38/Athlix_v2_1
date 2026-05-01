@@ -798,23 +798,9 @@ export const Progress: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] pb-28 md:pb-10">
-      <div className="max-w-4xl mx-auto px-4 pt-6">
-
-        {/* ── Page Header ─────────────────────────────────── */}
-        <div className="mb-7 flex items-end justify-between">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)] mb-1">Athlix™</p>
-            <p className="text-[12px] font-semibold tracking-[0.06em] text-[var(--text-secondary)]">Performance analytics</p>
-          </div>
-          <div className="text-right">
-            <p className="text-[11px] text-[var(--text-muted)]">{format(new Date(), 'EEE, MMM d')}</p>
-            <p className="text-[11px] font-semibold text-[var(--text-secondary)]">{workouts.length} sessions · 30 days</p>
-          </div>
-        </div>
-
-        {/* ── Tab Nav ─────────────────────────────────────── */}
-        <div className="mb-6 relative">
-          {/* Glass pill container */}
+      {/* ── Sticky Tab Nav ─────────────────────────────────── */}
+      <div className="sticky top-0 z-20 bg-[var(--bg-base)]/95 backdrop-blur-xl border-b border-white/[0.06]">
+        <div className="max-w-4xl mx-auto px-4 py-3">
           <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-[var(--bg-elevated)] border border-white/8 relative">
             {TABS.map((tab) => {
               const isActive = activeTab === tab.id;
@@ -857,8 +843,10 @@ export const Progress: React.FC = () => {
             </button>
           </div>
         </div>
+      </div>
 
-        {/* ── Tab Content ─────────────────────────────────── */}
+      {/* ── Tab Content ─────────────────────────────────── */}
+      <div className="max-w-4xl mx-auto px-4 pt-4">
         <motion.div
           key={activeTab}
           initial={{ opacity: 0, y: 8 }}
@@ -1716,4 +1704,5 @@ export const Progress: React.FC = () => {
       </div>
     </div>
   );
+
 };

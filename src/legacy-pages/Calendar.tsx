@@ -109,9 +109,9 @@ const isGenericWorkoutTitle = (title?: string | null) => {
   );
 };
 
-const getOrderedExerciseNames = (workout: any) =>
+const getOrderedExerciseNames = (workout: any): string[] =>
   Array.from(
-    new Set((workout.exercises || []).map((exercise: any) => exercise.name).filter(Boolean)),
+    new Set((workout.exercises || []).map((exercise: any) => exercise.name as string).filter(Boolean)),
   );
 
 const getWorkoutDisplayTitle = (workout: any) => {
@@ -687,48 +687,43 @@ export const Calendar: React.FC = () => {
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5 pb-24 md:pb-8">
-      <header className="flex flex-col gap-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#7A8798]">Training Calendar</div>
-            <h1 className="mt-1 text-3xl font-bold text-white">Calendar</h1>
-          </div>
-
-          <div className="flex w-full flex-col gap-3 md:w-auto md:flex-row md:items-center">
-            {!isCurrentRange && (
+    <div className="mx-auto max-w-5xl pb-24 md:pb-8">
+      {/* ── Sticky Controls ─────────────────────────────────── */}
+      <div className="sticky top-0 z-20 bg-[var(--bg-base)]/95 backdrop-blur-xl border-b border-white/[0.06] px-4 pt-3 pb-2 space-y-2">
+        {/* View toggle + Jump to Today */}
+        <div className="flex items-center gap-2">
+          <div className="flex flex-1 space-x-1 rounded-2xl border border-white/6 bg-[#171717] p-1">
+            {[
+              { id: 'today', icon: Zap, label: 'Today' },
+              { id: 'week', icon: CalendarIcon, label: 'Week' },
+              { id: 'month', icon: LayoutGrid, label: 'Month' },
+            ].map((mode) => (
               <button
-                onClick={handleToday}
-                className="rounded-full border border-[var(--accent)]/22 bg-[var(--accent)]/10 px-4 py-2 text-[12px] font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/16"
+                key={mode.id}
+                onClick={() => handleViewModeChange(mode.id as ViewMode)}
+                className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors md:flex-none ${
+                  viewMode === mode.id
+                    ? 'bg-[var(--accent)] text-black'
+                    : 'text-[var(--text-secondary)] hover:bg-white/5 hover:text-white'
+                }`}
               >
-                Jump To Today
+                <mode.icon className="h-4 w-4" />
+                <span>{mode.label}</span>
               </button>
-            )}
-
-            <div className="flex space-x-1 rounded-2xl border border-white/6 bg-[#171717] p-1">
-              {[
-                { id: 'today', icon: Zap, label: 'Today' },
-                { id: 'week', icon: CalendarIcon, label: 'Week' },
-                { id: 'month', icon: LayoutGrid, label: 'Month' },
-              ].map((mode) => (
-                <button
-                  key={mode.id}
-                  onClick={() => handleViewModeChange(mode.id as ViewMode)}
-                  className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors md:flex-none ${
-                    viewMode === mode.id
-                      ? 'bg-[var(--accent)] text-black'
-                      : 'text-[var(--text-secondary)] hover:bg-white/5 hover:text-white'
-                  }`}
-                >
-                  <mode.icon className="h-4 w-4" />
-                  <span className="hidden sm:inline">{mode.label}</span>
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
+          {!isCurrentRange && (
+            <button
+              onClick={handleToday}
+              className="flex-shrink-0 rounded-xl border border-[var(--accent)]/22 bg-[var(--accent)]/10 px-3 py-2 text-[12px] font-semibold text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/16"
+            >
+              Today
+            </button>
+          )}
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        {/* Filter pills — horizontally scrollable */}
+        <div className="flex gap-2 overflow-x-auto pb-0.5" style={{ scrollbarWidth: 'none' }}>
           {MUSCLE_FILTERS.map((muscle) => {
             const isAll = muscle === 'All';
             const active = isAll ? activeFilter === null : activeFilter === muscle;
@@ -736,7 +731,7 @@ export const Calendar: React.FC = () => {
               <button
                 key={muscle}
                 onClick={() => setActiveFilter(isAll ? null : activeFilter === muscle ? null : muscle)}
-                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                className={`inline-flex flex-shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                   active
                     ? 'border-white/30 bg-white text-black'
                     : 'border-white/10 bg-transparent text-[var(--text-secondary)] hover:border-white/20 hover:text-white'
@@ -753,7 +748,10 @@ export const Calendar: React.FC = () => {
             );
           })}
         </div>
-      </header>
+      </div>
+
+      {/* ── Content ─────────────────────────────────────────── */}
+      <div className="space-y-5 px-4 pt-4">
 
       <section className="overflow-hidden rounded-[28px] border border-white/6 bg-[linear-gradient(180deg,#171717_0%,#111111_100%)]">
         <div className="flex items-center justify-between border-b border-white/6 px-5 py-4">
@@ -877,6 +875,7 @@ export const Calendar: React.FC = () => {
       </section>
 
       {(viewMode === 'month' || (viewMode === 'week' && visibleWeekDays.length > 0)) && renderSelectedDayPanel()}
+      </div>
     </div>
   );
 };

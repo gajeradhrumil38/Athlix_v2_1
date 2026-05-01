@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { CheckCircle2, Eye, EyeOff, Loader2, X } from 'lucide-react';
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { z } from 'zod';
-import { createClient, createPasswordResetClient } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase';
 import { stashDashboardSessionTokens } from '@/lib/dashboard-session-bridge';
 
 const ATTEMPT_STORAGE_KEY = 'athlix_login_guard_v2';
@@ -62,7 +62,7 @@ export default function LoginPage() {
   const [attemptState, setAttemptState] = useState<AttemptState>(defaultAttemptState);
   const [failedHint, setFailedHint] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [oauthSubmitting, setOauthSubmitting] = useState<null | 'google' | 'apple'>(null);
+  const [oauthSubmitting, setOauthSubmitting] = useState<null | 'apple'>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showAlreadyExistsPrompt, setShowAlreadyExistsPrompt] = useState(false);
@@ -114,26 +114,8 @@ export default function LoginPage() {
     }
   };
 
-  const waitForSessionTokens = async (): Promise<SessionTokens | null> => {
-    const deadline = Date.now() + 2500;
-    while (Date.now() < deadline) {
-      const { data } = await supabase.auth.getSession();
-      if (data.session?.access_token && data.session?.refresh_token) {
-        return {
-          accessToken: data.session.access_token,
-          refreshToken: data.session.refresh_token,
-        };
-      }
-      await new Promise((resolve) => window.setTimeout(resolve, 120));
-    }
-    return null;
-  };
-
-  const redirectAfterSuccess = async (path: string) => {
-    await new Promise((resolve) => window.setTimeout(resolve, 450));
-    const tokens = await waitForSessionTokens();
+  const redirectAfterSuccess = (path: string, tokens: SessionTokens | null) => {
     stashDashboardSessionTokens(tokens);
-    // Use a full navigation so the server reads fresh auth cookies on first load.
     window.location.replace(path);
   };
 
@@ -145,25 +127,23 @@ export default function LoginPage() {
       setForgotMessageType('error');
       return;
     }
-    if (!supabase) {
-      setForgotMessage('Connection issue. Please try again.');
-      setForgotMessageType('error');
-      return;
-    }
     setForgotSending(true);
     setForgotMessage(null);
-    // Use the implicit-flow client so the email link contains a token_hash
-    // instead of a PKCE code. Token links work in any browser/email app —
-    // they don't require the code_verifier cookie that PKCE links need.
-    const resetClient = createPasswordResetClient();
-    const { error } = await resetClient.auth.resetPasswordForEmail(candidateEmail, {
-      // Clean URL — no query params — so it matches exactly what's in the
-      // Supabase Dashboard → Auth → URL Configuration → Redirect URLs list.
-      redirectTo: `${window.location.origin}/auth/confirm`,
+    const response = await fetch('/api/auth/reset-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: candidateEmail }),
     });
+
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null;
     setForgotSending(false);
-    if (error) {
-      setForgotMessage('Could not send reset email. Try again.');
+
+    if (!response.ok) {
+      const retryAfterSeconds = Number(response.headers.get('Retry-After') || '0');
+      if (retryAfterSeconds > 0) {
+        setForgotCountdown(Math.min(retryAfterSeconds, 3600));
+      }
+      setForgotMessage(payload?.error || 'Could not send reset email. Try again.');
       setForgotMessageType('error');
       return;
     }
@@ -183,30 +163,50 @@ export default function LoginPage() {
     setErrorMessage(null);
     setForgotMessage(null);
     setSubmitting(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: sanitizedEmail, password: sanitizedPassword });
-    if (error) {
-      const genericMessage = getGenericAuthError(error.message || '', error.status);
-      markFailedAttempt(genericMessage.includes('Too many attempts'));
+    const response = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: sanitizedEmail,
+        password: sanitizedPassword,
+      }),
+    });
+    const payload = (await response.json().catch(() => null)) as
+      | { error?: string; tokens?: SessionTokens | null }
+      | null;
+
+    if (!response.ok) {
+      const genericMessage = getGenericAuthError(payload?.error || '', response.status);
+      markFailedAttempt(response.status === 429 || genericMessage.includes('Too many attempts'));
       setPassword('');
       setSubmitting(false);
-      setErrorBanner(genericMessage);
+      setErrorBanner(payload?.error || genericMessage);
       return;
     }
+
+    const tokens =
+      payload?.tokens?.accessToken && payload?.tokens?.refreshToken
+        ? payload.tokens
+        : null;
+
     saveRememberPreference(sanitizedEmail);
     clearFailedAttempts();
     setSubmitting(false);
     setSuccessMessage('Welcome back!');
-    void redirectAfterSuccess(redirectPath);
+    redirectAfterSuccess(redirectPath, tokens);
   };
 
-  const handleOAuthLogin = async (provider: 'google' | 'apple') => {
+  const handleAppleLogin = async () => {
     if (!supabase) { setErrorBanner('Connection issue. Please try again.'); return; }
     if (isLocked) { setErrorBanner('Too many attempts. Try again in 15 minutes.'); return; }
     setErrorMessage(null);
-    setOauthSubmitting(provider);
+    setOauthSubmitting('apple');
+    const callbackUrl =
+      `${window.location.origin}/auth/callback` +
+      (redirectPath !== '/dashboard' ? `?next=${encodeURIComponent(redirectPath)}` : '');
     const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: { redirectTo: 'https://athlix-v2-1.vercel.app/auth/callback' },
+      provider: 'apple',
+      options: { redirectTo: callbackUrl },
     });
     if (error) { setOauthSubmitting(null); setErrorBanner('Connection issue. Please try again.'); }
   };
@@ -555,39 +555,20 @@ export default function LoginPage() {
               )}
             </AnimatePresence>
 
-            {/* Divider */}
-            <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.18em] text-[#444]">
-              <span className="h-px flex-1 bg-[#2a2a2a]" />
-              <span>or continue with</span>
-              <span className="h-px flex-1 bg-[#2a2a2a]" />
-            </div>
+            {showApple && (
+              <>
+                {/* Divider */}
+                <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.18em] text-[#444]">
+                  <span className="h-px flex-1 bg-[#2a2a2a]" />
+                  <span>or continue with</span>
+                  <span className="h-px flex-1 bg-[#2a2a2a]" />
+                </div>
 
-            {/* OAuth */}
-            <div className="space-y-3">
-              <button
-                type="button"
-                onClick={() => handleOAuthLogin('google')}
-                disabled={disableActions}
-                className="flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-[#ddd] bg-white text-[14px] font-medium text-[#111] transition hover:bg-[#f5f5f5] disabled:opacity-50"
-              >
-                {oauthSubmitting === 'google'
-                  ? <Loader2 className="h-4 w-4 animate-spin text-[#888]" />
-                  : (
-                    <svg width="18" height="18" viewBox="0 0 24 24">
-                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                    </svg>
-                  )
-                }
-                Continue with Google
-              </button>
-
-              {showApple && (
+                {/* OAuth */}
+                <div className="space-y-3">
                 <button
                   type="button"
-                  onClick={() => handleOAuthLogin('apple')}
+                  onClick={() => handleAppleLogin()}
                   disabled={disableActions}
                   className="flex h-12 w-full items-center justify-center gap-3 rounded-lg bg-black text-[14px] font-medium text-white border border-[#333] transition hover:bg-[#111] disabled:opacity-50"
                 >
@@ -597,8 +578,9 @@ export default function LoginPage() {
                   }
                   Continue with Apple
                 </button>
-              )}
-            </div>
+                </div>
+              </>
+            )}
 
             {/* Footer links */}
             <p className="text-center text-[13px] text-[#666]">
