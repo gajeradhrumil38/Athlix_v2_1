@@ -318,8 +318,8 @@ export const ActiveRun: React.FC = () => {
   return (
     <div className="relative h-screen w-full overflow-hidden" style={{ background: '#0d0f14' }}>
 
-      {/* ── Full-bleed map ── */}
-      <div className="absolute inset-0">
+      {/* ── Full-bleed map — isolation: isolate keeps Leaflet's internal z-indices (200-1000) from escaping into our stacking context ── */}
+      <div className="absolute inset-0" style={{ isolation: 'isolate', zIndex: 0 }}>
         <RunMap path={path} currentPosition={currentPosition} />
       </div>
 
@@ -328,8 +328,9 @@ export const ActiveRun: React.FC = () => {
 
       {/* ── Top bar — always visible ── */}
       <div
-        className="absolute left-0 right-0 top-0 z-20 flex items-center justify-between px-4"
+        className="absolute left-0 right-0 top-0 flex items-center justify-between px-4"
         style={{
+          zIndex: 50,
           paddingTop: 'max(14px, env(safe-area-inset-top))',
           paddingBottom: 12,
           background: 'linear-gradient(to bottom, rgba(13,15,20,0.85) 0%, transparent 100%)',
@@ -373,8 +374,8 @@ export const ActiveRun: React.FC = () => {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full px-5 py-2 backdrop-blur-md"
-            style={{ background: 'rgba(13,15,20,0.7)', border: '1px solid rgba(200,255,0,0.2)' }}
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full px-5 py-2 backdrop-blur-md"
+            style={{ zIndex: 50, background: 'rgba(13,15,20,0.7)', border: '1px solid rgba(200,255,0,0.2)' }}
           >
             <span className="text-[22px] font-black tabular-nums text-[var(--accent)]">
               {displayDistance.toFixed(2)}&nbsp;{distanceUnit}
@@ -385,8 +386,9 @@ export const ActiveRun: React.FC = () => {
 
       {/* ── Bottom gradient panel ── */}
       <div
-        className="absolute bottom-0 left-0 right-0 z-20 flex flex-col gap-3 px-4 pt-12 pb-6"
+        className="absolute bottom-0 left-0 right-0 flex flex-col gap-3 px-4 pt-12 pb-6"
         style={{
+          zIndex: 50,
           paddingBottom: 'max(24px, env(safe-area-inset-bottom))',
           background: 'linear-gradient(to top, #0d0f14 0%, #0d0f14 68%, rgba(13,15,20,0.85) 85%, transparent 100%)',
         }}

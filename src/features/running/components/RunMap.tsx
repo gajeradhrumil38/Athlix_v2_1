@@ -46,6 +46,10 @@ export const RunMap: React.FC<RunMapProps> = ({ path, currentPosition }) => {
 
   return (
     <div className="h-full w-full overflow-hidden">
+      <style>{`
+        .leaflet-tile { will-change: transform; }
+        .leaflet-zoom-anim .leaflet-zoom-animated { will-change: transform; }
+      `}</style>
       <MapContainer
         center={center ?? DEFAULT_CENTER}
         zoom={16}
@@ -55,6 +59,8 @@ export const RunMap: React.FC<RunMapProps> = ({ path, currentPosition }) => {
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
+          keepBuffer={6}
+          updateWhenZooming={false}
         />
 
         <MapAutoCenter center={center} />
