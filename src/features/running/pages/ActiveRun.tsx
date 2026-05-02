@@ -367,26 +367,9 @@ export const ActiveRun: React.FC = () => {
         </button>
       </div>
 
-      {/* ── Live distance badge (while running) ── */}
-      <AnimatePresence>
-        {isRunning && currentPosition && (
-          <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full px-5 py-2 backdrop-blur-md"
-            style={{ zIndex: 50, background: 'rgba(13,15,20,0.7)', border: '1px solid rgba(200,255,0,0.2)' }}
-          >
-            <span className="text-[22px] font-black tabular-nums text-[var(--accent)]">
-              {displayDistance.toFixed(2)}&nbsp;{distanceUnit}
-            </span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* ── Bottom gradient panel ── */}
       <div
-        className="absolute bottom-0 left-0 right-0 flex flex-col gap-3 px-4 pt-12 pb-6"
+        className="absolute bottom-0 left-0 right-0 flex flex-col gap-2.5 px-4 pt-8"
         style={{
           zIndex: 50,
           paddingBottom: 'max(24px, env(safe-area-inset-bottom))',
@@ -401,9 +384,9 @@ export const ActiveRun: React.FC = () => {
             { label: 'PACE', value: displayPace > 0 ? formatPace(displayPace) : '--:--', unit: `/${distanceUnit}` },
           ].map(({ label, value, unit }, i) => (
             <div key={i} className="flex flex-col items-center gap-0.5">
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--accent)]/80">{label}</span>
-              <span className="text-[28px] font-black tabular-nums leading-none text-white">{value}</span>
-              {unit ? <span className="text-[11px] font-bold text-white/30">{unit}</span> : <span className="h-4" />}
+              <span className="text-[9px] font-black uppercase tracking-[0.18em] text-[var(--accent)]/80">{label}</span>
+              <span className="font-victory text-[32px] font-black tabular-nums leading-none text-white">{value}</span>
+              {unit ? <span className="text-[11px] font-bold text-white/30">{unit}</span> : <span className="h-[18px]" />}
             </div>
           ))}
         </div>
@@ -456,42 +439,44 @@ export const ActiveRun: React.FC = () => {
 
           {/* Running */}
           {isRunning && !isPaused && (
-            <motion.div key="running" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex gap-3">
+            <motion.div key="running" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex gap-2.5">
               <button
                 onClick={pauseRun}
-                className="flex h-14 flex-1 items-center justify-center gap-2 rounded-full text-[14px] font-black text-white transition-all active:scale-[0.97]"
-                style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.12)' }}
+                className="flex h-14 w-[120px] shrink-0 items-center justify-center gap-2 rounded-full transition-all active:scale-[0.95]"
+                style={{ background: 'rgba(255,255,255,0.07)', border: '1.5px solid rgba(255,255,255,0.18)' }}
               >
-                <Pause className="h-5 w-5" />
-                Pause
+                <Pause className="h-[18px] w-[18px] fill-white text-white" />
+                <span className="font-victory text-[16px] font-black tracking-wide text-white">Pause</span>
               </button>
-              <SlideControl
-                label="SLIDE TO STOP"
-                icon={<Square className="h-4 w-4 fill-white text-white" />}
-                onConfirm={() => { void handleStop(); }}
-                danger
-              />
+              <div className="flex-1">
+                <SlideControl
+                  label="SLIDE TO STOP"
+                  icon={<Square className="h-4 w-4 fill-white text-white" />}
+                  onConfirm={() => { void handleStop(); }}
+                  danger
+                />
+              </div>
             </motion.div>
           )}
 
           {/* Paused */}
           {isRunning && isPaused && (
-            <motion.div key="paused" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex gap-3">
+            <motion.div key="paused" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex gap-2.5">
               <button
                 onClick={resumeRun}
-                className="flex h-14 flex-1 items-center justify-center gap-2 rounded-full text-[14px] font-black text-black transition-all active:scale-[0.97]"
+                className="flex h-14 flex-1 items-center justify-center gap-2 rounded-full text-black transition-all active:scale-[0.97]"
                 style={{ background: 'var(--accent)' }}
               >
                 <Play className="h-5 w-5 fill-black" />
-                Resume
+                <span className="font-victory text-[16px] font-black tracking-wide">Resume</span>
               </button>
               <button
                 onClick={() => { void handleStop(); }}
-                className="flex h-14 flex-1 items-center justify-center gap-2 rounded-full text-[14px] font-black text-white transition-all active:scale-[0.97]"
+                className="flex h-14 flex-1 items-center justify-center gap-2 rounded-full text-white transition-all active:scale-[0.97]"
                 style={{ background: 'rgba(239,68,68,0.85)' }}
               >
                 <Square className="h-4 w-4 fill-white" />
-                Finish
+                <span className="font-victory text-[16px] font-black tracking-wide">Finish</span>
               </button>
             </motion.div>
           )}

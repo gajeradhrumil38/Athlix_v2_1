@@ -47,20 +47,27 @@ export const RunMap: React.FC<RunMapProps> = ({ path, currentPosition }) => {
   return (
     <div className="h-full w-full overflow-hidden">
       <style>{`
+        /* Match CARTO dark tile background — unloaded tiles are dark, not white */
+        .leaflet-container { background: #0d0f14 !important; }
+        /* Promote tiles to their own compositor layer to avoid blink on zoom */
         .leaflet-tile { will-change: transform; }
         .leaflet-zoom-anim .leaflet-zoom-animated { will-change: transform; }
+        /* We show attribution in the app footer — hide Leaflet's duplicate */
+        .leaflet-control-attribution { display: none !important; }
       `}</style>
       <MapContainer
         center={center ?? DEFAULT_CENTER}
         zoom={16}
-        style={{ height: '100%', width: '100%' }}
+        style={{ height: '100%', width: '100%', background: '#0d0f14' }}
         zoomControl={false}
+        preferCanvas
       >
         <TileLayer
           url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
-          keepBuffer={6}
+          keepBuffer={8}
           updateWhenZooming={false}
+          updateWhenIdle
         />
 
         <MapAutoCenter center={center} />
