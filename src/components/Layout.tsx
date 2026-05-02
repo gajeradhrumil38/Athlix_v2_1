@@ -11,6 +11,7 @@ const navItems: { path: string; icon: IconName; label: string }[] = [
   { path: '/templates', icon: 'Clipboard', label: 'Templates' },
   { path: '/timeline',  icon: 'History',   label: 'Timeline'  },
   { path: '/progress',  icon: 'Trending',  label: 'Progress'  },
+  { path: '/run',       icon: 'Run',       label: 'Run'       },
   { path: '/settings',  icon: 'Settings',  label: 'Settings'  },
 ];
 
@@ -18,6 +19,7 @@ const mobileNavItems: { path: string; icon: IconName; label: string }[] = [
   { path: '/',         icon: 'Home',     label: 'Home'     },
   { path: '/progress', icon: 'Activity', label: 'Progress' },
   { path: '/calendar', icon: 'Calendar', label: 'Calendar' },
+  { path: '/run',      icon: 'Run',      label: 'Run'      },
   { path: '/settings', icon: 'More',     label: 'More'     },
 ];
 
@@ -28,7 +30,7 @@ export const Layout: React.FC = () => {
     typeof window === 'undefined' ? 0 : window.innerHeight,
   );
   const [tappedTab, setTappedTab] = useState<string | null>(null);
-  const isImmersiveRoute = location.pathname === '/log';
+  const isImmersiveRoute = location.pathname === '/log' || location.pathname === '/run';
   const isHomeRoute = location.pathname === '/';
   const swipeStartRef = useRef<{ x: number; y: number; ts: number } | null>(null);
   const tapTimerRef = useRef<number | null>(null);
