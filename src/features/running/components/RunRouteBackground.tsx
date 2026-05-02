@@ -1,7 +1,8 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import type { GpsPoint } from '../utils/gpsCalculations';
+import { douglasPeucker, catmullRomPath } from '../utils/gpsCalculations';
 
 const FALLBACK: [number, number] = [28.6139, 77.209];
 
@@ -24,6 +25,13 @@ export const RunRouteBackground: React.FC<{ path: GpsPoint[] }> = ({ path }) => 
           path.reduce((s, p) => s + p.lng, 0) / path.length,
         ]
       : FALLBACK;
+
+  // Simplify then smooth the full saved route for the post-run background view.
+  const smoothPath = useMemo(() => {
+    if (path.length < 2) return path.map(p => [p.lat, p.lng] as [number, number]);
+    const simplified = douglasPeucker(path, 2.5e-5); // ~2.8 m tolerance
+    return catmullRomPath(simplified, 8);
+  }, [path]);
 
   return (
     <div
@@ -54,9 +62,9 @@ export const RunRouteBackground: React.FC<{ path: GpsPoint[] }> = ({ path }) => 
             keepBuffer={4}
             updateWhenZooming={false}
           />
-          {path.length > 1 && (
+          {smoothPath.length > 1 && (
             <Polyline
-              positions={path.map((p) => [p.lat, p.lng] as [number, number])}
+              positions={smoothPath}
               pathOptions={{ color: '#C8FF00', weight: 8, opacity: 1 }}
             />
           )}

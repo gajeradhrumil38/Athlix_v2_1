@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useGPS } from './useGPS';
-import { calculateDistance, calculatePace } from '../utils/gpsCalculations';
+import { calculateDistance, calculatePace, GpsKalmanFilter } from '../utils/gpsCalculations';
 import type { GpsPoint } from '../utils/gpsCalculations';
 
 const MIN_MOVEMENT_METERS = 3;
@@ -44,6 +44,7 @@ export const useRunTracking = (): UseRunTrackingReturn => {
   const distanceRef = useRef(0);
   const skipNextDeltaRef = useRef(false);
   const lastPathSyncAtRef = useRef(0);
+  const kalmanRef = useRef(new GpsKalmanFilter());
 
   const clearTimer = () => {
     if (timerRef.current !== null) {
@@ -71,6 +72,7 @@ export const useRunTracking = (): UseRunTrackingReturn => {
     distanceRef.current = 0;
     skipNextDeltaRef.current = false;
     lastPathSyncAtRef.current = 0;
+    kalmanRef.current.reset();
     setPath([]);
     setTotalDistance(0);
     setElapsedTime(0);
@@ -113,19 +115,21 @@ export const useRunTracking = (): UseRunTrackingReturn => {
       return;
     }
 
+    // Smooth the raw GPS reading before any distance/speed checks.
+    const smoothed = kalmanRef.current.filter(position);
     const last = pathRef.current[pathRef.current.length - 1];
     if (last) {
       if (skipNextDeltaRef.current) {
         skipNextDeltaRef.current = false;
       } else {
-        const delta = calculateDistance(last, position);
+        const delta = calculateDistance(last, smoothed);
 
         const deltaMeters = delta * 1000;
         // Ignore jitter under 3 m
         if (deltaMeters < MIN_MOVEMENT_METERS) return;
 
-        if (typeof last.timestamp === 'number' && typeof position.timestamp === 'number') {
-          const deltaSeconds = (position.timestamp - last.timestamp) / 1000;
+        if (typeof last.timestamp === 'number' && typeof smoothed.timestamp === 'number') {
+          const deltaSeconds = (smoothed.timestamp - last.timestamp) / 1000;
           if (deltaSeconds > 0) {
             const speed = deltaMeters / deltaSeconds;
             // Ignore unrealistic spikes caused by GPS jumps.
@@ -138,8 +142,8 @@ export const useRunTracking = (): UseRunTrackingReturn => {
       }
     }
 
-    pathRef.current.push(position);
-    const now = position.timestamp ?? Date.now();
+    pathRef.current.push(smoothed);
+    const now = smoothed.timestamp ?? Date.now();
     if (
       pathRef.current.length <= 2
       || now - lastPathSyncAtRef.current >= PATH_UI_SYNC_INTERVAL_MS

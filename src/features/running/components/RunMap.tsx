@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import type { GpsPoint } from '../utils/gpsCalculations';
+import { douglasPeucker, catmullRomPath } from '../utils/gpsCalculations';
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -60,10 +61,13 @@ const RunMapView: React.FC<RunMapProps> = ({ path, currentPosition }) => {
   const center: [number, number] | null = currentPosition
     ? [currentPosition.lat, currentPosition.lng]
     : null;
-  const polylinePositions = useMemo(
-    () => path.map((p) => [p.lat, p.lng] as [number, number]),
-    [path],
-  );
+  const polylinePositions = useMemo(() => {
+    if (path.length < 2) return path.map(p => [p.lat, p.lng] as [number, number]);
+    // Light simplification (1.5 m tolerance) — removes collinear points on straight roads.
+    // Catmull-Rom then generates a smooth curve through the remaining waypoints.
+    const simplified = douglasPeucker(path, 1.5e-5);
+    return catmullRomPath(simplified, 6);
+  }, [path]);
 
   return (
     <div className="h-full w-full overflow-hidden">
