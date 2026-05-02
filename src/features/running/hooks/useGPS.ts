@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { calculateDistance } from '../utils/gpsCalculations';
 import type { GpsPoint } from '../utils/gpsCalculations';
 
 interface UseGPSReturn {
@@ -16,6 +17,7 @@ export const useGPS = (): UseGPSReturn => {
   const [errorCode, setErrorCode] = useState<number | null>(null);
   const [tracking, setTracking] = useState(false);
   const watchIdRef = useRef<number | null>(null);
+  const lastPointRef = useRef<GpsPoint | null>(null);
 
   const startTracking = () => {
     if (!window.isSecureContext) {
@@ -37,15 +39,27 @@ export const useGPS = (): UseGPSReturn => {
 
     setError(null);
     setErrorCode(null);
+    lastPointRef.current = null;
     try {
       watchIdRef.current = navigator.geolocation.watchPosition(
         (pos) => {
-          setPosition({
+          const nextPoint: GpsPoint = {
             lat: pos.coords.latitude,
             lng: pos.coords.longitude,
             accuracy: pos.coords.accuracy,
             timestamp: pos.timestamp,
-          });
+          };
+
+          const lastPoint = lastPointRef.current;
+          if (lastPoint) {
+            const movedMeters = calculateDistance(lastPoint, nextPoint) * 1000;
+            const elapsedMs = (nextPoint.timestamp ?? Date.now()) - (lastPoint.timestamp ?? 0);
+            // Ignore dense duplicates to keep map rendering smoother.
+            if (movedMeters < 2 && elapsedMs < 1000) return;
+          }
+
+          lastPointRef.current = nextPoint;
+          setPosition(nextPoint);
           setError(null);
           setErrorCode(null);
           setTracking(true);
@@ -55,7 +69,7 @@ export const useGPS = (): UseGPSReturn => {
           setErrorCode(err.code);
           setTracking(false);
         },
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 },
+        { enableHighAccuracy: true, maximumAge: 1000, timeout: 12000 },
       );
     } catch (watchError: any) {
       setError(watchError?.message || 'Failed to start GPS tracking.');
@@ -71,6 +85,7 @@ export const useGPS = (): UseGPSReturn => {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
+    lastPointRef.current = null;
     setTracking(false);
   };
 

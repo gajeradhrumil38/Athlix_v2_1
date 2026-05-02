@@ -1,14 +1,17 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import type { GpsPoint } from '../utils/gpsCalculations';
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 // Fix Leaflet's broken default icon URLs when bundled with Vite
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconRetinaUrl: markerIcon2x,
+  iconUrl: markerIcon,
+  shadowUrl: markerShadow,
 });
 
 const currentPositionIcon = L.divIcon({
@@ -26,8 +29,22 @@ const currentPositionIcon = L.divIcon({
 
 function MapAutoCenter({ center }: { center: [number, number] | null }) {
   const map = useMap();
+  const lastCenterRef = useRef<[number, number] | null>(null);
+  const lastCenterUpdateAtRef = useRef(0);
+
   useEffect(() => {
-    if (center) map.setView(center, map.getZoom(), { animate: true });
+    if (!center) return;
+
+    const now = Date.now();
+    const lastCenter = lastCenterRef.current;
+    const movedMeters = lastCenter ? map.distance(lastCenter, center) : Number.POSITIVE_INFINITY;
+    const shouldRecenter = movedMeters >= 8 || now - lastCenterUpdateAtRef.current >= 1200;
+
+    if (!shouldRecenter) return;
+
+    map.setView(center, map.getZoom(), { animate: false });
+    lastCenterRef.current = center;
+    lastCenterUpdateAtRef.current = now;
   }, [center, map]);
   return null;
 }
@@ -39,10 +56,14 @@ interface RunMapProps {
 
 const DEFAULT_CENTER: [number, number] = [28.6139, 77.209]; // fallback center
 
-export const RunMap: React.FC<RunMapProps> = ({ path, currentPosition }) => {
+const RunMapView: React.FC<RunMapProps> = ({ path, currentPosition }) => {
   const center: [number, number] | null = currentPosition
     ? [currentPosition.lat, currentPosition.lng]
     : null;
+  const polylinePositions = useMemo(
+    () => path.map((p) => [p.lat, p.lng] as [number, number]),
+    [path],
+  );
 
   return (
     <div className="h-full w-full overflow-hidden">
@@ -72,9 +93,9 @@ export const RunMap: React.FC<RunMapProps> = ({ path, currentPosition }) => {
 
         <MapAutoCenter center={center} />
 
-        {path.length > 1 && (
+        {polylinePositions.length > 1 && (
           <Polyline
-            positions={path.map((p) => [p.lat, p.lng] as [number, number])}
+            positions={polylinePositions}
             pathOptions={{ color: '#C8FF00', weight: 4, opacity: 0.9 }}
           />
         )}
@@ -89,3 +110,8 @@ export const RunMap: React.FC<RunMapProps> = ({ path, currentPosition }) => {
     </div>
   );
 };
+
+export const RunMap = React.memo(
+  RunMapView,
+  (prev, next) => prev.path === next.path && prev.currentPosition === next.currentPosition,
+);

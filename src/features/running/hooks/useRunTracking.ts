@@ -3,6 +3,11 @@ import { useGPS } from './useGPS';
 import { calculateDistance, calculatePace } from '../utils/gpsCalculations';
 import type { GpsPoint } from '../utils/gpsCalculations';
 
+const MIN_MOVEMENT_METERS = 3;
+const MAX_GPS_ACCURACY_METERS = 65;
+const MAX_RUNNING_SPEED_MPS = 12;
+const PATH_UI_SYNC_INTERVAL_MS = 1200;
+
 export interface RunSummary {
   path: GpsPoint[];
   distance: number;
@@ -38,9 +43,10 @@ export const useRunTracking = (): UseRunTrackingReturn => {
   const pathRef = useRef<GpsPoint[]>([]);
   const distanceRef = useRef(0);
   const skipNextDeltaRef = useRef(false);
+  const lastPathSyncAtRef = useRef(0);
 
   const clearTimer = () => {
-    if (timerRef.current) {
+    if (timerRef.current !== null) {
       window.clearInterval(timerRef.current);
       timerRef.current = null;
     }
@@ -64,6 +70,7 @@ export const useRunTracking = (): UseRunTrackingReturn => {
     pathRef.current = [];
     distanceRef.current = 0;
     skipNextDeltaRef.current = false;
+    lastPathSyncAtRef.current = 0;
     setPath([]);
     setTotalDistance(0);
     setElapsedTime(0);
@@ -101,20 +108,45 @@ export const useRunTracking = (): UseRunTrackingReturn => {
   // Track new GPS position → append to path
   useEffect(() => {
     if (!position || !isRunning || isPaused) return;
+
+    if (typeof position.accuracy === 'number' && position.accuracy > MAX_GPS_ACCURACY_METERS) {
+      return;
+    }
+
     const last = pathRef.current[pathRef.current.length - 1];
     if (last) {
       if (skipNextDeltaRef.current) {
         skipNextDeltaRef.current = false;
       } else {
         const delta = calculateDistance(last, position);
+
+        const deltaMeters = delta * 1000;
         // Ignore jitter under 3 m
-        if (delta * 1000 < 3) return;
+        if (deltaMeters < MIN_MOVEMENT_METERS) return;
+
+        if (typeof last.timestamp === 'number' && typeof position.timestamp === 'number') {
+          const deltaSeconds = (position.timestamp - last.timestamp) / 1000;
+          if (deltaSeconds > 0) {
+            const speed = deltaMeters / deltaSeconds;
+            // Ignore unrealistic spikes caused by GPS jumps.
+            if (speed > MAX_RUNNING_SPEED_MPS) return;
+          }
+        }
+
         distanceRef.current += delta;
         setTotalDistance(distanceRef.current);
       }
     }
-    pathRef.current = [...pathRef.current, position];
-    setPath([...pathRef.current]);
+
+    pathRef.current.push(position);
+    const now = position.timestamp ?? Date.now();
+    if (
+      pathRef.current.length <= 2
+      || now - lastPathSyncAtRef.current >= PATH_UI_SYNC_INTERVAL_MS
+    ) {
+      lastPathSyncAtRef.current = now;
+      setPath([...pathRef.current]);
+    }
   }, [position, isRunning, isPaused]);
 
   // If tracking cannot begin due permission denial, end the run gracefully.
