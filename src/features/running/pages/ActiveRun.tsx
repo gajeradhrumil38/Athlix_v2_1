@@ -8,8 +8,10 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { saveWorkout } from '../../../lib/supabaseData';
 import { useRunTracking } from '../hooks/useRunTracking';
 import { RunMap } from '../components/RunMap';
+import { RunRouteBackground } from '../components/RunRouteBackground';
 import { saveRun } from '../utils/storage';
 import { formatDuration, formatPace } from '../utils/gpsCalculations';
+import type { GpsPoint } from '../utils/gpsCalculations';
 
 /* ── Hex-grid GPS loading overlay ──────────────────────────────── */
 const HexOverlay: React.FC<{ show: boolean }> = ({ show }) => (
@@ -178,7 +180,7 @@ export const ActiveRun: React.FC = () => {
   const displayPace = distanceUnit === 'mi' ? pace * 1.609344 : pace;
 
   const [finished, setFinished] = useState<{
-    distance: number; duration: number; pace: number; unit: 'km' | 'mi';
+    distance: number; duration: number; pace: number; unit: 'km' | 'mi'; path: GpsPoint[];
   } | null>(null);
 
   const needsInternet = typeof navigator !== 'undefined' && !navigator.onLine;
@@ -211,7 +213,7 @@ export const ActiveRun: React.FC = () => {
         toast.error(e?.message || 'Run saved locally, sync failed.');
       }
     }
-    setFinished({ distance: displayDist, duration: summary.duration, pace: displayPaceVal, unit: distanceUnit });
+    setFinished({ distance: displayDist, duration: summary.duration, pace: displayPaceVal, unit: distanceUnit, path: summary.path });
   };
 
   /* ── Permission denied ─────────────────────────────────────── */
@@ -273,43 +275,79 @@ export const ActiveRun: React.FC = () => {
   /* ── Run complete ───────────────────────────────────────────── */
   if (finished) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-6 text-center" style={{ background: '#0d0f14' }}>
-        <motion.div
-          initial={{ scale: 0.75, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          className="flex h-20 w-20 items-center justify-center rounded-full"
-          style={{ background: 'var(--accent)' }}
+      <div className="relative flex min-h-screen flex-col overflow-hidden" style={{ background: '#0d0f14' }}>
+
+        {/* Blurred run route map as background */}
+        <RunRouteBackground path={finished.path} />
+
+        {/* Gradient overlay — dark at bottom so text is readable */}
+        <div
+          className="absolute inset-0"
+          style={{ background: 'linear-gradient(to bottom, rgba(13,15,20,0.55) 0%, rgba(13,15,20,0.7) 40%, rgba(13,15,20,0.96) 70%, #0d0f14 85%)' }}
+        />
+
+        {/* Content */}
+        <div
+          className="relative z-10 flex flex-1 flex-col items-center justify-end gap-6 px-6 pb-10 text-center"
+          style={{ paddingBottom: 'max(40px, env(safe-area-inset-bottom))' }}
         >
-          <Square className="h-8 w-8 fill-black text-black" />
-        </motion.div>
-        <div>
-          <p className="text-[11px] font-black uppercase tracking-[0.22em] text-[var(--accent)]">Run Complete</p>
-          <h2 className="mt-1 text-[32px] font-black text-white">
-            {finished.distance.toFixed(2)}&nbsp;{finished.unit}
-          </h2>
-        </div>
-        <div className="w-full rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}>
-          <div className="grid grid-cols-2 divide-x divide-white/10">
-            <div className="flex flex-col items-center gap-1 pr-4">
-              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-white/40">Time</span>
-              <span className="text-[26px] font-black tabular-nums text-white">{formatDuration(finished.duration)}</span>
+          {/* Label */}
+          <motion.p
+            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}
+            className="text-[10px] font-black uppercase tracking-[0.35em] text-[var(--accent)]"
+          >
+            Run Complete
+          </motion.p>
+
+          {/* Big distance */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.25, type: 'spring', stiffness: 220, damping: 20 }}
+            className="flex items-baseline gap-2"
+          >
+            <span className="font-victory text-[72px] font-black leading-none tabular-nums text-white">
+              {finished.distance.toFixed(2)}
+            </span>
+            <span className="font-victory text-[28px] font-black text-white/40">{finished.unit}</span>
+          </motion.div>
+
+          {/* Time + Pace — no card, just floating stats */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}
+            className="flex w-full items-start justify-around"
+          >
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[9px] font-black uppercase tracking-[0.22em] text-white/35">Time</span>
+              <span className="font-victory text-[36px] font-black tabular-nums leading-none text-white">
+                {formatDuration(finished.duration)}
+              </span>
             </div>
-            <div className="flex flex-col items-center gap-1 pl-4">
-              <span className="text-[10px] font-black uppercase tracking-[0.18em] text-white/40">Pace</span>
-              <span className="text-[26px] font-black tabular-nums text-white">
+
+            <div className="mt-2 h-12 w-px bg-white/10" />
+
+            <div className="flex flex-col items-center gap-1">
+              <span className="text-[9px] font-black uppercase tracking-[0.22em] text-white/35">Avg Pace</span>
+              <span className="font-victory text-[36px] font-black tabular-nums leading-none text-white">
                 {finished.pace > 0 ? formatPace(finished.pace) : '--:--'}
               </span>
-              <span className="text-[11px] font-semibold text-white/30">/{finished.unit}</span>
+              <span className="text-[11px] font-bold text-white/30">/{finished.unit}</span>
             </div>
-          </div>
+          </motion.div>
+
+          {/* Done */}
+          <motion.button
+            initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
+            onClick={() => navigate('/')}
+            className="h-14 w-full rounded-full font-victory text-[16px] font-black text-black transition-all active:scale-[0.97]"
+            style={{ background: 'var(--accent)' }}
+          >
+            Done
+          </motion.button>
+
+          <p className="text-[10px] font-semibold text-white/20">
+            © {new Date().getFullYear()} Athlix · Map © OpenStreetMap &amp; CARTO
+          </p>
         </div>
-        <button
-          onClick={() => navigate('/')}
-          className="h-12 w-full rounded-full text-[14px] font-black text-black transition-all active:scale-[0.98]"
-          style={{ background: 'var(--accent)' }}
-        >
-          Done
-        </button>
       </div>
     );
   }
