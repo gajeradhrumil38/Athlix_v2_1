@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format, isSameDay, isSameWeek, isSameMonth, addWeeks, subWeeks, subDays, addDays, addMonths, subMonths, isAfter, startOfDay } from 'date-fns';
 import { MuscleMap, MuscleData } from '../components/home/MuscleMap';
 import { WeeklyRing } from '../components/home/WeeklyRing';
+import { GoalEditSheet } from '../components/home/GoalEditSheet';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
 import { getBodyWeightLogs, getPersonalRecords, getWorkouts } from '../lib/supabaseData';
@@ -117,6 +118,12 @@ export const Home: React.FC = () => {
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
   const [currentPrIndex, setCurrentPrIndex] = useState(0);
+  const [goalDays, setGoalDays] = useState<number>(() => {
+    const stored = localStorage.getItem('athlix:weekly_goal_days');
+    const parsed = stored ? parseInt(stored, 10) : NaN;
+    return !isNaN(parsed) && parsed >= 1 && parsed <= 7 ? parsed : 4;
+  });
+  const [showGoalEdit, setShowGoalEdit] = useState(false);
   const targetWeightUnit = displayUnit as WeightUnit;
 
   const toDisplayExerciseWeight = useCallback((exercise: any) => {
@@ -568,12 +575,20 @@ export const Home: React.FC = () => {
     ),
     weekly_goal: (
       <div key="weekly_goal" className="bg-[var(--bg-surface)] border border-[var(--border)] rounded-[14px] p-[10px_8px] h-full flex flex-col justify-between">
-        <h3 className="text-[9px] uppercase tracking-[1.5px] text-[var(--text-secondary)] font-bold mb-2">WEEKLY GOAL</h3>
-        <WeeklyRing 
-          trainedDays={trainedDaysCount} 
-          goalDays={4} 
-          days={weekDays} 
-          balanceWarning={alert?.type === 'imbalance' ? alert.text : undefined} 
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-[9px] uppercase tracking-[1.5px] text-[var(--text-secondary)] font-bold">WEEKLY GOAL</h3>
+          <button
+            onClick={() => setShowGoalEdit(true)}
+            className="text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--accent)] hover:opacity-80 transition-opacity"
+          >
+            Edit
+          </button>
+        </div>
+        <WeeklyRing
+          trainedDays={trainedDaysCount}
+          goalDays={goalDays}
+          days={weekDays}
+          balanceWarning={alert?.type === 'imbalance' ? alert.text : undefined}
         />
       </div>
     ),
@@ -895,6 +910,18 @@ export const Home: React.FC = () => {
       <div className="max-w-[480px] mx-auto pb-6 flex flex-col gap-2">
         {renderWidgets()}
       </div>
+
+      {showGoalEdit && (
+        <GoalEditSheet
+          current={goalDays}
+          onClose={() => setShowGoalEdit(false)}
+          onConfirm={(days) => {
+            setGoalDays(days);
+            localStorage.setItem('athlix:weekly_goal_days', String(days));
+            setShowGoalEdit(false);
+          }}
+        />
+      )}
     </div>
   );
 };
