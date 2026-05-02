@@ -20,6 +20,7 @@ interface UseRunTrackingReturn {
   elapsedTime: number;
   pace: number;
   error: string | null;
+  errorCode: number | null;
   startRun: () => void;
   pauseRun: () => void;
   resumeRun: () => void;
@@ -139,6 +140,7 @@ export const useRunTracking = (): UseRunTrackingReturn => {
     elapsedTime,
     pace: totalDistance > 0 ? calculatePace(totalDistance, elapsedTime) : 0,
     error,
+    errorCode,
     startRun,
     pauseRun,
     resumeRun,
