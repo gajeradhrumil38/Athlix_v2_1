@@ -45,7 +45,7 @@ export const RunMap: React.FC<RunMapProps> = ({ path, currentPosition }) => {
     : null;
 
   return (
-    <div className="h-full w-full overflow-hidden rounded-xl">
+    <div className="h-full w-full overflow-hidden">
       <MapContainer
         center={center ?? DEFAULT_CENTER}
         zoom={16}
