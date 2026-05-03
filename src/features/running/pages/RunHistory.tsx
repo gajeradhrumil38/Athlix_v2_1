@@ -311,8 +311,9 @@ export const RunHistory: React.FC = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="fixed inset-0 z-50 overflow-hidden"
+            className="fixed inset-0 z-50 overflow-hidden cursor-pointer"
             style={{ background: '#0d0f14' }}
+            onClick={() => setSelected(null)}
           >
             {/* Map — visible in top 65% */}
             <RunRouteBackground path={selected.path} />
@@ -358,10 +359,11 @@ export const RunHistory: React.FC = () => {
               </button>
             </div>
 
-            {/* Stats content — pinned to bottom */}
+            {/* Stats content — pinned to bottom; stop propagation so tapping stats doesn't dismiss */}
             <div
-              className="absolute bottom-0 left-0 right-0 z-10 flex flex-col items-center gap-0 px-6"
+              className="absolute bottom-0 left-0 right-0 z-10 flex flex-col items-center gap-0 px-6 cursor-default"
               style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))' }}
+              onClick={(e) => e.stopPropagation()}
             >
               {/* Date */}
               <motion.p
@@ -420,18 +422,6 @@ export const RunHistory: React.FC = () => {
                   <span className="text-[11px] font-bold text-white/25">/{distanceUnit}</span>
                 </div>
               </motion.div>
-
-              {/* Close button */}
-              <motion.button
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.38 }}
-                onClick={() => setSelected(null)}
-                className="h-14 w-full rounded-full font-victory text-[16px] font-black tracking-[0.2em] text-black transition-all active:scale-[0.97]"
-                style={{ background: 'var(--accent)' }}
-              >
-                CLOSE
-              </motion.button>
 
               <motion.p
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}

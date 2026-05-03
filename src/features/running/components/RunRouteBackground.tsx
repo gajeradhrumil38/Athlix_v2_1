@@ -36,7 +36,7 @@ export const RunRouteBackground: React.FC<{ path: GpsPoint[] }> = ({ path }) => 
   return (
     <div
       className="absolute inset-0 pointer-events-none select-none"
-      style={{ filter: 'blur(2px) brightness(0.28) saturate(0.45)', opacity: 0.95 }}
+      style={{ filter: 'blur(1.5px) brightness(0.58) saturate(1.1)', opacity: 0.98 }}
     >
       <style>{`
         .rrbg .leaflet-container { background: #0d0f14 !important; }
@@ -65,7 +65,7 @@ export const RunRouteBackground: React.FC<{ path: GpsPoint[] }> = ({ path }) => 
           {smoothPath.length > 1 && (
             <Polyline
               positions={smoothPath}
-              pathOptions={{ color: '#C8FF00', weight: 8, opacity: 1 }}
+              pathOptions={{ color: '#C8FF00', weight: 11, opacity: 1 }}
             />
           )}
           <FitRoute path={path} />
