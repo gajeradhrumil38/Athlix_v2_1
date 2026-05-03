@@ -761,7 +761,27 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
             onClose={() => setShowExercisePicker(false)}
             recentExercises={[]}
             onLoadTemplate={(exercises) => {
-              exercises.forEach((ex) => { void handleAddExercise(ex); });
+              // Build ExerciseEntry objects with template defaults pre-filled so the
+              // user only needs to mark sets done — no manual weight/reps entry.
+              const newEntries: ExerciseEntry[] = exercises.map((ex) => ({
+                id: createSetId(),
+                name: ex.name,
+                muscleGroup: ex.muscleGroup,
+                exercise_db_id: ex.exercise_db_id,
+                sets: Array.from({ length: ex.defaultSets ?? 3 }, () => ({
+                  id: createSetId(),
+                  weight: ex.defaultWeight ?? null,
+                  reps: ex.defaultReps ?? null,
+                  done: false,
+                })),
+              }));
+              setWorkout((prev) => {
+                if (!prev) return prev;
+                const existing = new Set(prev.exercises.map((e) => e.name.toLowerCase()));
+                const toAdd = newEntries.filter((e) => !existing.has(e.name.toLowerCase()));
+                return toAdd.length > 0 ? { ...prev, exercises: [...prev.exercises, ...toAdd] } : prev;
+              });
+              setShowExercisePicker(false);
             }}
           />
         )}
