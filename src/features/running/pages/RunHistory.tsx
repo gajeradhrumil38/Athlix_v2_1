@@ -340,14 +340,31 @@ export const RunHistory: React.FC = () => {
                 <ChevronLeft className="h-5 w-5" />
               </button>
 
-              {isDemo(selected) && (
+              {/* Date/time — centered between the two buttons */}
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="flex flex-col items-center gap-0.5"
+              >
                 <span
-                  className="rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-[0.18em]"
-                  style={{ background: 'rgba(13,15,20,0.6)', color: 'rgba(200,255,0,0.6)', border: '1px solid rgba(200,255,0,0.18)' }}
+                  className="text-[11px] font-black uppercase tracking-[0.24em]"
+                  style={{ color: 'var(--accent)' }}
                 >
-                  Cedar Rapids, IA
+                  {format(new Date(selected.timestamp), "EEE, MMM d")}
                 </span>
-              )}
+                <span className="text-[10px] font-semibold text-white/35 tracking-[0.1em]">
+                  {format(new Date(selected.timestamp), "h:mm a")}
+                </span>
+                {isDemo(selected) && (
+                  <span
+                    className="mt-0.5 rounded-full px-2 py-px text-[8px] font-black uppercase tracking-[0.14em]"
+                    style={{ background: 'rgba(200,255,0,0.08)', color: 'rgba(200,255,0,0.5)', border: '1px solid rgba(200,255,0,0.15)' }}
+                  >
+                    Cedar Rapids, IA
+                  </span>
+                )}
+              </motion.div>
 
               <button
                 onClick={() => setConfirmDelete(selected)}
@@ -365,17 +382,6 @@ export const RunHistory: React.FC = () => {
               style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))' }}
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Date */}
-              <motion.p
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.08 }}
-                className="mb-3 text-[10px] font-black uppercase tracking-[0.3em]"
-                style={{ color: 'var(--accent)' }}
-              >
-                {format(new Date(selected.timestamp), "EEEE, MMM d · h:mm a")}
-              </motion.p>
-
               {/* Distance — hero number */}
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
