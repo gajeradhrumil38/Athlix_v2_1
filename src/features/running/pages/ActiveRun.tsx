@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Square, MapPin, AlertCircle, ChevronLeft, LocateOff, Play, Pause, Home } from 'lucide-react';
+import { Square, MapPin, AlertCircle, ChevronLeft, LocateOff, Play, Pause, Home, History } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -338,10 +338,10 @@ export const ActiveRun: React.FC = () => {
           <motion.button
             initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
             onClick={() => navigate('/')}
-            className="h-14 w-full rounded-full font-victory text-[16px] font-black text-black transition-all active:scale-[0.97]"
+            className="h-14 w-full rounded-full font-victory text-[16px] font-black tracking-[0.2em] text-black transition-all active:scale-[0.97]"
             style={{ background: 'var(--accent)' }}
           >
-            Done
+            DONE
           </motion.button>
 
           <p className="text-[10px] font-semibold text-white/20">
@@ -466,12 +466,19 @@ export const ActiveRun: React.FC = () => {
         <AnimatePresence mode="wait">
           {/* Not started */}
           {!isRunning && (
-            <motion.div key="start" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+            <motion.div key="start" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="flex flex-col gap-3">
               <SlideControl
                 label="SLIDE TO START"
                 icon={<Play className="h-5 w-5 fill-black text-black ml-0.5" />}
                 onConfirm={startRun}
               />
+              <button
+                onClick={() => navigate('/run/history')}
+                className="flex items-center justify-center gap-1.5 py-1 text-[12px] font-bold tracking-[0.1em] text-white/35 transition-all active:text-white/60"
+              >
+                <History className="h-3.5 w-3.5" />
+                VIEW RUN HISTORY
+              </button>
             </motion.div>
           )}
 
@@ -484,7 +491,7 @@ export const ActiveRun: React.FC = () => {
                 style={{ background: 'rgba(255,255,255,0.07)', border: '1.5px solid rgba(255,255,255,0.18)' }}
               >
                 <Pause className="h-[18px] w-[18px] fill-white text-white" />
-                <span className="font-victory text-[16px] font-black tracking-wide text-white">Pause</span>
+                <span className="font-victory text-[16px] font-black tracking-[0.18em] text-white uppercase">Pause</span>
               </button>
               <div className="flex-1">
                 <SlideControl
@@ -506,7 +513,7 @@ export const ActiveRun: React.FC = () => {
                 style={{ background: 'var(--accent)' }}
               >
                 <Play className="h-5 w-5 fill-black" />
-                <span className="font-victory text-[16px] font-black tracking-wide">Resume</span>
+                <span className="font-victory text-[16px] font-black tracking-[0.18em] uppercase">Resume</span>
               </button>
               <button
                 onClick={() => { void handleStop(); }}
@@ -514,7 +521,7 @@ export const ActiveRun: React.FC = () => {
                 style={{ background: 'rgba(239,68,68,0.85)' }}
               >
                 <Square className="h-4 w-4 fill-white" />
-                <span className="font-victory text-[16px] font-black tracking-wide">Finish</span>
+                <span className="font-victory text-[16px] font-black tracking-[0.18em] uppercase">Finish</span>
               </button>
             </motion.div>
           )}

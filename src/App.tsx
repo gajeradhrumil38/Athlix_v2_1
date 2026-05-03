@@ -21,6 +21,7 @@ import { Progress } from './legacy-pages/Progress';
 
 import { DashboardLayoutEditor } from './legacy-pages/DashboardLayoutEditor';
 import { ActiveRun } from './features/running/pages/ActiveRun';
+import { RunHistory } from './features/running/pages/RunHistory';
 import { WhoopCallback } from './legacy-pages/WhoopCallback';
 import { ResetPassword } from './legacy-pages/ResetPassword';
 
@@ -59,6 +60,7 @@ const AppRoutes = () => {
         <Route path="settings" element={<Settings />} />
         <Route path="settings/layout" element={<DashboardLayoutEditor />} />
         <Route path="run" element={<ActiveRun />} />
+        <Route path="run/history" element={<RunHistory />} />
       </Route>
     </Routes>
   );
