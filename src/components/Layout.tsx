@@ -30,7 +30,7 @@ export const Layout: React.FC = () => {
     typeof window === 'undefined' ? 0 : window.innerHeight,
   );
   const [tappedTab, setTappedTab] = useState<string | null>(null);
-  const isImmersiveRoute = location.pathname === '/log' || location.pathname === '/run';
+  const isImmersiveRoute = location.pathname === '/log' || location.pathname.startsWith('/run');
   const isHomeRoute = location.pathname === '/';
   const swipeStartRef = useRef<{ x: number; y: number; ts: number } | null>(null);
   const tapTimerRef = useRef<number | null>(null);
