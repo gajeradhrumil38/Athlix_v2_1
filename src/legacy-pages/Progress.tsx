@@ -217,7 +217,24 @@ export const Progress: React.FC = () => {
   const [weightChartView, setWeightChartView] = useState<'day' | 'week' | 'month'>('day');
   const [editEntry, setEditEntry] = useState<LocalBodyWeightLog | null>(null);
   const [editWeight, setEditWeight] = useState('');
-  const [heightCm, setHeightCm] = useState('');
+  const [heightCm, setHeightCm] = useState(() => localStorage.getItem('athlix_height_cm') ?? '');
+  const [heightUnit, setHeightUnit] = useState<'cm' | 'ftin'>(() =>
+    (localStorage.getItem('athlix_height_unit') as 'cm' | 'ftin') ?? 'cm',
+  );
+  const [heightFt, setHeightFt] = useState(() => {
+    const cm = parseFloat(localStorage.getItem('athlix_height_cm') ?? '');
+    if (!cm) return '';
+    const totalIn = cm / 2.54;
+    return String(Math.floor(totalIn / 12));
+  });
+  const [heightIn, setHeightIn] = useState(() => {
+    const cm = parseFloat(localStorage.getItem('athlix_height_cm') ?? '');
+    if (!cm) return '';
+    const totalIn = cm / 2.54;
+    return (totalIn % 12).toFixed(1);
+  });
+  const [heightEditing, setHeightEditing] = useState(() => !localStorage.getItem('athlix_height_cm'));
+  const [showBmiInfo, setShowBmiInfo] = useState(false);
   const [bmiValue, setBmiValue] = useState<string | null>(null);
   const {
     supportsWebBluetooth,
@@ -1533,35 +1550,262 @@ export const Progress: React.FC = () => {
               )}
 
               {/* BMI Calculator */}
-              <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] p-5">
-                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)] mb-4">BMI Calculator</p>
-                <div className="flex gap-3">
-                  <input
-                    type="number" value={heightCm} onChange={(e) => setHeightCm(e.target.value)}
-                    placeholder="Height (cm)"
-                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-[14px] focus:outline-none focus:border-[var(--accent)] transition-colors placeholder:text-white/20"
-                  />
-                  <div className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 flex items-center justify-between">
-                    <span className="text-[var(--text-muted)] text-[12px]">BMI</span>
-                    <span className={`font-black text-[20px] tabular-nums ${
-                      bmiValue
-                        ? parseFloat(bmiValue) < 18.5 ? 'text-sky-400'
-                        : parseFloat(bmiValue) < 25 ? 'text-[var(--accent)]'
-                        : parseFloat(bmiValue) < 30 ? 'text-yellow-400'
-                        : 'text-[var(--red)]'
-                        : 'text-[var(--text-muted)]'
-                    }`}>{bmiValue || '--'}</span>
+              {(() => {
+                const saveHeight = () => {
+                  let cm = '';
+                  if (heightUnit === 'cm') {
+                    cm = heightCm;
+                  } else {
+                    const ft = parseFloat(heightFt) || 0;
+                    const inches = parseFloat(heightIn) || 0;
+                    const totalCm = (ft * 12 + inches) * 2.54;
+                    cm = totalCm > 0 ? totalCm.toFixed(1) : '';
+                    setHeightCm(cm);
+                  }
+                  if (cm) {
+                    localStorage.setItem('athlix_height_cm', cm);
+                    localStorage.setItem('athlix_height_unit', heightUnit);
+                  }
+                  setHeightEditing(false);
+                };
+
+                const bmi = bmiValue ? parseFloat(bmiValue) : null;
+                const bmiColor = !bmi ? 'var(--text-muted)'
+                  : bmi < 18.5 ? '#38bdf8'
+                  : bmi < 25 ? 'var(--accent)'
+                  : bmi < 30 ? '#facc15'
+                  : 'var(--red)';
+                const bmiLabel = !bmi ? null
+                  : bmi < 18.5 ? 'Underweight'
+                  : bmi < 25 ? 'Healthy weight'
+                  : bmi < 30 ? 'Overweight'
+                  : 'Obese';
+
+                // BMI scale bar: range 10–40, mark position for bmi
+                const bmiBarPct = bmi ? Math.min(100, Math.max(0, ((bmi - 10) / 30) * 100)) : null;
+
+                // Ideal weight range for this height (BMI 18.5–24.9)
+                const hM = parseFloat(heightCm) / 100;
+                const idealMin = hM > 0 ? (18.5 * hM * hM) : null;
+                const idealMax = hM > 0 ? (24.9 * hM * hM) : null;
+                const currentWeightKg = weightLogs.length > 0
+                  ? (displayUnit === 'lbs' ? weightLogs[weightLogs.length - 1].weight / 2.20462 : weightLogs[weightLogs.length - 1].weight)
+                  : null;
+                const idealMinDisplay = idealMin ? (displayUnit === 'lbs' ? idealMin * 2.20462 : idealMin) : null;
+                const idealMaxDisplay = idealMax ? (displayUnit === 'lbs' ? idealMax * 2.20462 : idealMax) : null;
+                const weightStatus = currentWeightKg && idealMin && idealMax
+                  ? currentWeightKg < idealMin ? 'below'
+                  : currentWeightKg > idealMax ? 'above'
+                  : 'ideal'
+                  : null;
+
+                return (
+                  <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] p-5 space-y-4">
+
+                    {/* Title row */}
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">BMI Calculator</p>
+                      <button
+                        type="button"
+                        onClick={() => setShowBmiInfo((v) => !v)}
+                        className="flex items-center justify-center h-6 w-6 rounded-full transition-all active:scale-90"
+                        style={{ background: showBmiInfo ? 'rgba(200,255,0,0.12)' : 'rgba(255,255,255,0.06)', border: showBmiInfo ? '1px solid rgba(200,255,0,0.2)' : '1px solid rgba(255,255,255,0.1)' }}
+                        aria-label="What is BMI?"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+                          <circle cx="5" cy="5" r="4.5" stroke={showBmiInfo ? 'var(--accent)' : 'rgba(255,255,255,0.4)'} strokeWidth="0.9" />
+                          <text x="5" y="7.2" textAnchor="middle" fill={showBmiInfo ? 'var(--accent)' : 'rgba(255,255,255,0.4)'} fontSize="6" fontWeight="700" fontFamily="system-ui">i</text>
+                        </svg>
+                      </button>
+                    </div>
+
+                    {/* Info panel */}
+                    {showBmiInfo && (
+                      <div
+                        className="rounded-xl p-3 space-y-1.5"
+                        style={{ background: 'rgba(200,255,0,0.05)', border: '1px solid rgba(200,255,0,0.13)' }}
+                      >
+                        <p className="text-[12px] font-black text-white">What is BMI?</p>
+                        <p className="text-[11px] leading-relaxed text-white/50">
+                          Body Mass Index (BMI) is a simple number calculated from your height and weight. It's a quick screening tool — not a diagnostic — to categorise weight status.
+                        </p>
+                        <div className="grid grid-cols-4 gap-1.5 pt-1">
+                          {[
+                            { label: '< 18.5', tag: 'Under', color: '#38bdf8' },
+                            { label: '18.5–24.9', tag: 'Healthy', color: 'var(--accent)' },
+                            { label: '25–29.9', tag: 'Over', color: '#facc15' },
+                            { label: '≥ 30', tag: 'Obese', color: 'var(--red)' },
+                          ].map(({ label, tag, color }) => (
+                            <div key={tag} className="flex flex-col items-center gap-0.5 rounded-lg py-1.5 px-1" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                              <span className="text-[9px] font-black" style={{ color }}>{tag}</span>
+                              <span className="text-[8px] text-white/30 tabular-nums">{label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Height input / saved display */}
+                    {heightEditing ? (
+                      <div className="space-y-3">
+                        {/* Unit toggle */}
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Height unit</span>
+                          <div
+                            className="flex items-center gap-0.5 ml-auto rounded-lg p-0.5"
+                            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+                          >
+                            {(['cm', 'ftin'] as const).map((u) => (
+                              <button
+                                key={u}
+                                type="button"
+                                onClick={() => setHeightUnit(u)}
+                                className="px-3 py-1 rounded-md text-[11px] font-black transition-all"
+                                style={heightUnit === u ? { background: 'var(--accent)', color: '#000' } : { color: 'rgba(255,255,255,0.35)' }}
+                              >
+                                {u === 'cm' ? 'CM' : 'FT / IN'}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Inputs */}
+                        {heightUnit === 'cm' ? (
+                          <input
+                            type="number" min="100" max="250" step="0.5"
+                            value={heightCm}
+                            onChange={(e) => setHeightCm(e.target.value)}
+                            placeholder="e.g. 175"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-[15px] font-semibold focus:outline-none focus:border-[var(--accent)] transition-colors placeholder:text-white/20"
+                          />
+                        ) : (
+                          <div className="flex gap-2">
+                            <div className="flex-1 relative">
+                              <input
+                                type="number" min="3" max="8" step="1"
+                                value={heightFt}
+                                onChange={(e) => setHeightFt(e.target.value)}
+                                placeholder="5"
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-10 text-white text-[15px] font-semibold focus:outline-none focus:border-[var(--accent)] transition-colors placeholder:text-white/20"
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-bold text-white/30">ft</span>
+                            </div>
+                            <div className="flex-1 relative">
+                              <input
+                                type="number" min="0" max="11" step="0.5"
+                                value={heightIn}
+                                onChange={(e) => setHeightIn(e.target.value)}
+                                placeholder="10"
+                                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-10 text-white text-[15px] font-semibold focus:outline-none focus:border-[var(--accent)] transition-colors placeholder:text-white/20"
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[12px] font-bold text-white/30">in</span>
+                            </div>
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          onClick={saveHeight}
+                          disabled={heightUnit === 'cm' ? !heightCm : (!heightFt && !heightIn)}
+                          className="w-full h-11 rounded-xl text-[13px] font-black tracking-[0.1em] text-black transition-all active:scale-[0.97] disabled:opacity-30"
+                          style={{ background: 'var(--accent)' }}
+                        >
+                          SAVE HEIGHT
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Your Height</p>
+                          <p className="text-[16px] font-black text-white mt-0.5">
+                            {heightUnit === 'ftin' && heightFt
+                              ? `${heightFt}′ ${parseFloat(heightIn || '0').toFixed(0)}″  ·  ${parseFloat(heightCm).toFixed(0)} cm`
+                              : `${parseFloat(heightCm).toFixed(0)} cm`}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setHeightEditing(true)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-black transition-all active:scale-90"
+                          style={{ background: 'rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.5)', border: '1px solid rgba(255,255,255,0.09)' }}
+                        >
+                          <Pencil className="h-3 w-3" /> Edit
+                        </button>
+                      </div>
+                    )}
+
+                    {/* BMI result */}
+                    {bmi !== null && (
+                      <div className="space-y-3">
+                        {/* Number + label */}
+                        <div className="flex items-end justify-between">
+                          <div>
+                            <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)] mb-1">Your BMI</p>
+                            <span className="text-[36px] font-black tabular-nums leading-none" style={{ color: bmiColor }}>{bmiValue}</span>
+                          </div>
+                          <span
+                            className="mb-1 rounded-full px-3 py-1 text-[11px] font-black"
+                            style={{ background: `color-mix(in srgb, ${bmiColor} 12%, transparent)`, color: bmiColor, border: `1px solid color-mix(in srgb, ${bmiColor} 22%, transparent)` }}
+                          >
+                            {bmiLabel}
+                          </span>
+                        </div>
+
+                        {/* Scale bar */}
+                        <div className="relative h-2 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                          <div
+                            className="h-full rounded-full"
+                            style={{
+                              width: '100%',
+                              background: 'linear-gradient(to right, #38bdf8 0%, var(--accent) 30%, #facc15 65%, var(--red) 100%)',
+                            }}
+                          />
+                          {/* Marker */}
+                          {bmiBarPct !== null && (
+                            <div
+                              className="absolute top-1/2 -translate-y-1/2 h-3.5 w-1.5 rounded-full bg-white shadow-lg"
+                              style={{ left: `calc(${bmiBarPct}% - 3px)` }}
+                            />
+                          )}
+                        </div>
+                        <div className="flex justify-between text-[9px] font-semibold text-white/25">
+                          <span>10</span><span>Healthy 18.5–24.9</span><span>40</span>
+                        </div>
+
+                        {/* Weight vs ideal */}
+                        {weightStatus && idealMinDisplay && idealMaxDisplay && (
+                          <div
+                            className="rounded-xl px-4 py-3 flex items-center justify-between"
+                            style={{
+                              background: weightStatus === 'ideal' ? 'rgba(200,255,0,0.06)' : 'rgba(255,255,255,0.04)',
+                              border: `1px solid ${weightStatus === 'ideal' ? 'rgba(200,255,0,0.16)' : 'rgba(255,255,255,0.07)'}`,
+                            }}
+                          >
+                            <div>
+                              <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--text-muted)]">Ideal range for your height</p>
+                              <p className="text-[13px] font-black text-white mt-0.5">
+                                {idealMinDisplay.toFixed(1)} – {idealMaxDisplay.toFixed(1)} {displayUnit}
+                              </p>
+                            </div>
+                            <span
+                              className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black"
+                              style={
+                                weightStatus === 'ideal'
+                                  ? { background: 'rgba(200,255,0,0.12)', color: 'var(--accent)' }
+                                  : weightStatus === 'below'
+                                  ? { background: 'rgba(56,189,248,0.12)', color: '#38bdf8' }
+                                  : { background: 'rgba(239,68,68,0.12)', color: 'var(--red)' }
+                              }
+                            >
+                              {weightStatus === 'ideal' ? '✓ On track' : weightStatus === 'below' ? '↑ Below' : '↓ Above'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                </div>
-                {bmiValue && (
-                  <p className="mt-3 text-[11px] text-[var(--text-muted)]">
-                    {parseFloat(bmiValue) < 18.5 ? 'Underweight'
-                      : parseFloat(bmiValue) < 25 ? 'Healthy weight'
-                      : parseFloat(bmiValue) < 30 ? 'Overweight'
-                      : 'Obese'} · BMI {bmiValue}
-                  </p>
-                )}
-              </div>
+                );
+              })()}
 
               {/* ── Edit weight entry modal ── */}
               {editEntry && (
