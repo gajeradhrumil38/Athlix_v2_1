@@ -904,6 +904,19 @@ export const logBodyWeight = async (userId: string, input: { date: string; weigh
   return nextLog;
 };
 
+export const updateBodyWeightLog = async (
+  _userId: string,
+  id: string,
+  input: { weight: number; unit: 'kg' | 'lbs'; notes?: string | null },
+): Promise<LocalBodyWeightLog> => {
+  const db = readDb();
+  const idx = db.bodyWeightLogs.findIndex((l) => l.id === id);
+  if (idx < 0) throw new Error('Weight log not found');
+  db.bodyWeightLogs[idx] = { ...db.bodyWeightLogs[idx], ...input };
+  writeDb(db);
+  return db.bodyWeightLogs[idx];
+};
+
 export const getPersonalRecords = async (userId: string, options?: { startDate?: string; endDate?: string }) => {
   const db = readDb();
   return db.personalRecords

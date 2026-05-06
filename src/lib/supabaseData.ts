@@ -1637,6 +1637,24 @@ export const logBodyWeight = async (
   return data as LocalBodyWeightLog;
 };
 
+export const updateBodyWeightLog = async (
+  userId: string,
+  id: string,
+  input: { weight: number; unit: 'kg' | 'lbs'; notes?: string | null },
+): Promise<LocalBodyWeightLog> => {
+  if (!hasSupabaseConfig) return localData.updateBodyWeightLog(userId, id, input);
+
+  const { data, error } = await supabase
+    .from('body_weight_logs')
+    .update({ weight: input.weight, unit: input.unit, notes: input.notes ?? null })
+    .eq('id', id)
+    .select()
+    .maybeSingle();
+
+  if (error) throw normalizeError(error, 'Failed to update weight log.');
+  return data as LocalBodyWeightLog;
+};
+
 export const getPersonalRecords = async (
   userId: string,
   options?: { startDate?: string; endDate?: string },

@@ -3,22 +3,26 @@ import { useAuth } from '../contexts/AuthContext';
 import { useHeartRate, type HeartRateSample } from '../contexts/HeartRateContext';
 import {
   addDays,
+  addMonths,
   eachDayOfInterval,
   eachWeekOfInterval,
   endOfMonth,
   endOfWeek,
   format,
   isSameDay,
+  isSameMonth,
+  parseISO,
   startOfDay,
   startOfMonth,
   startOfToday,
   startOfWeek,
   subDays,
+  subMonths,
   subWeeks,
 } from 'date-fns';
 
 import { LineChart, AreaChart, ComposedChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
-import { Trophy, TrendingUp, Activity, Scale, ChevronDown, Heart, Bluetooth, PlugZap, Unplug, Info, Zap, Flame } from 'lucide-react';
+import { Trophy, TrendingUp, Activity, Scale, ChevronDown, ChevronLeft, ChevronRight, CalendarDays, Pencil, Heart, Bluetooth, PlugZap, Unplug, Info, Zap, Flame } from 'lucide-react';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { ExerciseImage } from '../components/shared/ExerciseImage';
@@ -29,7 +33,9 @@ import {
   getPersonalRecords,
   getWorkouts,
   logBodyWeight,
+  updateBodyWeightLog,
 } from '../lib/supabaseData';
+import type { LocalBodyWeightLog } from '../lib/supabaseData';
 import { parseDateAtStartOfDay } from '../lib/dates';
 import { convertWeight, isWeightUnit, type WeightUnit } from '../lib/units';
 
@@ -206,6 +212,11 @@ export const Progress: React.FC = () => {
 
   const [newWeight, setNewWeight] = useState('');
   const [weightDate, setWeightDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => startOfMonth(new Date()));
+  const [weightChartView, setWeightChartView] = useState<'day' | 'week' | 'month'>('day');
+  const [editEntry, setEditEntry] = useState<LocalBodyWeightLog | null>(null);
+  const [editWeight, setEditWeight] = useState('');
   const [heightCm, setHeightCm] = useState('');
   const [bmiValue, setBmiValue] = useState<string | null>(null);
   const {
@@ -664,6 +675,21 @@ export const Progress: React.FC = () => {
       fetchData();
     } catch (error: any) {
       toast.error(error.message || 'Failed to log weight');
+    }
+  };
+
+  const handleEditWeight = async () => {
+    if (!editEntry || !editWeight || !user) return;
+    const weightNum = parseFloat(editWeight);
+    if (isNaN(weightNum)) return;
+    try {
+      await updateBodyWeightLog(user.id, editEntry.id, { weight: weightNum, unit: displayUnit, notes: editEntry.notes });
+      setEditEntry(null);
+      setEditWeight('');
+      toast.success('Entry updated');
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update entry');
     }
   };
 
@@ -1205,13 +1231,100 @@ export const Progress: React.FC = () => {
               {/* Log weight */}
               <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] p-5 space-y-3">
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Log Weight</p>
-                <input
-                  type="date"
-                  max={format(new Date(), 'yyyy-MM-dd')}
-                  value={weightDate}
-                  onChange={(e) => setWeightDate(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[var(--text-primary)] text-[13px] font-medium focus:outline-none focus:border-[var(--accent)] transition-colors [color-scheme:dark]"
-                />
+
+                {/* Date picker trigger */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCalendarMonth(startOfMonth(parseISO(weightDate)));
+                      setShowDatePicker((v) => !v);
+                    }}
+                    className="w-full flex items-center justify-between bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-left transition-colors focus:outline-none"
+                    style={{ borderColor: showDatePicker ? 'var(--accent)' : undefined }}
+                  >
+                    <span className="text-[13px] font-medium text-[var(--text-primary)]">
+                      {format(parseISO(weightDate), 'MMMM d, yyyy')}
+                    </span>
+                    <CalendarDays className="h-4 w-4 text-[var(--text-muted)]" />
+                  </button>
+
+                  {/* Inline calendar dropdown */}
+                  {showDatePicker && (() => {
+                    const today = new Date();
+                    const monthStart = startOfMonth(calendarMonth);
+                    const monthEnd = endOfMonth(calendarMonth);
+                    const gridStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+                    const gridEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
+                    const days = eachDayOfInterval({ start: gridStart, end: gridEnd });
+                    const selected = parseISO(weightDate);
+                    return (
+                      <div
+                        className="absolute left-0 right-0 top-[calc(100%+6px)] z-40 rounded-2xl p-4 shadow-2xl"
+                        style={{ background: '#161a22', border: '1px solid rgba(255,255,255,0.1)' }}
+                      >
+                        {/* Month nav */}
+                        <div className="flex items-center justify-between mb-3">
+                          <button
+                            type="button"
+                            onClick={() => setCalendarMonth((m) => subMonths(m, 1))}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/8 transition-all"
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </button>
+                          <span className="text-[13px] font-black text-white tracking-[0.08em]">
+                            {format(calendarMonth, 'MMMM yyyy')}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setCalendarMonth((m) => addMonths(m, 1))}
+                            disabled={isSameMonth(calendarMonth, today)}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg text-white/50 hover:text-white hover:bg-white/8 transition-all disabled:opacity-25 disabled:cursor-not-allowed"
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </button>
+                        </div>
+
+                        {/* Weekday headers */}
+                        <div className="grid grid-cols-7 mb-1">
+                          {['Su','Mo','Tu','We','Th','Fr','Sa'].map((d) => (
+                            <span key={d} className="text-center text-[9px] font-black uppercase tracking-[0.1em] text-white/25 py-1">{d}</span>
+                          ))}
+                        </div>
+
+                        {/* Day grid */}
+                        <div className="grid grid-cols-7 gap-y-0.5">
+                          {days.map((day) => {
+                            const inMonth = isSameMonth(day, calendarMonth);
+                            const isToday = isSameDay(day, today);
+                            const isSel = isSameDay(day, selected);
+                            const isFuture = day > today;
+                            return (
+                              <button
+                                key={day.toISOString()}
+                                type="button"
+                                disabled={isFuture || !inMonth}
+                                onClick={() => {
+                                  setWeightDate(format(day, 'yyyy-MM-dd'));
+                                  setShowDatePicker(false);
+                                }}
+                                className={`relative mx-auto flex h-8 w-8 items-center justify-center rounded-full text-[12px] font-semibold transition-all
+                                  ${!inMonth ? 'opacity-0 pointer-events-none' : ''}
+                                  ${isFuture && inMonth ? 'opacity-20 cursor-not-allowed' : ''}
+                                  ${isSel ? 'font-black text-black' : isToday ? 'text-[var(--accent)] font-black' : 'text-white/70 hover:bg-white/8 hover:text-white'}
+                                `}
+                                style={isSel ? { background: 'var(--accent)' } : isToday && !isSel ? { boxShadow: '0 0 0 1.5px var(--accent)' } : undefined}
+                              >
+                                {format(day, 'd')}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
                 <div className="flex gap-2">
                   <input
                     type="number" step="0.1" min="20" max="500" value={newWeight}
@@ -1228,6 +1341,17 @@ export const Progress: React.FC = () => {
                   >
                     Save
                   </button>
+                </div>
+
+                {/* Unit caution */}
+                <div
+                  className="flex items-center gap-2 rounded-xl px-3 py-2.5"
+                  style={{ background: 'rgba(200,255,0,0.06)', border: '1px solid rgba(200,255,0,0.14)' }}
+                >
+                  <Info className="h-3.5 w-3.5 shrink-0" style={{ color: 'var(--accent)' }} />
+                  <p className="text-[11px] font-semibold leading-snug" style={{ color: 'rgba(200,255,0,0.75)' }}>
+                    Your unit is set to <span className="font-black">{displayUnit.toUpperCase()}</span> in Settings — make sure you enter weight in {displayUnit === 'lbs' ? 'pounds' : 'kilograms'}.
+                  </p>
                 </div>
               </div>
 
@@ -1266,40 +1390,139 @@ export const Progress: React.FC = () => {
                 );
               })()}
 
-              {/* Chart */}
-              {weightLogs.length > 0 ? (
-                <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Weight Trend</p>
-                    <p className="text-[11px] text-[var(--text-muted)]">{weightLogs.length} {weightLogs.length === 1 ? 'entry' : 'entries'}</p>
+              {/* Entries list */}
+              {weightLogs.length > 0 && (
+                <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] overflow-hidden">
+                  <div className="px-5 pt-4 pb-3 flex items-center justify-between">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">All Entries</p>
+                    <span className="text-[11px] text-[var(--text-muted)]">{weightLogs.length}</span>
                   </div>
-                  <div className="h-52">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={weightLogs} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                        <defs>
-                          <linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#C8FF00" stopOpacity={0.30} />
-                            <stop offset="100%" stopColor="#C8FF00" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
-                        <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false}
-                          tickFormatter={(val) => formatStoredDate(val, 'MMM d')} interval="preserveStartEnd" />
-                        <YAxis domain={['auto', 'auto']} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} width={36} />
-                        <Tooltip
-                          contentStyle={{ backgroundColor: '#1A1D24', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontSize: 12, padding: '8px 12px' }}
-                          cursor={{ stroke: 'var(--accent)', strokeWidth: 1, strokeDasharray: '4 2' }}
-                          labelFormatter={(val) => formatStoredDate(val, 'EEE, MMM d yyyy')}
-                          formatter={(value: number) => [`${value.toFixed(1)} ${displayUnit}`, 'Weight']}
-                        />
-                        <Area type="monotone" dataKey="weight" stroke="var(--accent)" strokeWidth={2.5} fill="url(#weightGrad)"
-                          dot={weightLogs.length <= 20 ? { fill: 'var(--accent)', strokeWidth: 0, r: 3 } : false}
-                          activeDot={{ r: 5, fill: 'var(--accent)', stroke: '#111419', strokeWidth: 2 }} />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                  <div className="max-h-52 overflow-y-auto divide-y divide-white/[0.05]">
+                    {[...weightLogs].reverse().map((log) => (
+                      <div key={log.id} className="flex items-center justify-between px-5 py-3">
+                        <div>
+                          <p className="text-[13px] font-semibold text-white">
+                            {formatStoredDate(log.date, 'EEE, MMM d yyyy')}
+                          </p>
+                          <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                            {log.weight.toFixed(1)} {log.unit ?? displayUnit}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { setEditEntry(log); setEditWeight(String(log.weight)); }}
+                          className="flex h-8 w-8 items-center justify-center rounded-xl transition-all active:scale-90"
+                          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.09)' }}
+                          aria-label="Edit entry"
+                        >
+                          <Pencil className="h-3.5 w-3.5 text-[var(--text-muted)]" />
+                        </button>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ) : (
+              )}
+
+              {/* Chart */}
+              {weightLogs.length > 0 ? (() => {
+                // Aggregate data based on view
+                let chartData: { label: string; weight: number }[] = [];
+                if (weightChartView === 'day') {
+                  chartData = weightLogs.map((l) => ({
+                    label: l.date,
+                    weight: l.weight,
+                  }));
+                } else if (weightChartView === 'week') {
+                  const byWeek: Record<string, number[]> = {};
+                  weightLogs.forEach((l) => {
+                    const d = parseDateAtStartOfDay(l.date);
+                    if (!d) return;
+                    const key = format(startOfWeek(d, { weekStartsOn: 1 }), 'yyyy-MM-dd');
+                    (byWeek[key] = byWeek[key] || []).push(l.weight);
+                  });
+                  chartData = Object.entries(byWeek)
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([key, vals]) => ({
+                      label: key,
+                      weight: vals.reduce((s, v) => s + v, 0) / vals.length,
+                    }));
+                } else {
+                  const byMonth: Record<string, number[]> = {};
+                  weightLogs.forEach((l) => {
+                    const d = parseDateAtStartOfDay(l.date);
+                    if (!d) return;
+                    const key = format(startOfMonth(d), 'yyyy-MM-dd');
+                    (byMonth[key] = byMonth[key] || []).push(l.weight);
+                  });
+                  chartData = Object.entries(byMonth)
+                    .sort(([a], [b]) => a.localeCompare(b))
+                    .map(([key, vals]) => ({
+                      label: key,
+                      weight: vals.reduce((s, v) => s + v, 0) / vals.length,
+                    }));
+                }
+
+                const labelFmt = weightChartView === 'month' ? 'MMM yy' : 'MMM d';
+                const tooltipFmt = weightChartView === 'month' ? 'MMMM yyyy' : weightChartView === 'week' ? "'Wk of' MMM d, yyyy" : 'EEE, MMM d yyyy';
+
+                return (
+                  <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">Weight Trend</p>
+                      <p className="text-[11px] text-[var(--text-muted)]">{weightLogs.length} {weightLogs.length === 1 ? 'entry' : 'entries'}</p>
+                    </div>
+                    <div className="h-52">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                          <defs>
+                            <linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#C8FF00" stopOpacity={0.30} />
+                              <stop offset="100%" stopColor="#C8FF00" stopOpacity={0} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" vertical={false} />
+                          <XAxis dataKey="label" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false}
+                            tickFormatter={(val) => formatStoredDate(val, labelFmt)} interval="preserveStartEnd" />
+                          <YAxis domain={['auto', 'auto']} tick={{ fill: 'var(--text-muted)', fontSize: 10 }} axisLine={false} tickLine={false} width={36} />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: '#1A1D24', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontSize: 12, padding: '8px 12px' }}
+                            cursor={{ stroke: 'var(--accent)', strokeWidth: 1, strokeDasharray: '4 2' }}
+                            labelFormatter={(val) => formatStoredDate(val, tooltipFmt)}
+                            formatter={(value) => [`${(value as number).toFixed(1)} ${displayUnit}`, 'Weight']}
+                          />
+                          <Area type="monotone" dataKey="weight" stroke="var(--accent)" strokeWidth={2.5} fill="url(#weightGrad)"
+                            dot={chartData.length <= 20 ? { fill: 'var(--accent)', strokeWidth: 0, r: 3 } : false}
+                            activeDot={{ r: 5, fill: 'var(--accent)', stroke: '#111419', strokeWidth: 2 }} />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+
+                    {/* View tabs */}
+                    <div className="mt-4 flex justify-center">
+                      <div
+                        className="flex items-center gap-1 p-1 rounded-xl"
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.07)' }}
+                      >
+                        {(['day', 'week', 'month'] as const).map((v) => (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => setWeightChartView(v)}
+                            className="px-4 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-[0.1em] transition-all"
+                            style={
+                              weightChartView === v
+                                ? { background: 'var(--accent)', color: '#000' }
+                                : { color: 'rgba(255,255,255,0.35)' }
+                            }
+                          >
+                            {v}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })() : (
                 <div className="rounded-2xl border border-white/8 bg-[linear-gradient(160deg,#16191F_0%,#111419_100%)] flex flex-col items-center justify-center py-16 text-center">
                   <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center mb-4">
                     <Scale className="w-6 h-6 text-[var(--text-muted)] opacity-40" />
@@ -1339,6 +1562,97 @@ export const Progress: React.FC = () => {
                   </p>
                 )}
               </div>
+
+              {/* ── Edit weight entry modal ── */}
+              {editEntry && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[70] flex items-center justify-center px-5"
+                  style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)' }}
+                  onClick={() => { setEditEntry(null); setEditWeight(''); }}
+                >
+                  <motion.div
+                    initial={{ scale: 0.92, opacity: 0, y: 10 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.92, opacity: 0, y: 10 }}
+                    transition={{ type: 'spring', stiffness: 340, damping: 28 }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-full max-w-[340px] rounded-2xl p-6 flex flex-col gap-5"
+                    style={{ background: '#161a22', border: '1px solid rgba(255,255,255,0.1)' }}
+                  >
+                    {/* Header */}
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="flex h-10 w-10 items-center justify-center rounded-xl shrink-0"
+                        style={{ background: 'rgba(200,255,0,0.09)', border: '1px solid rgba(200,255,0,0.18)' }}
+                      >
+                        <Pencil className="h-4 w-4" style={{ color: 'var(--accent)' }} />
+                      </div>
+                      <div>
+                        <p className="text-[15px] font-black text-white leading-tight">Edit Entry</p>
+                        <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                          {formatStoredDate(editEntry.date, 'EEEE, MMM d yyyy')}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Unit caution */}
+                    <div
+                      className="flex items-start gap-2 rounded-xl px-3 py-2.5"
+                      style={{ background: 'rgba(200,255,0,0.06)', border: '1px solid rgba(200,255,0,0.14)' }}
+                    >
+                      <Info className="h-3.5 w-3.5 mt-px shrink-0" style={{ color: 'var(--accent)' }} />
+                      <p className="text-[11px] font-semibold leading-snug" style={{ color: 'rgba(200,255,0,0.75)' }}>
+                        Entering in <span className="font-black">{displayUnit.toUpperCase()}</span> — your current unit from Settings.
+                      </p>
+                    </div>
+
+                    {/* Weight input */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                        New Weight ({displayUnit})
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="20"
+                          max="500"
+                          autoFocus
+                          value={editWeight}
+                          onChange={(e) => setEditWeight(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleEditWeight()}
+                          className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white text-[16px] font-bold focus:outline-none focus:border-[var(--accent)] transition-colors"
+                        />
+                        <span className="flex items-center text-[12px] font-semibold text-[var(--text-muted)] px-1">{displayUnit}</span>
+                      </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => { setEditEntry(null); setEditWeight(''); }}
+                        className="flex-1 h-12 rounded-full text-[13px] font-black tracking-[0.1em] text-white/70 transition-all active:scale-[0.97]"
+                        style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)' }}
+                      >
+                        CANCEL
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleEditWeight}
+                        disabled={!editWeight}
+                        className="flex-1 h-12 rounded-full text-[13px] font-black tracking-[0.1em] text-black transition-all active:scale-[0.97] disabled:opacity-30"
+                        style={{ background: 'var(--accent)' }}
+                      >
+                        SAVE
+                      </button>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
             </>
           )}
 
