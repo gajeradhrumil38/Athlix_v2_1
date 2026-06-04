@@ -641,6 +641,179 @@ async function executeTool(
   return { success: false, message: `Unknown tool: ${name}` };
 }
 
+/* ── API Key first-launch setup modal ───────────────────────────── */
+const GEMINI_DOCS_URL = 'https://aistudio.google.com/app/apikey';
+
+const ApiKeySetupModal: React.FC<{ onDone: () => void }> = ({ onDone }) => {
+  const [key, setKey] = useState('');
+  const [validating, setValidating] = useState(false);
+  const [error, setError] = useState('');
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [showWhy, setShowWhy] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (step === 2) setTimeout(() => inputRef.current?.focus(), 80);
+  }, [step]);
+
+  const validate = async () => {
+    const trimmed = key.trim();
+    if (!trimmed) { setError('Paste your API key first.'); return; }
+    setValidating(true);
+    setError('');
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${trimmed}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: 'hi' }] }], generationConfig: { maxOutputTokens: 1 } }),
+        },
+      );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const msg: string = (body as any)?.error?.message || `Error ${res.status}`;
+        setError(msg.includes('API_KEY') || res.status === 400 ? 'Invalid key — check and try again.' : msg);
+        return;
+      }
+      localStorage.setItem(GEMINI_KEY_STORAGE, trimmed);
+      setStep(3);
+      setTimeout(onDone, 1200);
+    } catch {
+      setError('Could not reach Gemini. Check your connection.');
+    } finally {
+      setValidating(false);
+    }
+  };
+
+  return (
+    <div
+      className="flex flex-col h-full p-6 gap-5"
+      style={{ fontFamily: 'var(--font-body, Inter, sans-serif)' }}
+    >
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <div className="ai-aurora-static flex items-center justify-center rounded-lg"
+          style={{ width: 36, height: 36, border: '1.5px solid transparent' }}>
+          <Sparkles className="w-4 h-4" style={{ color: 'var(--accent)' }} />
+        </div>
+        <div>
+          <p className="text-[15px] font-bold text-white">Set up AI Coach</p>
+          <p className="text-[12px] text-white/40">Free · 1 min setup</p>
+        </div>
+      </div>
+
+      {/* Steps */}
+      <div className="flex-1 flex flex-col gap-4">
+
+        {/* Step 1 */}
+        <div
+          className="rounded-xl p-4 flex items-start gap-3"
+          style={{ background: step === 1 ? 'var(--bg-elevated)' : 'transparent', border: '1px solid var(--border)' }}
+        >
+          <span className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold"
+            style={{ background: step > 1 ? 'var(--accent)' : 'var(--bg-surface)', color: step > 1 ? '#000' : 'var(--text-secondary)' }}>
+            {step > 1 ? <Check className="w-3 h-3" /> : '1'}
+          </span>
+          <div className="flex-1">
+            <p className="text-[13px] font-semibold text-white/90">Get your free Gemini key</p>
+            <p className="text-[12px] text-white/40 mt-0.5">No credit card · Free tier: 1,500 req/day</p>
+            {step === 1 && (
+              <a
+                href={GEMINI_DOCS_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-semibold transition-colors"
+                style={{ background: 'var(--accent)', color: '#000' }}
+                onClick={() => setStep(2)}
+              >
+                Open Google AI Studio <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+          </div>
+        </div>
+
+        {/* Step 2 */}
+        <div
+          className="rounded-xl p-4 flex items-start gap-3"
+          style={{
+            background: step === 2 ? 'var(--bg-elevated)' : 'transparent',
+            border: `1px solid ${step === 2 ? 'rgba(200,255,0,0.25)' : 'var(--border)'}`,
+            opacity: step < 2 ? 0.4 : 1,
+          }}
+        >
+          <span className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold"
+            style={{ background: step > 2 ? 'var(--accent)' : 'var(--bg-surface)', color: step > 2 ? '#000' : 'var(--text-secondary)' }}>
+            {step > 2 ? <Check className="w-3 h-3" /> : '2'}
+          </span>
+          <div className="flex-1">
+            <p className="text-[13px] font-semibold text-white/90">Paste your key</p>
+            {step >= 2 && (
+              <>
+                <input
+                  ref={inputRef}
+                  type="password"
+                  value={key}
+                  onChange={(e) => { setKey(e.target.value); setError(''); }}
+                  onKeyDown={(e) => e.key === 'Enter' && validate()}
+                  placeholder="AIza…"
+                  className="mt-2 w-full h-9 rounded-lg px-3 text-[13px] text-white/90 outline-none placeholder:text-white/20"
+                  style={{ background: 'var(--bg-base)', border: '1px solid var(--border)' }}
+                />
+                {error && <p className="mt-1.5 text-[12px] text-red-400">{error}</p>}
+                <button
+                  onClick={validate}
+                  disabled={validating}
+                  className="mt-2 inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-[12px] font-semibold disabled:opacity-50 transition-colors"
+                  style={{ background: 'var(--accent)', color: '#000' }}
+                >
+                  {validating ? <><Loader2 className="w-3 h-3 animate-spin" /> Validating…</> : 'Confirm key'}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Step 3 */}
+        <div
+          className="rounded-xl p-4 flex items-start gap-3"
+          style={{
+            background: step === 3 ? 'var(--bg-elevated)' : 'transparent',
+            border: `1px solid ${step === 3 ? 'rgba(200,255,0,0.4)' : 'var(--border)'}`,
+            opacity: step < 3 ? 0.4 : 1,
+          }}
+        >
+          <span className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold"
+            style={{ background: step === 3 ? 'var(--accent)' : 'var(--bg-surface)', color: step === 3 ? '#000' : 'var(--text-secondary)' }}>
+            {step === 3 ? <Check className="w-3 h-3" /> : '3'}
+          </span>
+          <div>
+            <p className="text-[13px] font-semibold text-white/90">
+              {step === 3 ? '🎉 Ready! Opening coach…' : 'Done — chat opens automatically'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Why accordion */}
+      <div>
+        <button
+          onClick={() => setShowWhy((v) => !v)}
+          className="flex items-center gap-1.5 text-[12px] text-white/30 hover:text-white/50 transition-colors"
+        >
+          {showWhy ? '▾' : '▸'} Why do I need this?
+        </button>
+        {showWhy && (
+          <p className="mt-2 text-[12px] text-white/40 leading-relaxed">
+            Your key is stored only on this device — never sent to Athlix servers. All AI requests go
+            directly from your browser to Google's Gemini API. You can revoke it anytime at aistudio.google.com.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
+
 /* ── Main AiChat component ─────────────────────────────────────────── */
 export const AiChat: React.FC = () => {
   const { user, profile } = useAuth();
@@ -700,6 +873,14 @@ export const AiChat: React.FC = () => {
     if (open) setTimeout(() => inputRef.current?.focus(), 320);
   }, [open]);
 
+  const close = () => setOpen(false);
+
+  const openChat = () => {
+    const key = localStorage.getItem(GEMINI_KEY_STORAGE)?.trim() || '';
+    if (!key) { setShowKeySetup(true); setOpen(true); }
+    else { setShowKeySetup(false); setOpen(true); }
+  };
+
   // Inject aurora CSS once
   useEffect(() => {
     if (document.getElementById('athlix-ai-aurora-css')) return;
@@ -711,7 +892,7 @@ export const AiChat: React.FC = () => {
 
   // Allow sidebar / other components to open the chat via a custom event
   useEffect(() => {
-    const handler = () => setOpen(true);
+    const handler = () => openChat();
     window.addEventListener('athlix:open-ai', handler);
     return () => window.removeEventListener('athlix:open-ai', handler);
   }, []);
@@ -722,8 +903,6 @@ export const AiChat: React.FC = () => {
     const id = setInterval(() => setLoadingPhase((p) => (p + 1) % LOADING_PHASES.length), 2200);
     return () => clearInterval(id);
   }, [loading]);
-
-  const close = () => setOpen(false);
 
   /* ── Send message to Gemini ───────────────────────────────────────── */
   const send = useCallback(
@@ -946,7 +1125,7 @@ export const AiChat: React.FC = () => {
   /* ── FAB button (mobile only, sits left of the + FAB) ───────────── */
   const fabButton = (
     <button
-      onClick={() => setOpen(true)}
+      onClick={openChat}
       aria-label="Open AI assistant"
       className="ai-aurora-spin fixed flex items-center justify-center active:scale-95 transition-transform z-[94]"
       style={{
@@ -996,27 +1175,31 @@ export const AiChat: React.FC = () => {
           >
             {/* Drag pill */}
             <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.15)', margin: '10px auto 0', flexShrink: 0 }} />
-            <ChatContent
-              apiKey={apiKey}
-              messages={messages}
-              suggestions={getSuggestions(workouts, foodScans, recentRuns)}
-              input={input}
-              loading={loading}
-              loadingPhase={loadingPhase}
-              copiedIdx={copiedIdx}
-              inputRef={inputRef}
-              bottomRef={bottomRef}
-              onInput={setInput}
-              onKey={handleKey}
-              onSend={() => send()}
-              onSuggest={(q) => send(q)}
-              onLogExercise={handleLogExercise}
-              onShowFormWithName={handleShowFormWithName}
-              onClose={close}
-              onGoSettings={() => { close(); navigate('/settings'); }}
-              onClear={() => setMessages([])}
-              onCopy={handleCopy}
-            />
+            {showKeySetup ? (
+              <ApiKeySetupModal onDone={() => setShowKeySetup(false)} />
+            ) : (
+              <ChatContent
+                apiKey={apiKey}
+                messages={messages}
+                suggestions={getSuggestions(workouts, foodScans, recentRuns)}
+                input={input}
+                loading={loading}
+                loadingPhase={loadingPhase}
+                copiedIdx={copiedIdx}
+                inputRef={inputRef}
+                bottomRef={bottomRef}
+                onInput={setInput}
+                onKey={handleKey}
+                onSend={() => send()}
+                onSuggest={(q) => send(q)}
+                onLogExercise={handleLogExercise}
+                onShowFormWithName={handleShowFormWithName}
+                onClose={close}
+                onGoSettings={() => { close(); navigate('/settings'); }}
+                onClear={() => setMessages([])}
+                onCopy={handleCopy}
+              />
+            )}
           </motion.div>
 
           {/* Desktop: centered modal */}
@@ -1037,27 +1220,31 @@ export const AiChat: React.FC = () => {
               boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
             }}
           >
-            <ChatContent
-              apiKey={apiKey}
-              messages={messages}
-              suggestions={getSuggestions(workouts, foodScans, recentRuns)}
-              input={input}
-              loading={loading}
-              loadingPhase={loadingPhase}
-              copiedIdx={copiedIdx}
-              inputRef={inputRef}
-              bottomRef={bottomRef}
-              onInput={setInput}
-              onKey={handleKey}
-              onSend={() => send()}
-              onSuggest={(q) => send(q)}
-              onLogExercise={handleLogExercise}
-              onShowFormWithName={handleShowFormWithName}
-              onClose={close}
-              onGoSettings={() => { close(); navigate('/settings'); }}
-              onClear={() => setMessages([])}
-              onCopy={handleCopy}
-            />
+            {showKeySetup ? (
+              <ApiKeySetupModal onDone={() => setShowKeySetup(false)} />
+            ) : (
+              <ChatContent
+                apiKey={apiKey}
+                messages={messages}
+                suggestions={getSuggestions(workouts, foodScans, recentRuns)}
+                input={input}
+                loading={loading}
+                loadingPhase={loadingPhase}
+                copiedIdx={copiedIdx}
+                inputRef={inputRef}
+                bottomRef={bottomRef}
+                onInput={setInput}
+                onKey={handleKey}
+                onSend={() => send()}
+                onSuggest={(q) => send(q)}
+                onLogExercise={handleLogExercise}
+                onShowFormWithName={handleShowFormWithName}
+                onClose={close}
+                onGoSettings={() => { close(); navigate('/settings'); }}
+                onClear={() => setMessages([])}
+                onCopy={handleCopy}
+              />
+            )}
           </motion.div>
         </>
       )}
