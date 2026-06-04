@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Send, Loader2, Settings as SettingsIcon, RotateCcw, Copy, Check, Plus, Minus, Trash2 } from 'lucide-react';
+import { Sparkles, X, Send, Loader2, Settings as SettingsIcon, RotateCcw, Copy, Check, Plus, Minus, Trash2, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { format, subDays, differenceInCalendarDays } from 'date-fns';
@@ -18,6 +18,12 @@ import {
   type LocalPersonalRecord,
   type LocalExerciseLibraryItem,
 } from '../../lib/supabaseData';
+import { getFoodScans } from '../../lib/foodData';
+import type { FoodScan } from '../../features/food/types';
+import { getRuns } from '../../features/running/utils/storage';
+import type { SavedRun } from '../../features/running/utils/storage';
+import { whoopService } from '../../features/whoop/services/whoopService';
+import type { WhoopAllData } from '../../features/whoop/services/whoopService';
 
 /* ── Per-set data type ────────────────────────────────────────────── */
 interface SetEntry { reps: number; weight: number; }
@@ -487,6 +493,11 @@ export const AiChat: React.FC = () => {
   const [dataReady, setDataReady] = useState(false);
   const [workouts, setWorkouts] = useState<WorkoutWithExercises[]>([]);
   const [prs, setPrs] = useState<LocalPersonalRecord[]>([]);
+  const [foodScans, setFoodScans] = useState<FoodScan[]>([]);
+  const [recentRuns, setRecentRuns] = useState<SavedRun[]>([]);
+  const [whoopData, setWhoopData] = useState<WhoopAllData | null>(null);
+  const [skincareStats, setSkincareStats] = useState<{ weekPercent: number; streak: number } | null>(null);
+  const [showKeySetup, setShowKeySetup] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const apiKey = localStorage.getItem(GEMINI_KEY_STORAGE)?.trim() || '';
