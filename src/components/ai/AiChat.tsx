@@ -516,30 +516,36 @@ function buildSkincareSection(stats: { weekPercent: number; streak: number } | n
 }
 
 /* ── Context-aware suggestions ──────────────────────────────────────── */
-function getSuggestions(workouts: WorkoutWithExercises[]): string[] {
+function getSuggestions(
+  workouts: WorkoutWithExercises[],
+  foodScans: FoodScan[],
+  recentRuns: SavedRun[],
+): string[] {
   const trainedToday = workouts.some((w) => calDaysSince(w.date) === 0);
-  const hasData = workouts.length > 3;
+  const hasFood = foodScans.length > 0;
+  const hasRuns = recentRuns.length > 0;
+
   if (trainedToday) {
     return [
-      'My weight today is 78 kg',
+      hasFood ? "How are my macros looking today?" : 'My weight today is 78 kg',
       'I stayed clean today',
       'Any recovery tips for what I trained?',
-      'What should I focus on next session?',
+      hasRuns ? 'How is my running pace improving?' : 'What should I focus on next session?',
     ];
   }
-  if (hasData) {
+  if (workouts.length > 3) {
     return [
       'Log my weight as 75 kg',
-      'I stayed strong today',
+      hasFood ? "Am I hitting my protein goals?" : 'I stayed strong today',
       'Which exercises am I plateauing on?',
-      "How's my weekly volume looking?",
+      hasRuns ? "How's my weekly mileage?" : "How's my weekly volume looking?",
     ];
   }
   return [
     'My weight today is 80 kg',
     'I stayed clean today',
     'What should I train today?',
-    'Give me a beginner plan.',
+    hasRuns ? 'Analyse my recent runs' : 'Give me a beginner plan.',
   ];
 }
 
@@ -993,7 +999,7 @@ export const AiChat: React.FC = () => {
             <ChatContent
               apiKey={apiKey}
               messages={messages}
-              suggestions={getSuggestions(workouts)}
+              suggestions={getSuggestions(workouts, foodScans, recentRuns)}
               input={input}
               loading={loading}
               loadingPhase={loadingPhase}
@@ -1034,7 +1040,7 @@ export const AiChat: React.FC = () => {
             <ChatContent
               apiKey={apiKey}
               messages={messages}
-              suggestions={getSuggestions(workouts)}
+              suggestions={getSuggestions(workouts, foodScans, recentRuns)}
               input={input}
               loading={loading}
               loadingPhase={loadingPhase}
