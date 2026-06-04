@@ -141,6 +141,31 @@ const FUNCTION_DECLARATIONS = [
       required: [],
     },
   },
+  {
+    name: 'navigate_to_log',
+    description: "Open the workout logger page. Use when user says 'start a workout', 'let\\'s train', 'open the log', 'I want to log a session', 'take me to the workout page'.",
+    parameters: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'navigate_to_food',
+    description: "Open the food scanner page. Use when user says 'log my meal', 'scan food', 'I want to track what I ate', 'food log', 'open food scanner'.",
+    parameters: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'navigate_to_run',
+    description: "Open the GPS run tracker. Use when user says 'start a run', 'let\\'s go running', 'open the run tracker', 'I want to track my run'.",
+    parameters: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'show_nutrition_summary',
+    description: "Triggered when user asks about their diet, macros, calories, or food intake. Read the NUTRITION section already in your context and provide a data-driven response. Do NOT call this if no NUTRITION section exists in context.",
+    parameters: { type: 'object', properties: {}, required: [] },
+  },
+  {
+    name: 'show_run_summary',
+    description: "Triggered when user asks about their running, pace, distance, mileage, or cardio performance. Read the RUNNING section already in your context. Do NOT call this if no RUNNING section exists in context.",
+    parameters: { type: 'object', properties: {}, required: [] },
+  },
 ];
 
 const LOADING_PHASES = [
@@ -523,6 +548,7 @@ async function executeTool(
   userId: string,
   name: string,
   args: Record<string, unknown>,
+  navigate: ReturnType<typeof useNavigate>,
 ): Promise<ToolResult> {
   const today = format(new Date(), 'yyyy-MM-dd');
 
@@ -581,6 +607,29 @@ async function executeTool(
 
   if (name === 'show_exercise_form') {
     return { success: true, message: '', showForm: true, formInitialName: (args.exercise_name as string) || '' };
+  }
+
+  if (name === 'navigate_to_log') {
+    navigate('/log');
+    return { success: true, message: 'Opening workout logger…' };
+  }
+
+  if (name === 'navigate_to_food') {
+    navigate('/food/scan');
+    return { success: true, message: 'Opening food scanner…' };
+  }
+
+  if (name === 'navigate_to_run') {
+    navigate('/run');
+    return { success: true, message: 'Starting run tracker…' };
+  }
+
+  if (name === 'show_nutrition_summary') {
+    return { success: true, message: '' };
+  }
+
+  if (name === 'show_run_summary') {
+    return { success: true, message: '' };
   }
 
   return { success: false, message: `Unknown tool: ${name}` };
@@ -762,7 +811,7 @@ export const AiChat: React.FC = () => {
           const { name: toolName, args: toolArgs } = fnCallPart.functionCall;
           let toolResult: ToolResult;
           try {
-            toolResult = await executeTool(user.id, toolName, toolArgs);
+            toolResult = await executeTool(user.id, toolName, toolArgs, navigate);
           } catch (e: any) {
             toolResult = { success: false, message: e.message || 'Action failed' };
           }
