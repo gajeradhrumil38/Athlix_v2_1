@@ -292,6 +292,62 @@ function trainingStats(workouts: WorkoutWithExercises[]): string {
   return `${sessionsPerWeek} sessions/week avg (last 28d) · Streak: ${streak} day${streak !== 1 ? 's' : ''}`;
 }
 
+/* ── Parse skincare adherence from localStorage ─────────────────── */
+function parseSkincareStats(): { weekPercent: number; streak: number } | null {
+  try {
+    const raw = localStorage.getItem('athlix_skincare_v1');
+    if (!raw) return null;
+    const state = JSON.parse(raw) as {
+      weeks: Record<string, { days: Record<string, { subcats: Record<string, { products: Array<{ status: string }> }> }> }>;
+    };
+    if (!state?.weeks) return null;
+
+    // Current ISO week ID
+    const now = new Date();
+    const d = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+    const weekId = `${d.getUTCFullYear()}-W${weekNo.toString().padStart(2, '0')}`;
+
+    const weekData = state.weeks[weekId];
+    if (!weekData?.days) return null;
+
+    let done = 0;
+    let total = 0;
+    for (const dayData of Object.values(weekData.days)) {
+      for (const subcat of Object.values(dayData?.subcats ?? {})) {
+        for (const p of subcat.products ?? []) {
+          total++;
+          if (p.status === 'done') done++;
+        }
+      }
+    }
+
+    const weekPercent = total > 0 ? Math.round((done / total) * 100) : 0;
+
+    // Streak: consecutive past days (including today) where all scheduled products are done
+    const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const todayName = DAY_NAMES[(new Date().getDay() + 6) % 7];
+    const todayIndex = DAY_NAMES.indexOf(todayName);
+    let streak = 0;
+    for (let i = todayIndex; i >= 0; i--) {
+      const dayData = weekData.days[DAY_NAMES[i]];
+      if (!dayData?.subcats) break;
+      const allDone = Object.values(dayData.subcats).every((s) =>
+        (s.products ?? []).filter((p) => p.status !== 'skipped').every((p) => p.status === 'done'),
+      );
+      if (allDone) streak++;
+      else break;
+    }
+
+    return { weekPercent, streak };
+  } catch {
+    return null;
+  }
+}
+
 /* ── System prompt builder ──────────────────────────────────────────── */
 function buildSystemPrompt(
   profile: any,
