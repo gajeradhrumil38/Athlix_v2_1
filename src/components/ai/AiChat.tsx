@@ -353,6 +353,10 @@ function buildSystemPrompt(
   profile: any,
   workouts: WorkoutWithExercises[],
   prs: LocalPersonalRecord[],
+  foodScans: FoodScan[],
+  recentRuns: SavedRun[],
+  whoopData: WhoopAllData | null,
+  skincareStats: { weekPercent: number; streak: number } | null,
 ): string {
   const today = format(new Date(), 'EEEE, MMMM d, yyyy');
   const name = profile?.full_name || 'Athlete';
@@ -437,7 +441,53 @@ COACHING RULES:
 2. Plateau on an exercise → suggest rep scheme change or drop set, not just "keep going"
 3. Weekly sets below MEV range → flag it, suggest extra sets
 4. PR opportunity → call it out explicitly with the weight to hit
-5. For nutrition/science questions use Google Search for current evidence`;
+5. For nutrition/science questions use Google Search for current evidence
+
+${buildFoodSection(foodScans)}${buildRunSection(recentRuns)}${buildWhoopSection(whoopData)}${buildSkincareSection(skincareStats)}`;
+}
+
+/* ── Section builders for new data sources ───────────────────────── */
+function buildFoodSection(scans: FoodScan[]): string {
+  if (!scans.length) return '';
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 7);
+  const recent = scans
+    .filter((s) => new Date(s.scan_date) >= cutoff)
+    .slice(0, 14);
+  if (!recent.length) return '';
+  const lines = recent.map(
+    (s) => `  ${s.scan_date} — ${s.food_name}: ${s.total_calories}cal | P:${s.total_protein}g C:${s.total_carbs}g F:${s.total_fat}g`,
+  );
+  return `\n\n━━ NUTRITION (last 7 days) ━━\n${lines.join('\n')}`;
+}
+
+function buildRunSection(runs: SavedRun[]): string {
+  if (!runs.length) return '';
+  const recent = [...runs].sort((a, b) => b.timestamp - a.timestamp).slice(0, 5);
+  const lines = recent.map((r) => {
+    const date = new Date(r.timestamp).toISOString().slice(0, 10);
+    const km = r.distance.toFixed(2);
+    const totalSecs = Math.floor(r.duration / 1000);
+    const dur = `${Math.floor(totalSecs / 60)}:${(totalSecs % 60).toString().padStart(2, '0')}`;
+    const paceMin = Math.floor(r.pace);
+    const paceSec = Math.round((r.pace % 1) * 60).toString().padStart(2, '0');
+    return `  ${date} — ${km}km in ${dur} (${paceMin}:${paceSec}/km avg)`;
+  });
+  return `\n\n━━ RUNNING (last ${recent.length} runs) ━━\n${lines.join('\n')}`;
+}
+
+function buildWhoopSection(data: WhoopAllData | null): string {
+  if (!data?.recovery?.length) return '';
+  const r = data.recovery[0];
+  const s = data.sleep?.[0];
+  const sleepH = s ? (s.total_in_bed_time_milli / 3_600_000).toFixed(1) : '?';
+  const strain = data.cycles?.[0]?.strain_score?.toFixed(1) ?? '?';
+  return `\n\n━━ WHOOP RECOVERY (latest: ${r.date}) ━━\n  Recovery: ${r.recovery_score}% | HRV: ${Math.round(r.hrv_rmssd_milli)}ms | RHR: ${r.resting_heart_rate}bpm | Sleep: ${sleepH}h | Strain: ${strain}`;
+}
+
+function buildSkincareSection(stats: { weekPercent: number; streak: number } | null): string {
+  if (!stats) return '';
+  return `\n\n━━ SKINCARE ━━\n  This week: ${stats.weekPercent}% complete | Streak: ${stats.streak} day${stats.streak !== 1 ? 's' : ''}`;
 }
 
 /* ── Context-aware suggestions ──────────────────────────────────────── */
@@ -628,7 +678,7 @@ export const AiChat: React.FC = () => {
       setLoading(true);
 
       try {
-        const systemPrompt = buildSystemPrompt(profile, workouts, prs);
+        const systemPrompt = buildSystemPrompt(profile, workouts, prs, foodScans, recentRuns, whoopData, skincareStats);
 
         // Only send the last MAX_HISTORY messages to keep prompt tokens low
         const trimmedHistory = history.slice(-MAX_HISTORY);
@@ -770,7 +820,7 @@ export const AiChat: React.FC = () => {
         setLoading(false);
       }
     },
-    [input, loading, apiKey, model, profile, workouts, prs, messages],
+    [input, loading, apiKey, model, profile, workouts, prs, foodScans, recentRuns, whoopData, skincareStats, messages],
   );
 
   const handleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
