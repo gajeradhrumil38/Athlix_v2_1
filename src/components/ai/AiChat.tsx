@@ -609,23 +609,28 @@ export const AiChat: React.FC = () => {
   const apiKey = localStorage.getItem(GEMINI_KEY_STORAGE)?.trim() || '';
   const model = localStorage.getItem(GEMINI_MODEL_STORAGE) || DEFAULT_MODEL;
 
-  /* ── Load workout data once chat opens ────────────────────────────── */
+  /* ── Load all data sources once chat opens ───────────────────────── */
   useEffect(() => {
     if (!open || dataReady || !user?.id) return;
     const load = async () => {
-      try {
-        const startDate = format(subDays(new Date(), 90), 'yyyy-MM-dd');
-        const [ws, ps] = await Promise.all([
-          getWorkouts(user.id, { startDate, limit: 20, includeExercises: true }),
-          getPersonalRecords(user.id),
-        ]);
-        setWorkouts(ws || []);
-        setPrs(ps || []);
-      } catch {
-        // non-fatal — AI still works without context
-      } finally {
-        setDataReady(true);
-      }
+      const startDate = format(subDays(new Date(), 90), 'yyyy-MM-dd');
+      const [workoutRes, prRes, foodRes, whoopRes] = await Promise.allSettled([
+        getWorkouts(user.id, { startDate, limit: 20, includeExercises: true }),
+        getPersonalRecords(user.id),
+        getFoodScans(user.id, 0, 14),
+        whoopService.fetchAll('day').catch(() => null),
+      ]);
+
+      if (workoutRes.status === 'fulfilled') setWorkouts((workoutRes.value as WorkoutWithExercises[]) || []);
+      if (prRes.status === 'fulfilled') setPrs((prRes.value as LocalPersonalRecord[]) || []);
+      if (foodRes.status === 'fulfilled') setFoodScans((foodRes.value as { scans: FoodScan[] }).scans || []);
+      if (whoopRes.status === 'fulfilled' && whoopRes.value) setWhoopData(whoopRes.value as WhoopAllData);
+
+      // Runs and skincare are synchronous (localStorage) — always safe
+      setRecentRuns(getRuns());
+      setSkincareStats(parseSkincareStats());
+
+      setDataReady(true);
     };
     load();
   }, [open, user?.id, dataReady]);
