@@ -10,11 +10,13 @@
  */
 
 import React, { useMemo, useState } from 'react';
-import { CheckCircle2, Edit3, Plus, RotateCcw, Trash2, X, Search } from 'lucide-react';
+import { CheckCircle2, Edit3, Plus, RotateCcw, Trash2, X, Search, SlidersHorizontal } from 'lucide-react';
 import type { DetectedFood, ScanState } from '../types';
 import { calcTotals, searchFood } from '../services/foodRecognition.service';
 import { scoreDish } from '../services/healthScore.service';
 import { DishScoreRing } from './HealthRings';
+import { useNutritionPriority, type MacroKey } from '../hooks/useNutritionPriority';
+import { NutritionPrioritySheet } from './NutritionPrioritySheet';
 
 // ─── Daily value reference ─────────────────────────────────────────────────────
 
@@ -265,6 +267,31 @@ const AddFoodModal: React.FC<{ onAdd: (food: DetectedFood) => void; onClose: () 
   );
 };
 
+// ─── Priority-aware macro tile ────────────────────────────────────────────────
+
+const MacroTile: React.FC<{
+  label: string; val: number; unit: string; color: string;
+  macroKey: MacroKey; isPriority: boolean;
+}> = ({ label, val, unit, color, isPriority }) => (
+  <div className="rounded-xl p-3 text-center"
+    style={{
+      background: isPriority ? `${color}10` : 'rgba(255,255,255,0.04)',
+      border:     isPriority ? `1.5px solid ${color}55` : '1px solid rgba(255,255,255,0.07)',
+      position:   'relative',
+    }}>
+    {isPriority && (
+      <div style={{
+        position: 'absolute', top: 4, right: 5,
+        width: 5, height: 5, borderRadius: '50%', background: color,
+      }} />
+    )}
+    <p style={{ color: isPriority ? color : 'rgba(255,255,255,0.4)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4, fontWeight: 700 }}>{label}</p>
+    <p style={{ color, fontSize: isPriority ? 20 : 16, fontWeight: 900 }}>
+      {val.toFixed(1)}<span style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', marginLeft: 1 }}>{unit}</span>
+    </p>
+  </div>
+);
+
 // ─── Main FoodResults ─────────────────────────────────────────────────────────
 
 interface Props {
@@ -275,9 +302,11 @@ interface Props {
 }
 
 export const FoodResults: React.FC<Props> = ({ state, onSave, onScanAgain, saving }) => {
-  const [foods, setFoods]          = useState<DetectedFood[]>(state.foods);
-  const [showAddModal, setShowAdd] = useState(false);
+  const [foods, setFoods]             = useState<DetectedFood[]>(state.foods);
+  const [showAddModal, setShowAdd]    = useState(false);
+  const [showPriority, setShowPriority] = useState(false);
 
+  const { isPriority } = useNutritionPriority();
   const totals  = useMemo(() => calcTotals(foods), [foods]);
   const noFood  = state.foods.length === 0 && foods.length === 0;
 
@@ -304,29 +333,33 @@ export const FoodResults: React.FC<Props> = ({ state, onSave, onScanAgain, savin
       {foods.length > 0 && (
         <div className="rounded-2xl p-5"
           style={{ background: 'linear-gradient(160deg,#16191F,#111419)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.18em', marginBottom: 12 }}>
-            Total Nutrition
-          </p>
+          <div className="flex items-center justify-between mb-3">
+            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.18em' }}>
+              Total Nutrition
+            </p>
+            <button onClick={() => setShowPriority(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg active:scale-95 transition-all"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <SlidersHorizontal className="w-3 h-3" style={{ color: 'rgba(255,255,255,0.5)' }} />
+              <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 700 }}>Priority</span>
+            </button>
+          </div>
           <div className="flex items-end gap-2 mb-4">
-            <span style={{ color: '#C8FF00', fontSize: 56, fontWeight: 900, lineHeight: 1 }}>
+            <span style={{
+              color: isPriority('calories') ? '#C8FF00' : '#C8FF00',
+              fontSize: 56, fontWeight: 900, lineHeight: 1,
+            }}>
               {totals.total_calories}
             </span>
             <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 16, fontWeight: 600, marginBottom: 8 }}>kcal</span>
+            {isPriority('calories') && (
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#C8FF00', marginBottom: 10 }} />
+            )}
           </div>
           <div className="grid grid-cols-3 gap-2">
-            {[
-              { label: 'Protein', val: totals.total_protein, color: '#60a5fa' },
-              { label: 'Carbs',   val: totals.total_carbs,   color: '#fbbf24' },
-              { label: 'Fat',     val: totals.total_fat,     color: '#f87171' },
-            ].map(({ label, val, color }) => (
-              <div key={label} className="rounded-xl p-3 text-center"
-                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>{label}</p>
-                <p style={{ color, fontSize: 18, fontWeight: 900 }}>
-                  {val.toFixed(1)}<span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginLeft: 1 }}>g</span>
-                </p>
-              </div>
-            ))}
+            <MacroTile label="Protein" val={totals.total_protein} unit="g" color="#60a5fa" macroKey="protein" isPriority={isPriority('protein')} />
+            <MacroTile label="Carbs"   val={totals.total_carbs}   unit="g" color="#fbbf24" macroKey="carbs"   isPriority={isPriority('carbs')} />
+            <MacroTile label="Fat"     val={totals.total_fat}     unit="g" color="#f87171" macroKey="fat"     isPriority={isPriority('fat')} />
           </div>
         </div>
       )}
@@ -385,6 +418,10 @@ export const FoodResults: React.FC<Props> = ({ state, onSave, onScanAgain, savin
 
       {showAddModal && (
         <AddFoodModal onAdd={(f) => setFoods((p) => [...p, f])} onClose={() => setShowAdd(false)} />
+      )}
+
+      {showPriority && (
+        <NutritionPrioritySheet onClose={() => setShowPriority(false)} />
       )}
     </div>
   );

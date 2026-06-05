@@ -1,23 +1,22 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera } from 'lucide-react';
+import { Camera, SlidersHorizontal } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { FoodScan } from '../types';
 import { FoodHistory } from '../components/FoodHistory';
 import { FoodDetailModal } from '../components/FoodDetailModal';
+import { NutritionPrioritySheet } from '../components/NutritionPrioritySheet';
 
 export const FoodHistoryPage: React.FC = () => {
   const navigate = useNavigate();
-  const [selectedScan, setSelectedScan] = useState<FoodScan | null>(null);
-  const [scans, setScans] = useState<FoodScan[]>([]);   // lifted for update/delete
+  const [selectedScan, setSelectedScan]   = useState<FoodScan | null>(null);
+  const [showPriority, setShowPriority]   = useState(false);
 
   const handleDeleted = (id: string) => {
-    setScans((prev) => prev.filter((s) => s.id !== id));
     setSelectedScan(null);
   };
 
   const handleUpdated = (updated: FoodScan) => {
-    setScans((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
     setSelectedScan(updated);
   };
 
@@ -27,17 +26,27 @@ export const FoodHistoryPage: React.FC = () => {
       {/* Page header */}
       <div className="flex items-start justify-between mb-5">
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.22em] mb-1"
-            style={{ color: 'rgba(255,255,255,0.3)' }}>Food History</p>
-          <h1 className="text-[22px] font-bold leading-tight" style={{ color: '#fff', letterSpacing: '-0.02em' }}>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.22em', marginBottom: 4 }}>
+            Food
+          </p>
+          <h1 style={{ color: '#fff', fontSize: 22, fontWeight: 800, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
             Scan History
           </h1>
         </div>
-        <button onClick={() => navigate('/food/scan')}
-          className="flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-[12px] font-bold active:scale-95 transition-all"
-          style={{ background: '#C8FF00', color: '#000' }}>
-          <Camera className="w-3.5 h-3.5" /> New Scan
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowPriority(true)}
+            className="w-9 h-9 rounded-xl flex items-center justify-center active:scale-90 transition-all"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <SlidersHorizontal className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.6)' }} />
+          </button>
+          <button
+            onClick={() => navigate('/food/scan')}
+            className="flex items-center gap-1.5 h-9 px-3.5 rounded-xl text-[12px] font-bold active:scale-95 transition-all"
+            style={{ background: '#C8FF00', color: '#000' }}>
+            <Camera className="w-3.5 h-3.5" /> Scan
+          </button>
+        </div>
       </div>
 
       <FoodHistory onViewDetail={(scan) => setSelectedScan(scan)} />
@@ -55,6 +64,10 @@ export const FoodHistoryPage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {showPriority && (
+        <NutritionPrioritySheet onClose={() => setShowPriority(false)} />
+      )}
     </div>
   );
 };

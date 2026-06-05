@@ -198,24 +198,57 @@ function parseDescription(desc: string): Pick<DetectedFood, 'calories' | 'protei
 
 // ─── Gemini Vision helpers ─────────────────────────────────────────────────────
 
-function fileToBase64(file: File): Promise<string> {
+function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload  = () => resolve((reader.result as string).split(',')[1]);
-    reader.onerror = () => reject(new Error('Failed to read image file for analysis.'));
-    reader.readAsDataURL(file);
+    reader.onerror = () => reject(new Error('Failed to encode image for analysis.'));
+    reader.readAsDataURL(blob);
   });
 }
 
+/**
+ * Prepare an image specifically for Gemini Vision:
+ *  1. Loads via <img> so the browser applies EXIF orientation (fixes sideways gallery photos)
+ *  2. Renders to canvas at up to 1280×1280 (enough detail for food recognition)
+ *  3. Applies a mild enhancement pass: contrast + brightness + saturation
+ *     (helps with dark, flat, or washed-out gallery images)
+ *  4. Always outputs JPEG (most reliable format for Gemini Vision)
+ */
+async function prepareForGemini(file: File): Promise<{ data: string; mimeType: 'image/jpeg' }> {
+  const img = await fileToImage(file); // browser applies EXIF rotation here
+  const { width, height } = calcDims(img.naturalWidth, img.naturalHeight, 1280, 1280);
+  const canvas = document.createElement('canvas');
+  canvas.width  = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+  // Mild enhancement — improves recognition for dark / low-contrast gallery shots
+  ctx.filter = 'contrast(1.12) brightness(1.06) saturate(1.1)';
+  ctx.drawImage(img, 0, 0, width, height);
+  ctx.filter = 'none';
+  const blob = await canvasToBlob(canvas, 0.92);
+  const data = await blobToBase64(blob);
+  return { data, mimeType: 'image/jpeg' };
+}
+
 function extractJsonFromText(text: string): unknown {
-  // Strip markdown code fences (```json ... ``` or ``` ... ```)
-  const stripped = text.replace(/^```(?:json)?\s*/im, '').replace(/\s*```\s*$/im, '').trim();
-  // Find the first valid JSON array in the text (handles leading/trailing prose)
-  const start = stripped.indexOf('[');
-  const end   = stripped.lastIndexOf(']');
-  if (start !== -1 && end !== -1 && end > start) {
-    return JSON.parse(stripped.slice(start, end + 1));
+  // Strip ALL markdown code fence variants (```json, ```, etc.)
+  const stripped = text.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim();
+
+  // Prefer outermost JSON object (new unified Gemini response: {"scanType":...})
+  const objStart = stripped.indexOf('{');
+  const objEnd   = stripped.lastIndexOf('}');
+  if (objStart !== -1 && objEnd > objStart) {
+    try { return JSON.parse(stripped.slice(objStart, objEnd + 1)); } catch { /* fall through */ }
   }
+
+  // Fallback: outermost JSON array (legacy format)
+  const arrStart = stripped.indexOf('[');
+  const arrEnd   = stripped.lastIndexOf(']');
+  if (arrStart !== -1 && arrEnd > arrStart) {
+    return JSON.parse(stripped.slice(arrStart, arrEnd + 1));
+  }
+
   return JSON.parse(stripped);
 }
 
@@ -235,30 +268,31 @@ export async function recognizeFoodWithGemini(imageFile: File): Promise<GeminiSc
   const apiKey = localStorage.getItem('athlix:gemini_api_key');
   if (!apiKey) throw new Error('Gemini API key not set. Open Settings → AI Coach to add your free key.');
 
-  const model      = localStorage.getItem('athlix:gemini_model') || 'gemini-1.5-flash';
-  const base64Data = await fileToBase64(imageFile);
-  const mimeType   = imageFile.type || 'image/jpeg';
+  const model = localStorage.getItem('athlix:gemini_model') || 'gemini-1.5-flash';
+
+  // Preprocess: EXIF-correct, enhance, always JPEG — critical for gallery uploads
+  const { data: base64Data, mimeType } = await prepareForGemini(imageFile);
 
   const prompt =
-    'You are a food & nutrition analyst. Look at this image carefully.\n\n' +
+    'You are a food & nutrition analyst. Carefully examine this image — it may be a freshly taken photo OR a gallery image (older photo, screenshot, any angle, any lighting).\n\n' +
 
-    'CASE A — Nutrition Facts Label\n' +
-    'If you see a printed black-bordered Nutrition Facts panel (the standardised US/EU label on packaged products), extract ALL numbers exactly as printed. Return raw JSON:\n' +
+    'CASE A — Nutrition Facts Panel\n' +
+    'If you see a printed Nutrition Facts label (black-bordered standard panel on packaged food), extract ALL numbers exactly. Return:\n' +
     '{"scanType":"nutrition_label","label":{"productName":"","servingSize":"","servingGrams":100,"servingsPerContainer":"","calories":0,"totalFat":0,"saturatedFat":0,"transFat":0,"cholesterol":0,"sodium":0,"totalCarbs":0,"dietaryFiber":0,"totalSugars":0,"addedSugars":0,"protein":0,"ingredients":"","vitaminD":0,"calcium":0,"iron":0,"potassium":0}}\n\n' +
 
-    'CASE B — Dish or Meal Photo\n' +
-    'If you see actual food, a plate, or a meal, identify every distinct item. Return raw JSON:\n' +
+    'CASE B — Food / Meal Photo\n' +
+    'If you see any food — on a plate, in a bowl, on a surface, in a container, partially eaten, or mixed — identify every distinct item. Include ALL visible food even if partially obscured. Return:\n' +
     '{"scanType":"dish","items":[{"name":"<specific food name>","type":"<whole_food|packaged|restaurant>","servings":<number>,"portionNote":"<size cue>"}]}\n\n' +
 
-    'Rules:\n' +
-    '- Return ONLY the raw JSON above — no markdown fences, no explanation\n' +
-    '- nutrition_label: copy numbers exactly from the label; use 0 if a field is missing\n' +
-    '- dish name: specific enough for a nutrition DB (e.g. "grilled salmon fillet" not "fish")\n' +
-    '- type: "whole_food"=fresh/raw ingredient, "packaged"=boxed/branded product, "restaurant"=prepared dish\n' +
-    '- servings: decimal estimate of portions visible (0.5, 1, 1.5, 2…)\n' +
-    '- portionNote: visible size cue ("large fillet ~180g", "1 cup cooked")\n' +
-    '- If no food is visible: {"scanType":"dish","items":[]}\n' +
-    '- Caloric drinks (juice, milk, smoothie) count as food items';
+    'Strict rules:\n' +
+    '- Return ONLY raw JSON — no markdown fences, no explanation, no other text\n' +
+    '- name: be specific for nutrition DB lookup (e.g. "grilled chicken breast" not "chicken", "white rice cooked" not "rice")\n' +
+    '- type: "whole_food"=fresh/raw ingredient, "packaged"=branded/boxed product, "restaurant"=cooked/prepared dish\n' +
+    '- servings: best decimal estimate of portions visible (0.5, 1, 1.5, 2…); if unclear, use 1\n' +
+    '- portionNote: a size cue visible in the image ("large bowl ~300g", "2 slices", "1 cup cooked")\n' +
+    '- Caloric drinks (juice, milk, smoothie, protein shake) are food items — include them\n' +
+    '- If truly no food is visible (empty plate, non-food scene): {"scanType":"dish","items":[]}\n' +
+    '- DO NOT return empty items if there is food — make your best identification even under imperfect conditions';
 
   const resp = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,

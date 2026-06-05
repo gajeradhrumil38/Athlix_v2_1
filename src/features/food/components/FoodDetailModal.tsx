@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { X, Trash2, Share2, Edit3, Check, UtensilsCrossed, Plus } from 'lucide-react';
 import type { DetectedFood, FoodScan } from '../types';
 import { calcTotals, searchFood } from '../services/foodRecognition.service';
 import { deleteFoodScan, updateFoodScan } from '../../../lib/foodData';
 import { deleteFoodImage } from '../services/foodRecognition.service';
+import { scoreDish } from '../services/healthScore.service';
+import { DishScoreRing } from './HealthRings';
+import { useNutritionPriority } from '../hooks/useNutritionPriority';
 
 interface Props {
   scan: FoodScan;
@@ -155,7 +158,9 @@ export const FoodDetailModal: React.FC<Props> = ({ scan: initialScan, onClose, o
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  const totals = calcTotals(foods);
+  const totals    = useMemo(() => calcTotals(foods), [foods]);
+  const dishScore = useMemo(() => scoreDish(foods),  [foods]);
+  const { isPriority } = useNutritionPriority();
 
   // ── Save edits ─────────────────────────────────────────────────────────
 
@@ -251,28 +256,47 @@ export const FoodDetailModal: React.FC<Props> = ({ scan: initialScan, onClose, o
         )}
 
         {/* Totals summary */}
-        <div className="mx-4 mb-4 rounded-2xl p-4"
+        <div className="mx-4 mb-3 rounded-2xl p-4"
           style={{ background: 'rgba(200,255,0,0.05)', border: '1px solid rgba(200,255,0,0.12)' }}>
           <div className="flex items-end gap-2 mb-3">
             <span className="text-[48px] font-black leading-none tabular-nums" style={{ color: '#C8FF00' }}>
               {totals.total_calories}
             </span>
             <span className="text-[14px] font-semibold mb-1.5" style={{ color: 'rgba(255,255,255,0.4)' }}>kcal total</span>
+            {isPriority('calories') && (
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#C8FF00', marginBottom: 12 }} />
+            )}
           </div>
           <div className="grid grid-cols-3 gap-2">
-            {[
-              { label: 'Protein', val: totals.total_protein, color: '#60a5fa' },
-              { label: 'Carbs',   val: totals.total_carbs,   color: '#fbbf24' },
-              { label: 'Fat',     val: totals.total_fat,     color: '#f87171' },
-            ].map(({ label, val, color }) => (
-              <div key={label} className="rounded-xl p-2.5 text-center"
-                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <p className="text-[9px] uppercase tracking-wider mb-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>{label}</p>
-                <p className="text-[16px] font-black tabular-nums" style={{ color }}>{val.toFixed(1)}g</p>
-              </div>
-            ))}
+            {([
+              { key: 'protein' as const, label: 'Protein', val: totals.total_protein, color: '#60a5fa' },
+              { key: 'carbs'   as const, label: 'Carbs',   val: totals.total_carbs,   color: '#fbbf24' },
+              { key: 'fat'     as const, label: 'Fat',     val: totals.total_fat,     color: '#f87171' },
+            ]).map(({ key, label, val, color }) => {
+              const hi = isPriority(key);
+              return (
+                <div key={label} className="rounded-xl p-2.5 text-center" style={{
+                  background: hi ? `${color}10` : 'rgba(255,255,255,0.04)',
+                  border:     hi ? `1.5px solid ${color}55` : '1px solid rgba(255,255,255,0.07)',
+                }}>
+                  <p className="text-[9px] uppercase tracking-wider mb-0.5"
+                    style={{ color: hi ? color : 'rgba(255,255,255,0.3)', fontWeight: hi ? 800 : 600 }}>{label}</p>
+                  <p className="tabular-nums" style={{ color, fontSize: hi ? 18 : 16, fontWeight: 900 }}>
+                    {val.toFixed(1)}g
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </div>
+
+        {/* Health score */}
+        {foods.length > 0 && (
+          <div className="mx-4 mb-3 rounded-2xl px-4 py-3"
+            style={{ background: '#16191F', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <DishScoreRing score={dishScore} />
+          </div>
+        )}
 
         {/* Food list */}
         <div className="mx-4 mb-3 rounded-2xl overflow-hidden"

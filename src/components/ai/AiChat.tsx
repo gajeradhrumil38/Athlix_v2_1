@@ -621,7 +621,7 @@ async function executeTool(
   }
 
   if (name === 'navigate_to_food') {
-    navigate('/food/scan');
+    navigate('/food/history');
     return { success: true, message: 'Opening food scanner…' };
   }
 

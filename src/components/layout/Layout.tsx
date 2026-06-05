@@ -5,22 +5,23 @@ import { AppIcon, IconName } from '../../config/icons';
 import { AiChat } from '../ai/AiChat';
 
 const navItems: { path: string; icon: IconName; label: string }[] = [
-  { path: '/',          icon: 'Home',      label: 'Home'      },
-  { path: '/calendar',  icon: 'Calendar',  label: 'Calendar'  },
-  { path: '/log',       icon: 'Plus',      label: 'Log'       },
-  { path: '/timeline',  icon: 'History',   label: 'Timeline'  },
-  { path: '/progress',  icon: 'Trending',  label: 'Progress'  },
-  { path: '/run',       icon: 'Run',       label: 'Run'       },
-  { path: '/skincare',  icon: 'Skincare',  label: 'Skincare'  },
-  { path: '/settings',  icon: 'Settings',  label: 'Settings'  },
+  { path: '/',               icon: 'Home',      label: 'Home'      },
+  { path: '/calendar',       icon: 'Calendar',  label: 'Calendar'  },
+  { path: '/log',            icon: 'Plus',      label: 'Log'       },
+  { path: '/timeline',       icon: 'History',   label: 'Timeline'  },
+  { path: '/progress',       icon: 'Trending',  label: 'Progress'  },
+  { path: '/food/history',   icon: 'Food',      label: 'Food'      },
+  { path: '/run',            icon: 'Run',       label: 'Run'       },
+  { path: '/skincare',       icon: 'Skincare',  label: 'Skincare'  },
+  { path: '/settings',       icon: 'Settings',  label: 'Settings'  },
 ];
 
 const mobileNavItems: { path: string; icon: IconName; label: string }[] = [
-  { path: '/',          icon: 'Home',     label: 'Home'     },
-  { path: '/progress',  icon: 'Activity', label: 'Progress' },
-  { path: '/calendar',  icon: 'Calendar', label: 'Calendar' },
-  { path: '/run',       icon: 'Run',      label: 'Run'      },
-  { path: '/skincare',  icon: 'Skincare', label: 'Skin'     },
+  { path: '/',             icon: 'Home',     label: 'Home'     },
+  { path: '/progress',     icon: 'Activity', label: 'Progress' },
+  { path: '/food/history', icon: 'Food',     label: 'Food'     },
+  { path: '/run',          icon: 'Run',      label: 'Run'      },
+  { path: '/skincare',     icon: 'Skincare', label: 'Skin'     },
 ];
 
 export const Layout: React.FC = () => {

@@ -11,6 +11,17 @@
 
 import type { DetectedFood } from '../types';
 
+// ─── Request timeout (free APIs can be slow) ─────────────────────────────────
+
+const API_TIMEOUT_MS = 5000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), ms)),
+  ]);
+}
+
 // ─── USDA FoodData Central ─────────────────────────────────────────────────
 
 const USDA_KEY  = 'DEMO_KEY'; // 1 000 req/hour per IP — sufficient for a PWA
@@ -117,9 +128,11 @@ export async function searchUSDA(query: string, maxResults = 8): Promise<Detecte
     sortBy:    'dataType.keyword', // Foundation > SR Legacy > Survey > Branded
     sortOrder: 'asc',
   });
-  const res = await fetch(`${USDA_BASE}/foods/search?${params}`, {
-    headers: { Accept: 'application/json' },
-  });
+  const res = await withTimeout(
+    fetch(`${USDA_BASE}/foods/search?${params}`, { headers: { Accept: 'application/json' } }),
+    API_TIMEOUT_MS,
+    new Response('{}', { status: 200 }),
+  );
   if (!res.ok) throw new Error(`USDA ${res.status}: ${res.statusText}`);
   const json = await res.json() as { foods?: UsdaFood[] };
   return (json.foods ?? [])
@@ -212,12 +225,15 @@ export async function searchOpenFoodFacts(query: string, maxResults = 8): Promis
     search_terms: query,
     json:         '1',
     page_size:    String(maxResults),
+    // Request only the fields we use — keeps payload small and response faster
     fields:       'product_name,brands,serving_size,nutriments',
     sort_by:      'unique_scans_n', // most-scanned = highest data quality
   });
-  const res = await fetch(
-    `https://world.openfoodfacts.org/cgi/search.pl?${params}`,
-    { headers: { 'User-Agent': 'Athlix/1.0 (fitness tracking app)' } },
+  // No custom headers — User-Agent is a forbidden header that triggers CORS preflight
+  const res = await withTimeout(
+    fetch(`https://world.openfoodfacts.org/cgi/search.pl?${params}`),
+    API_TIMEOUT_MS,
+    new Response('{}', { status: 200 }),
   );
   if (!res.ok) throw new Error(`Open Food Facts ${res.status}`);
   const json = await res.json() as { products?: OffProduct[] };

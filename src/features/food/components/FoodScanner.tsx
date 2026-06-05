@@ -10,12 +10,109 @@ import {
 } from '../services/foodRecognition.service';
 import { useAuth } from '../../../contexts/AuthContext';
 
-// Step labels shown during processing
-const STEP_LABELS: Partial<Record<ScanStep, string>> = {
-  uploading:    'Uploading image…',
-  recognizing:  'Analysing food…',
-  calculating:  'Calculating nutrition…',
+// ─── Health quotes shown while scanning ──────────────────────────────────────
+
+const HEALTH_QUOTES: { quote: string; tag: string }[] = [
+  { quote: 'Protein synthesis peaks 2–3 hours after resistance training.', tag: 'EXERCISE SCIENCE' },
+  { quote: 'A colourful plate naturally diversifies your gut microbiome.', tag: 'NUTRITION' },
+  { quote: 'Eating slowly can reduce calorie intake by up to 20%.', tag: 'MINDFUL EATING' },
+  { quote: 'Your muscles are ~70% water — hydration directly affects strength.', tag: 'HYDRATION' },
+  { quote: 'Fibre feeds the 38 trillion bacteria that keep your gut in balance.', tag: 'GUT HEALTH' },
+  { quote: 'Sleep is the most potent anabolic stimulus money cannot buy.', tag: 'RECOVERY' },
+  { quote: 'Omega-3s reduce delayed-onset muscle soreness by up to 35%.', tag: 'RECOVERY' },
+  { quote: 'The Mediterranean diet reduces cardiovascular risk by around 30%.', tag: 'LONGEVITY' },
+  { quote: 'Creatine is the most researched and proven performance supplement.', tag: 'SUPPLEMENTS' },
+  { quote: 'Nitrates in leafy greens improve mitochondrial efficiency during exercise.', tag: 'PERFORMANCE' },
+  { quote: 'Eating protein at breakfast significantly reduces total daily hunger.', tag: 'SATIETY' },
+  { quote: 'Your gut microbiome influences mood, energy, and cognitive function.', tag: 'GUT–BRAIN AXIS' },
+  { quote: 'Magnesium is involved in 300+ enzymatic reactions, including sleep regulation.', tag: 'MICRONUTRIENTS' },
+  { quote: 'Post-workout carbohydrates replenish muscle glycogen 2× faster than rest.', tag: 'RECOVERY' },
+  { quote: 'Zone 2 cardio is the most efficient way to build mitochondrial density.', tag: 'ENDURANCE' },
+  { quote: 'Leucine is the amino acid that most potently triggers muscle protein synthesis.', tag: 'PROTEIN' },
+  { quote: 'Resistance training improves insulin sensitivity for up to 24 hours.', tag: 'METABOLIC HEALTH' },
+  { quote: 'Consistent meal timing trains your gut clock for better digestion.', tag: 'CHRONO-NUTRITION' },
+  { quote: 'Polyphenols in dark berries increase blood flow to working muscles.', tag: 'PERFORMANCE' },
+  { quote: 'Vitamin D deficiency affects 40% of adults and impairs recovery.', tag: 'MICRONUTRIENTS' },
+  { quote: 'Whole foods contain thousands of phytochemicals science has not fully mapped.', tag: 'WHOLE FOODS' },
+  { quote: 'Sprint intervals elevate growth hormone for up to 24 hours post-workout.', tag: 'HORMONES' },
+  { quote: 'Every 10 g of protein per meal contributes meaningfully to muscle synthesis.', tag: 'PROTEIN' },
+  { quote: 'The liver stores ~100 g of glycogen — the body\'s fastest available fuel.', tag: 'METABOLISM' },
+  { quote: 'Cold exposure activates brown adipose tissue, boosting resting metabolic rate.', tag: 'METABOLISM' },
+  { quote: 'Your meal timing can shift your circadian rhythm by up to 4 hours.', tag: 'CHRONO-NUTRITION' },
+  { quote: 'Heat stress from saunas mirrors some cellular adaptations from aerobic exercise.', tag: 'RECOVERY' },
+  { quote: 'Sodium benzoate forms benzene when combined with Vitamin C in acidic drinks.', tag: 'FOOD SAFETY' },
+  { quote: 'Walking 10 min after a meal reduces post-meal blood glucose by up to 22%.', tag: 'BLOOD SUGAR' },
+  { quote: 'Eating within a 10-hour window improves metabolic markers in most adults.', tag: 'TIME-RESTRICTED EATING' },
+];
+
+// ─── Processing view — replaces spinner with rotating quotes ─────────────────
+
+const ORDERED_STEPS: ScanStep[] = ['uploading', 'recognizing', 'calculating'];
+const STEP_LABEL: Partial<Record<ScanStep, string>> = {
+  uploading:   'Saving image…',
+  recognizing: 'Analysing food…',
+  calculating: 'Building nutrition profile…',
 };
+
+const ProcessingView: React.FC<{ step: ScanStep }> = ({ step }) => {
+  const [idx, setIdx]   = useState(() => Math.floor(Math.random() * HEALTH_QUOTES.length));
+  const [fade, setFade] = useState(true);
+
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setFade(false);
+      setTimeout(() => { setIdx((i) => (i + 1) % HEALTH_QUOTES.length); setFade(true); }, 380);
+    }, 4800);
+    return () => clearInterval(iv);
+  }, []);
+
+  const currentIdx   = ORDERED_STEPS.indexOf(step);
+  const { quote, tag } = HEALTH_QUOTES[idx];
+
+  return (
+    <div className="flex flex-col items-center justify-center flex-1 gap-8 py-10">
+
+      {/* Current step label */}
+      <p style={{ color: '#C8FF00', fontSize: 11, fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+        {STEP_LABEL[step] ?? 'Processing…'}
+      </p>
+
+      {/* Rotating quote */}
+      <div style={{ opacity: fade ? 1 : 0, transition: 'opacity 0.38s ease', minHeight: 110 }}
+        className="flex flex-col items-center gap-3 text-center px-4">
+        <p style={{ color: '#C8FF00', fontSize: 9, fontWeight: 800, letterSpacing: '0.22em', textTransform: 'uppercase' }}>
+          {tag}
+        </p>
+        <p style={{ color: '#fff', fontSize: 17, fontWeight: 700, lineHeight: 1.65, maxWidth: 300 }}>
+          "{quote}"
+        </p>
+      </div>
+
+      {/* Step indicators */}
+      <div className="flex items-center gap-3">
+        {ORDERED_STEPS.map((s, i) => {
+          const done   = currentIdx > i;
+          const active = currentIdx === i;
+          return (
+            <div key={s} className="flex items-center gap-3">
+              <div className="flex flex-col items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full"
+                  style={{ background: active ? '#C8FF00' : done ? 'rgba(200,255,0,0.45)' : 'rgba(255,255,255,0.15)', transition: 'background 0.3s' }} />
+                <span style={{ fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, color: active ? '#C8FF00' : done ? 'rgba(200,255,0,0.45)' : 'rgba(255,255,255,0.25)' }}>
+                  {s === 'uploading' ? 'Upload' : s === 'recognizing' ? 'Analyse' : 'Nutrition'}
+                </span>
+              </div>
+              {i < 2 && <div style={{ width: 28, height: 1, background: 'rgba(255,255,255,0.08)', marginBottom: 16 }} />}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// Step labels (kept for STEP_LABELS usage below if any)
+const STEP_LABELS: Partial<Record<ScanStep, string>> = STEP_LABEL;
 
 interface Props {
   onScanComplete: (state: ScanState) => void;
@@ -219,35 +316,9 @@ export const FoodScanner: React.FC<Props> = ({ onScanComplete }) => {
           </button>
         </div>
 
-      /* ── Processing ─────────────────────────────────────────────────── */
+      /* ── Processing — rotating health quotes ──────────────────────── */
       ) : isProcessing ? (
-        <div className="flex flex-col items-center justify-center flex-1 gap-5 py-16">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-            style={{ background: 'rgba(200,255,0,0.1)', border: '1px solid rgba(200,255,0,0.2)' }}>
-            <div className="w-8 h-8 border-[3px] border-t-transparent rounded-full animate-spin"
-              style={{ borderColor: '#C8FF00', borderTopColor: 'transparent' }} />
-          </div>
-          <div className="text-center">
-            <p className="text-[16px] font-bold" style={{ color: '#fff' }}>{STEP_LABELS[step]}</p>
-            <p className="text-[12px] mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>This takes a few seconds…</p>
-          </div>
-          {/* Step indicators */}
-          <div className="flex items-center gap-3">
-            {(['uploading', 'recognizing', 'calculating'] as ScanStep[]).map((s, i) => (
-              <div key={s} className="flex items-center gap-3">
-                <div className="flex flex-col items-center gap-1">
-                  <div className="w-2 h-2 rounded-full transition-all"
-                    style={{ background: step === s ? '#C8FF00' : step > s ? 'rgba(200,255,0,0.5)' : 'rgba(255,255,255,0.15)' }} />
-                  <span className="text-[9px] uppercase tracking-wider"
-                    style={{ color: step === s ? '#C8FF00' : 'rgba(255,255,255,0.3)' }}>
-                    {s === 'uploading' ? 'Upload' : s === 'recognizing' ? 'Analyse' : 'Calculate'}
-                  </span>
-                </div>
-                {i < 2 && <div className="w-8 h-px mb-4" style={{ background: 'rgba(255,255,255,0.1)' }} />}
-              </div>
-            ))}
-          </div>
-        </div>
+        <ProcessingView step={step} />
 
       /* ── Idle / Camera ──────────────────────────────────────────────── */
       ) : (

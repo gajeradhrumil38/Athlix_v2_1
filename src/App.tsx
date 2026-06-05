@@ -61,6 +61,7 @@ const AppRoutes = () => {
         <Route path="settings/layout" element={<DashboardLayoutEditor />} />
         <Route path="run" element={<ActiveRun />} />
         <Route path="run/history" element={<RunHistory />} />
+        <Route path="food" element={<Navigate to="food/history" replace />} />
         <Route path="food/scan" element={<FoodScannerPage />} />
         <Route path="food/history" element={<FoodHistoryPage />} />
         <Route path="skincare" element={<SkincareRoutinePage />} />
