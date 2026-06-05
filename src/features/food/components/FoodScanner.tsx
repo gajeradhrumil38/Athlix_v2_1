@@ -84,17 +84,28 @@ export const FoodScanner: React.FC<Props> = ({ onScanComplete }) => {
   const captureFromCamera = () => {
     if (!videoRef.current) return;
     const video = videoRef.current;
+
+    // Guard: video not playing yet (can happen on slow devices or before stream fully starts)
+    if (!video.videoWidth || !video.videoHeight) {
+      setError('Camera not ready yet — please wait a moment and try again.');
+      return;
+    }
+
     const canvas = document.createElement('canvas');
     canvas.width  = video.videoWidth;
     canvas.height = video.videoHeight;
     canvas.getContext('2d')!.drawImage(video, 0, 0);
     canvas.toBlob((blob) => {
-      if (!blob) return;
+      if (!blob) {
+        setError('Failed to capture image. Please try again or use gallery upload.');
+        return;
+      }
       const file = new File([blob], `capture-${Date.now()}.jpg`, { type: 'image/jpeg' });
       stopCamera();
       setPreview(URL.createObjectURL(file));
       setCapturedFile(file);
       setStep('previewing');
+      setError(null);
     }, 'image/jpeg', 0.95);
   };
 
@@ -133,22 +144,23 @@ export const FoodScanner: React.FC<Props> = ({ onScanComplete }) => {
         uploadFoodImage(user.id, thumb, '_thumb'),
       ]);
 
-      // 3. Identify foods via Gemini Vision → FatSecret nutrition lookup
+      // 3. Identify foods (dish) or extract nutrition label via Gemini Vision
       setStep('recognizing');
-      const foods = await recognizeFoodWithGemini(capturedFile);
+      const { foods, labelData } = await recognizeFoodWithGemini(capturedFile);
 
-      // 4. Aggregate totals
+      // 4. Aggregate totals (0 for label scan — saved on confirm)
       setStep('calculating');
       const totals = calcTotals(foods);
 
       onScanComplete({
-        step:                'done',
-        imageFile:           capturedFile,
-        imagePreviewUrl:     preview,
-        uploadedImageUrl:    imageUrl,
-        uploadedThumbUrl:    thumbUrl,
+        step:             'done',
+        imageFile:        capturedFile,
+        imagePreviewUrl:  preview,
+        uploadedImageUrl: imageUrl,
+        uploadedThumbUrl: thumbUrl,
         foods,
-        error:               null,
+        labelData,
+        error:            null,
         ...totals,
       } as any);
     } catch (err: unknown) {
@@ -164,6 +176,7 @@ export const FoodScanner: React.FC<Props> = ({ onScanComplete }) => {
     setCapturedFile(null);
     setStep('idle');
     setError(null);
+    // Re-entering idle clears any stale error from the previous attempt
   };
 
   // ── Render ───────────────────────────────────────────────────────────────

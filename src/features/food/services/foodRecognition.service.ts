@@ -1,13 +1,10 @@
 /**
  * FoodRecognitionService
  *
- * Client-side service that:
- *   1. Compresses and uploads images to Supabase Storage
- *   2. Proxies FatSecret API calls through our Supabase Edge Function
- *      (the Consumer Key/Secret never touch the browser)
- *   3. Parses raw FatSecret responses into typed DetectedFood objects
- *
- * The edge function at supabase/functions/food-scan/index.ts handles OAuth 1.0a signing.
+ * 1. Image compression + upload to Supabase Storage
+ * 2. Gemini Vision — identify foods + classify type (whole_food / packaged / restaurant)
+ * 3. Multi-provider nutrition lookup: USDA → Open Food Facts → FatSecret (best accuracy)
+ * 4. FatSecret proxy via Supabase Edge Function (OAuth 1.0a — credentials never touch browser)
  */
 
 import { supabase } from '../../../lib/supabase';
@@ -20,8 +17,21 @@ import type {
   FatSecretSearchResponse,
   FatSecretFoodResponse,
 } from '../types';
+import {
+  searchNutrition,
+  searchUSDA,
+  searchOpenFoodFacts,
+  dedup,
+  type FoodType,
+} from './nutritionProviders.service';
+import type { LabelData } from '../types';
 
-// ─── Image processing (client-side Canvas) ────────────────────────────────
+export interface GeminiScanResult {
+  foods: DetectedFood[];
+  labelData: LabelData | null;
+}
+
+// ─── Image processing (client-side Canvas) ────────────────────────────────────
 
 function calcDims(
   w: number, h: number, maxW: number, maxH: number,
@@ -36,8 +46,18 @@ function fileToImage(file: File): Promise<HTMLImageElement> {
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload  = () => { URL.revokeObjectURL(url); resolve(img); };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Failed to load image')); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Could not load image — the file may be corrupted.')); };
     img.src = url;
+  });
+}
+
+function canvasToBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (b) => b ? resolve(b) : reject(new Error('Image encoding failed. Try a different image.')),
+      'image/jpeg',
+      quality,
+    );
   });
 }
 
@@ -51,19 +71,13 @@ export async function compressImage(
   const img = await fileToImage(file);
   const { width, height } = calcDims(img.naturalWidth, img.naturalHeight, maxW, maxH);
   const canvas = document.createElement('canvas');
-  canvas.width = width;
+  canvas.width  = width;
   canvas.height = height;
   canvas.getContext('2d')!.drawImage(img, 0, 0, width, height);
-  return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))),
-      'image/jpeg',
-      quality,
-    );
-  });
+  return canvasToBlob(canvas, quality);
 }
 
-/** Square-crop + resize a file to a thumbnail Blob. */
+/** Square-crop + resize to a thumbnail Blob. */
 export async function makeThumbnail(file: File, size = 200): Promise<Blob> {
   const img = await fileToImage(file);
   const { naturalWidth: iw, naturalHeight: ih } = img;
@@ -71,21 +85,33 @@ export async function makeThumbnail(file: File, size = 200): Promise<Blob> {
   canvas.width  = size;
   canvas.height = size;
   const ctx = canvas.getContext('2d')!;
-  // Center-square crop
   const side = Math.min(iw, ih);
-  const sx = (iw - side) / 2;
-  const sy = (ih - side) / 2;
+  const sx   = (iw - side) / 2;
+  const sy   = (ih - side) / 2;
   ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
-  return new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (b) => (b ? resolve(b) : reject(new Error('Canvas toBlob failed'))),
-      'image/jpeg',
-      0.80,
-    );
-  });
+  return canvasToBlob(canvas, 0.80);
 }
 
-// ─── Supabase Storage upload ───────────────────────────────────────────────
+// ─── Supabase Storage upload ───────────────────────────────────────────────────
+
+function uniqueFilename(userId: string, suffix: string): string {
+  // crypto.randomUUID() is available in all modern browsers; fallback for edge cases
+  const uid = typeof crypto?.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+  return `${userId}/${uid}${suffix}.jpg`;
+}
+
+function storageErrorMessage(err: unknown): string {
+  const raw = (err as { message?: string })?.message ?? String(err);
+  if (/bucket.*not.*found|no such bucket/i.test(raw))
+    return 'Storage bucket "food-scans" not found. Create it in your Supabase dashboard → Storage.';
+  if (/security policy|rls|violates/i.test(raw))
+    return 'Upload permission denied. Check RLS policies on the food-scans storage bucket.';
+  if (/exceeded|too large|size/i.test(raw))
+    return 'Image too large. Max allowed size is 10 MB.';
+  return `Upload failed: ${raw}`;
+}
 
 /** Upload a Blob to the food-scans bucket. Returns the public URL. */
 export async function uploadFoodImage(
@@ -93,38 +119,39 @@ export async function uploadFoodImage(
   blob: Blob,
   suffix: '_thumb' | '' = '',
 ): Promise<string> {
-  const path = `${userId}/${Date.now()}${suffix}.jpg`;
+  const path = uniqueFilename(userId, suffix);
   const { error } = await supabase.storage
     .from('food-scans')
     .upload(path, blob, { contentType: 'image/jpeg', upsert: false });
-  if (error) throw error;
+  if (error) throw new Error(storageErrorMessage(error));
   return supabase.storage.from('food-scans').getPublicUrl(path).data.publicUrl;
 }
 
-/** Delete an image from storage given its public URL. Best-effort — never throws. */
+/** Delete an image by its public URL. Best-effort — never throws. */
 export async function deleteFoodImage(publicUrl: string): Promise<void> {
   try {
-    // Extract the path after "/food-scans/"
     const marker = '/food-scans/';
-    const idx = publicUrl.indexOf(marker);
+    const idx    = publicUrl.indexOf(marker);
     if (idx === -1) return;
     const path = decodeURIComponent(publicUrl.slice(idx + marker.length));
     await supabase.storage.from('food-scans').remove([path]);
   } catch { /* silent */ }
 }
 
-// ─── Edge-function proxy calls ─────────────────────────────────────────────
+// ─── Edge-function proxy (FatSecret OAuth 1.0a) ───────────────────────────────
 
 async function invoke<T>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke<T>('food-scan', { body });
   if (error) throw error;
-  // FatSecret error field in the JSON body
-  const d = data as any;
-  if (d?.error) throw new Error(d.error.message ?? JSON.stringify(d.error));
+  const d = data as Record<string, unknown>;
+  if (d?.error) {
+    const fe = d.error as { message?: string; code?: string };
+    throw new Error(fe.message ?? JSON.stringify(d.error));
+  }
   return data as T;
 }
 
-// ─── FatSecret parsers ─────────────────────────────────────────────────────
+// ─── FatSecret parsers ────────────────────────────────────────────────────────
 
 function firstServing(food: FatSecretFood): FatSecretServing | null {
   const s = food.servings?.serving;
@@ -146,18 +173,19 @@ function parseServing(
     servingSize:  serving.serving_description ?? '1 serving',
     servingGrams: parseFloat(serving.metric_serving_amount ?? '100') || 100,
     servings:     parseFloat(entry?.number_of_units ?? '1') || 1,
-    calories:     parseFloat(serving.calories ?? '0'),
-    protein:      parseFloat(serving.protein   ?? '0'),
-    carbs:        parseFloat(serving.carbohydrate ?? '0'),
-    fat:          parseFloat(serving.fat       ?? '0'),
-    fiber:        serving.fiber ? parseFloat(serving.fiber)  : undefined,
-    sugar:        serving.sugar ? parseFloat(serving.sugar)  : undefined,
+    calories:     parseFloat(serving.calories        ?? '0'),
+    protein:      parseFloat(serving.protein         ?? '0'),
+    carbs:        parseFloat(serving.carbohydrate    ?? '0'),
+    fat:          parseFloat(serving.fat             ?? '0'),
+    fiber:        serving.fiber ? parseFloat(serving.fiber) : undefined,
+    sugar:        serving.sugar ? parseFloat(serving.sugar) : undefined,
     confidence:   entry?.confidence ? parseFloat(entry.confidence) : undefined,
+    source:       'fatsecret',
   };
 }
 
 /**
- * Parse compact food_description from foods.search results.
+ * Parse compact food_description from FatSecret search results.
  * Format: "Per 100g - Calories: 52kcal | Fat: 0.17g | Carbs: 13.81g | Protein: 0.26g"
  */
 function parseDescription(desc: string): Pick<DetectedFood, 'calories' | 'protein' | 'carbs' | 'fat'> {
@@ -165,92 +193,124 @@ function parseDescription(desc: string): Pick<DetectedFood, 'calories' | 'protei
     const m = new RegExp(`${label}:\\s*([\\d.]+)`, 'i').exec(desc);
     return m ? parseFloat(m[1]) : 0;
   };
-  return {
-    calories: num('Calories'),
-    protein:  num('Protein'),
-    carbs:    num('Carbs'),
-    fat:      num('Fat'),
-  };
+  return { calories: num('Calories'), protein: num('Protein'), carbs: num('Carbs'), fat: num('Fat') };
 }
 
-// ─── Gemini Vision helpers ─────────────────────────────────────────────────
+// ─── Gemini Vision helpers ─────────────────────────────────────────────────────
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve((reader.result as string).split(',')[1]);
-    reader.onerror = () => reject(new Error('Failed to read image file'));
+    reader.onload  = () => resolve((reader.result as string).split(',')[1]);
+    reader.onerror = () => reject(new Error('Failed to read image file for analysis.'));
     reader.readAsDataURL(file);
   });
 }
 
 function extractJsonFromText(text: string): unknown {
-  // Strip markdown code fences if Gemini wraps the output
-  const stripped = text.replace(/```(?:json)?\n?/gi, '').trim();
+  // Strip markdown code fences (```json ... ``` or ``` ... ```)
+  const stripped = text.replace(/^```(?:json)?\s*/im, '').replace(/\s*```\s*$/im, '').trim();
+  // Find the first valid JSON array in the text (handles leading/trailing prose)
+  const start = stripped.indexOf('[');
+  const end   = stripped.lastIndexOf(']');
+  if (start !== -1 && end !== -1 && end > start) {
+    return JSON.parse(stripped.slice(start, end + 1));
+  }
   return JSON.parse(stripped);
 }
 
-// ─── Public API ────────────────────────────────────────────────────────────
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Identify foods using Gemini Vision, then look up nutrition via FatSecret foods.search.
- * Reads the API key from localStorage('athlix:gemini_api_key') — set via Settings → AI Chat.
+ * Unified Gemini scan — detects whether the image is a nutrition facts panel or a dish/meal.
+ *
+ * Returns:
+ *  - { foods, labelData: null }   when a dish/meal is photographed
+ *  - { foods: [], labelData }     when a nutrition label is photographed
+ *
+ * Nutrition lookup path for dish items: USDA → Open Food Facts → FatSecret (fallback).
+ * Reads Gemini API key from localStorage('athlix:gemini_api_key').
  */
-export async function recognizeFoodWithGemini(imageFile: File): Promise<DetectedFood[]> {
+export async function recognizeFoodWithGemini(imageFile: File): Promise<GeminiScanResult> {
   const apiKey = localStorage.getItem('athlix:gemini_api_key');
-  if (!apiKey) throw new Error('Gemini API key not set. Add it in Settings → AI Chat.');
+  if (!apiKey) throw new Error('Gemini API key not set. Open Settings → AI Coach to add your free key.');
 
-  const model = localStorage.getItem('athlix:gemini_model') || 'gemini-1.5-flash';
+  const model      = localStorage.getItem('athlix:gemini_model') || 'gemini-1.5-flash';
   const base64Data = await fileToBase64(imageFile);
-  const mimeType = imageFile.type || 'image/jpeg';
+  const mimeType   = imageFile.type || 'image/jpeg';
 
   const prompt =
-    'Identify every distinct food item visible in this image. ' +
-    'Return ONLY a JSON array, no extra text:\n' +
-    '[{"name":"<specific food name>","servings":<number>,"portionNote":"<brief size>"}]\n' +
-    'Guidelines:\n' +
-    '- name: specific enough for a nutrition DB search (e.g. "grilled chicken breast" not "chicken")\n' +
-    '- servings: decimal estimate (0.5, 1, 1.5, 2 …)\n' +
-    '- portionNote: e.g. "medium fillet", "1 cup cooked", "2 slices"\n' +
-    'Return [] if no food is visible.';
+    'You are a food & nutrition analyst. Look at this image carefully.\n\n' +
+
+    'CASE A — Nutrition Facts Label\n' +
+    'If you see a printed black-bordered Nutrition Facts panel (the standardised US/EU label on packaged products), extract ALL numbers exactly as printed. Return raw JSON:\n' +
+    '{"scanType":"nutrition_label","label":{"productName":"","servingSize":"","servingGrams":100,"servingsPerContainer":"","calories":0,"totalFat":0,"saturatedFat":0,"transFat":0,"cholesterol":0,"sodium":0,"totalCarbs":0,"dietaryFiber":0,"totalSugars":0,"addedSugars":0,"protein":0,"ingredients":"","vitaminD":0,"calcium":0,"iron":0,"potassium":0}}\n\n' +
+
+    'CASE B — Dish or Meal Photo\n' +
+    'If you see actual food, a plate, or a meal, identify every distinct item. Return raw JSON:\n' +
+    '{"scanType":"dish","items":[{"name":"<specific food name>","type":"<whole_food|packaged|restaurant>","servings":<number>,"portionNote":"<size cue>"}]}\n\n' +
+
+    'Rules:\n' +
+    '- Return ONLY the raw JSON above — no markdown fences, no explanation\n' +
+    '- nutrition_label: copy numbers exactly from the label; use 0 if a field is missing\n' +
+    '- dish name: specific enough for a nutrition DB (e.g. "grilled salmon fillet" not "fish")\n' +
+    '- type: "whole_food"=fresh/raw ingredient, "packaged"=boxed/branded product, "restaurant"=prepared dish\n' +
+    '- servings: decimal estimate of portions visible (0.5, 1, 1.5, 2…)\n' +
+    '- portionNote: visible size cue ("large fillet ~180g", "1 cup cooked")\n' +
+    '- If no food is visible: {"scanType":"dish","items":[]}\n' +
+    '- Caloric drinks (juice, milk, smoothie) count as food items';
 
   const resp = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
     {
-      method: 'POST',
+      method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents: [{ parts: [
           { inline_data: { mime_type: mimeType, data: base64Data } },
           { text: prompt },
         ] }],
-        generationConfig: { temperature: 0.1, maxOutputTokens: 1024 },
+        generationConfig: { temperature: 0.1, maxOutputTokens: 2048 },
       }),
     },
   );
 
   if (!resp.ok) {
     const errText = await resp.text().catch(() => resp.statusText);
-    throw new Error(`Gemini: ${errText}`);
+    let msg = errText;
+    try { msg = (JSON.parse(errText) as { error?: { message?: string } })?.error?.message ?? errText; } catch { /* keep raw */ }
+    throw new Error(`Gemini error: ${msg}`);
   }
 
-  const json = await resp.json();
-  const text: string = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+  const json    = await resp.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+  const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
-  let items: Array<{ name: string; servings: number; portionNote?: string }> = [];
-  try {
-    const parsed = extractJsonFromText(text);
-    if (Array.isArray(parsed)) items = parsed;
-  } catch { /* unparseable → treat as no foods */ }
+  let parsed: Record<string, unknown> = {};
+  try { parsed = extractJsonFromText(rawText) as Record<string, unknown>; } catch { /* treat as empty dish */ }
 
-  if (items.length === 0) return [];
+  // ── CASE A: Nutrition label ────────────────────────────────────────────────
+  if (parsed.scanType === 'nutrition_label' && parsed.label) {
+    return { foods: [], labelData: parsed.label as LabelData };
+  }
 
-  // Look up nutrition for each identified food via FatSecret free search
+  // ── CASE B: Dish / meal ────────────────────────────────────────────────────
+  type GeminiItem = { name: string; type?: string; servings?: number; portionNote?: string };
+  const items: GeminiItem[] = Array.isArray(parsed.items) ? (parsed.items as GeminiItem[]) : [];
+
+  if (items.length === 0) return { foods: [], labelData: null };
+
   const results = await Promise.all(
-    items.map(async (item) => {
+    items.map(async (item): Promise<DetectedFood | null> => {
+      const name = item.name?.trim();
+      if (!name) return null;
       try {
-        const matches = await searchFood(item.name);
+        const foodType: FoodType =
+          item.type === 'packaged' || item.type === 'restaurant' ? item.type : 'whole_food';
+
+        let matches = await searchNutrition(name, foodType);
+        if (matches.length === 0) matches = await searchFatSecret(name);
         if (matches.length === 0) return null;
+
         const food: DetectedFood = { ...matches[0] };
         food.servings = Math.max(0.5, Math.round((item.servings ?? 1) * 2) / 2);
         if (item.portionNote) food.servingSize = item.portionNote;
@@ -261,20 +321,20 @@ export async function recognizeFoodWithGemini(imageFile: File): Promise<Detected
     }),
   );
 
-  return results.filter((r): r is DetectedFood => r !== null);
+  return { foods: results.filter((r): r is DetectedFood => r !== null), labelData: null };
 }
 
 /**
- * Recognize foods in an already-uploaded image URL via FatSecret.
+ * Recognize foods in an already-uploaded image URL via FatSecret Premier.
  * Requires FatSecret Premier plan — kept for reference but not used by the scanner.
  */
 export async function recognizeFood(imageUrl: string): Promise<DetectedFood[]> {
-  const raw = await invoke<FatSecretRecognizeResponse>({ action: 'recognize', imageUrl });
+  const raw    = await invoke<FatSecretRecognizeResponse>({ action: 'recognize', imageUrl });
   const entries = raw.food_entries?.food_entry;
   if (!entries) return [];
-  const list = Array.isArray(entries) ? entries : [entries];
+  const list   = Array.isArray(entries) ? entries : [entries];
   return list.flatMap((entry): DetectedFood[] => {
-    const food = entry.food;
+    const food    = entry.food;
     if (!food) return [];
     const serving = firstServing(food);
     if (!serving) return [];
@@ -282,22 +342,16 @@ export async function recognizeFood(imageUrl: string): Promise<DetectedFood[]> {
   });
 }
 
-/**
- * Search FatSecret by text query. Returns up to 15 results.
- */
-export async function searchFood(query: string): Promise<DetectedFood[]> {
-  const raw = await invoke<FatSecretSearchResponse>({ action: 'search', query });
+/** FatSecret text search via edge function (internal — used as fallback). */
+async function searchFatSecret(query: string): Promise<DetectedFood[]> {
+  const raw   = await invoke<FatSecretSearchResponse>({ action: 'search', query });
   const foods = raw.foods?.food;
   if (!foods) return [];
-  const list = Array.isArray(foods) ? foods : [foods];
+  const list  = Array.isArray(foods) ? foods : [foods];
   return list.flatMap((food): DetectedFood[] => {
-    // Search results may lack detailed servings; fall back to food_description
     const serving = firstServing(food);
-    if (serving) {
-      return [parseServing(food.food_id, food.food_name, food.brand_name, null, serving)];
-    }
+    if (serving) return [parseServing(food.food_id, food.food_name, food.brand_name, null, serving)];
     if (food.food_description) {
-      const macros = parseDescription(food.food_description);
       return [{
         id:           food.food_id,
         name:         food.food_name,
@@ -305,7 +359,8 @@ export async function searchFood(query: string): Promise<DetectedFood[]> {
         servingSize:  '100g',
         servingGrams: 100,
         servings:     1,
-        ...macros,
+        source:       'fatsecret',
+        ...parseDescription(food.food_description),
       }];
     }
     return [];
@@ -313,10 +368,26 @@ export async function searchFood(query: string): Promise<DetectedFood[]> {
 }
 
 /**
+ * Search nutrition for a food query — merges USDA, Open Food Facts, and FatSecret.
+ * Used by the manual "Add food" search in FoodResults.
+ */
+export async function searchFood(query: string): Promise<DetectedFood[]> {
+  const [usdaRes, offRes, fsRes] = await Promise.allSettled([
+    searchUSDA(query, 6),
+    searchOpenFoodFacts(query, 6),
+    searchFatSecret(query),
+  ]);
+  const usda = usdaRes.status === 'fulfilled' ? usdaRes.value : [];
+  const off  = offRes.status  === 'fulfilled' ? offRes.value  : [];
+  const fs   = fsRes.status   === 'fulfilled' ? fsRes.value   : [];
+  return dedup([...usda, ...off, ...fs]).slice(0, 15);
+}
+
+/**
  * Fetch full nutritional details for a single food by its FatSecret ID.
  */
 export async function getFoodDetails(foodId: string): Promise<DetectedFood | null> {
-  const raw = await invoke<FatSecretFoodResponse>({ action: 'get_food', foodId });
+  const raw  = await invoke<FatSecretFoodResponse>({ action: 'get_food', foodId });
   const food = raw.food;
   if (!food) return null;
   const serving = firstServing(food);
@@ -324,9 +395,9 @@ export async function getFoodDetails(foodId: string): Promise<DetectedFood | nul
   return parseServing(food.food_id, food.food_name, food.brand_name, null, serving);
 }
 
-// ─── Nutrition aggregation ─────────────────────────────────────────────────
+// ─── Nutrition aggregation ─────────────────────────────────────────────────────
 
-/** Calculate totals across all detected foods (respecting per-food servings count). */
+/** Sum macros across all detected foods, respecting each food's servings count. */
 export function calcTotals(foods: DetectedFood[]): {
   total_calories: number;
   total_protein:  number;
@@ -336,9 +407,9 @@ export function calcTotals(foods: DetectedFood[]): {
   return foods.reduce(
     (acc, f) => ({
       total_calories: acc.total_calories + Math.round(f.calories * f.servings),
-      total_protein:  acc.total_protein  + parseFloat((f.protein  * f.servings).toFixed(1)),
-      total_carbs:    acc.total_carbs    + parseFloat((f.carbs    * f.servings).toFixed(1)),
-      total_fat:      acc.total_fat      + parseFloat((f.fat      * f.servings).toFixed(1)),
+      total_protein:  parseFloat((acc.total_protein + f.protein * f.servings).toFixed(1)),
+      total_carbs:    parseFloat((acc.total_carbs   + f.carbs   * f.servings).toFixed(1)),
+      total_fat:      parseFloat((acc.total_fat     + f.fat     * f.servings).toFixed(1)),
     }),
     { total_calories: 0, total_protein: 0, total_carbs: 0, total_fat: 0 },
   );

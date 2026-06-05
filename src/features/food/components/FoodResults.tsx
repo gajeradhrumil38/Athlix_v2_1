@@ -1,16 +1,86 @@
-import React, { useState } from 'react';
+/**
+ * FoodResults — shown after a dish/meal photo is scanned.
+ *
+ * Sections:
+ *  1. Total nutrition summary card
+ *  2. Individual food cards (editable servings)
+ *  3. Health Snapshot — score ring + macro DV bars
+ *  4. Add food manually
+ *  5. Save / Scan Again
+ */
+
+import React, { useMemo, useState } from 'react';
 import { CheckCircle2, Edit3, Plus, RotateCcw, Trash2, X, Search } from 'lucide-react';
 import type { DetectedFood, ScanState } from '../types';
 import { calcTotals, searchFood } from '../services/foodRecognition.service';
+import { scoreDish } from '../services/healthScore.service';
+import { DishScoreRing } from './HealthRings';
 
-interface Props {
-  state: ScanState;
-  onSave: (foods: DetectedFood[]) => Promise<void>;
-  onScanAgain: () => void;
-  saving: boolean;
-}
+// ─── Daily value reference ─────────────────────────────────────────────────────
 
-// ── Inline serving editor ────────────────────────────────────────────────────
+const DV = { protein: 50, carbs: 275, fat: 78 };
+
+// ─── Macro DV bar ──────────────────────────────────────────────────────────────
+
+const MacroBar: React.FC<{ label: string; value: number; dv: number; color: string }> = ({
+  label, value, dv, color,
+}) => {
+  const pct = Math.min(100, Math.round((value / dv) * 100));
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>{label}</span>
+        <div className="flex items-center gap-2">
+          <span style={{ color: '#fff', fontSize: 12, fontWeight: 800 }}>{value.toFixed(1)}g</span>
+          <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: 600 }}>{pct}% DV</span>
+        </div>
+      </div>
+      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+        <div className="h-full rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, background: color }} />
+      </div>
+    </div>
+  );
+};
+
+// ─── Health snapshot block ────────────────────────────────────────────────────
+
+const HealthSnapshot: React.FC<{ foods: DetectedFood[]; totals: ReturnType<typeof calcTotals> }> = ({
+  foods, totals,
+}) => {
+  const score = useMemo(() => scoreDish(foods), [foods]);
+
+  return (
+    <div className="rounded-2xl overflow-hidden"
+      style={{ background: '#16191F', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.14em' }}>
+          Health Snapshot
+        </p>
+      </div>
+      <div className="px-4 py-4 space-y-4">
+        {/* Score ring */}
+        <DishScoreRing score={score} />
+
+        {/* Divider */}
+        <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
+
+        {/* Macro DV bars */}
+        <div className="space-y-3">
+          <MacroBar label="Protein" value={totals.total_protein} dv={DV.protein} color="#60a5fa" />
+          <MacroBar label="Carbs"   value={totals.total_carbs}   dv={DV.carbs}   color="#fbbf24" />
+          <MacroBar label="Fat"     value={totals.total_fat}     dv={DV.fat}     color="#f87171" />
+        </div>
+
+        <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, lineHeight: 1.5 }}>
+          DV = FDA Daily Value (2 000 kcal diet)
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ─── Serving editor card ──────────────────────────────────────────────────────
 
 const ServingEditor: React.FC<{
   food: DetectedFood;
@@ -21,32 +91,46 @@ const ServingEditor: React.FC<{
 
   const commit = () => {
     const n = parseFloat(qty);
-    if (!isNaN(n) && n > 0) onUpdate({ ...food, servings: n });
+    if (!isNaN(n) && n >= 0.1) onUpdate({ ...food, servings: n });
+    else setQty(String(food.servings));
   };
 
   const effectiveCal = Math.round(food.calories * food.servings);
 
+  const sourceLabel: Record<string, string> = {
+    usda: 'USDA', openfoodfacts: 'OFF', fatsecret: 'FS', label: 'LABEL',
+  };
+
   return (
     <div className="rounded-2xl overflow-hidden" style={{ background: '#1a1d24', border: '1px solid rgba(255,255,255,0.08)' }}>
-      {/* Food header */}
+      {/* Header */}
       <div className="px-4 pt-4 pb-3 flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-[14px] font-bold leading-tight" style={{ color: '#fff' }}>{food.name}</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p style={{ color: '#fff', fontSize: 14, fontWeight: 800, lineHeight: 1.2 }}>{food.name}</p>
+            {food.source && (
+              <span style={{
+                color: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 700,
+                background: 'rgba(255,255,255,0.07)', padding: '1px 5px', borderRadius: 3,
+                letterSpacing: '0.08em',
+              }}>
+                {sourceLabel[food.source] ?? food.source}
+              </span>
+            )}
+          </div>
           {food.brand && (
-            <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{food.brand}</p>
+            <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>{food.brand}</p>
           )}
-          <p className="text-[11px] mt-1" style={{ color: 'rgba(255,255,255,0.3)' }}>{food.servingSize}</p>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 3 }}>{food.servingSize}</p>
         </div>
         <div className="text-right shrink-0">
-          <p className="text-[24px] font-black tabular-nums leading-none" style={{ color: '#C8FF00' }}>
-            {effectiveCal}
-          </p>
-          <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.3)' }}>kcal</p>
+          <p style={{ color: '#C8FF00', fontSize: 26, fontWeight: 900, lineHeight: 1 }}>{effectiveCal}</p>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>kcal</p>
         </div>
       </div>
 
-      {/* Macros row */}
-      <div className="grid grid-cols-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+      {/* Macros */}
+      <div className="grid grid-cols-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
         {[
           { label: 'Protein', val: food.protein * food.servings, color: '#60a5fa' },
           { label: 'Carbs',   val: food.carbs   * food.servings, color: '#fbbf24' },
@@ -54,19 +138,21 @@ const ServingEditor: React.FC<{
         ].map(({ label, val, color }, i, arr) => (
           <div key={label} className="text-center py-2.5"
             style={{ borderRight: i < arr.length - 1 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-            <p className="text-[13px] font-bold tabular-nums" style={{ color }}>{val.toFixed(1)}g</p>
-            <p className="text-[9px] uppercase tracking-wider mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>{label}</p>
+            <p style={{ color, fontSize: 13, fontWeight: 800 }}>{val.toFixed(1)}g</p>
+            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 2 }}>{label}</p>
           </div>
         ))}
       </div>
 
-      {/* Servings editor + remove */}
-      <div className="flex items-center gap-2 px-4 py-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-        <p className="text-[11px] font-semibold shrink-0" style={{ color: 'rgba(255,255,255,0.4)' }}>Servings:</p>
+      {/* Servings editor */}
+      <div className="flex items-center gap-2 px-4 py-3"
+        style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 700 }}>Servings</p>
         <div className="flex items-center gap-1 flex-1">
-          <button onClick={() => { const n = Math.max(0.5, food.servings - 0.5); onUpdate({ ...food, servings: n }); setQty(String(n)); }}
+          <button
+            onClick={() => { const n = Math.max(0.5, food.servings - 0.5); onUpdate({ ...food, servings: n }); setQty(String(n)); }}
             className="w-7 h-7 rounded-lg flex items-center justify-center text-lg font-bold transition-all active:scale-90"
-            style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)' }}>−</button>
+            style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)' }}>−</button>
           <input
             type="number" min={0.1} step={0.5} value={qty}
             onChange={(e) => setQty(e.target.value)}
@@ -74,9 +160,10 @@ const ServingEditor: React.FC<{
             className="w-14 text-center text-[13px] font-bold rounded-lg h-7 focus:outline-none"
             style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff' }}
           />
-          <button onClick={() => { const n = food.servings + 0.5; onUpdate({ ...food, servings: n }); setQty(String(n)); }}
+          <button
+            onClick={() => { const n = food.servings + 0.5; onUpdate({ ...food, servings: n }); setQty(String(n)); }}
             className="w-7 h-7 rounded-lg flex items-center justify-center text-lg font-bold transition-all active:scale-90"
-            style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)' }}>+</button>
+            style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.7)' }}>+</button>
         </div>
         <button onClick={onRemove}
           className="w-7 h-7 rounded-lg flex items-center justify-center transition-all active:scale-90"
@@ -88,12 +175,11 @@ const ServingEditor: React.FC<{
   );
 };
 
-// ── Add food search modal ────────────────────────────────────────────────────
+// ─── Add food modal ───────────────────────────────────────────────────────────
 
-const AddFoodModal: React.FC<{
-  onAdd: (food: DetectedFood) => void;
-  onClose: () => void;
-}> = ({ onAdd, onClose }) => {
+const AddFoodModal: React.FC<{ onAdd: (food: DetectedFood) => void; onClose: () => void }> = ({
+  onAdd, onClose,
+}) => {
   const [query, setQuery]       = useState('');
   const [results, setResults]   = useState<DetectedFood[]>([]);
   const [loading, setLoading]   = useState(false);
@@ -102,12 +188,13 @@ const AddFoodModal: React.FC<{
   const doSearch = async () => {
     if (!query.trim()) return;
     setLoading(true);
-    try {
-      const r = await searchFood(query);
-      setResults(r);
-      setSearched(true);
-    } catch { setResults([]); setSearched(true); }
+    try { const r = await searchFood(query); setResults(r); setSearched(true); }
+    catch { setResults([]); setSearched(true); }
     finally { setLoading(false); }
+  };
+
+  const sourceLabel: Record<string, string> = {
+    usda: 'USDA', openfoodfacts: 'OFF', fatsecret: 'FS',
   };
 
   return (
@@ -116,22 +203,21 @@ const AddFoodModal: React.FC<{
       <div className="w-full max-w-[480px] rounded-t-[24px] overflow-hidden pb-[max(20px,env(safe-area-inset-bottom))]"
         style={{ background: '#111419', border: '1px solid rgba(255,255,255,0.1)', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
 
-        <div className="w-9 h-1 rounded-full mx-auto mt-4 mb-4 opacity-30" style={{ background: '#fff' }} />
+        <div className="w-9 h-1 rounded-full mx-auto mt-4 mb-4" style={{ background: 'rgba(255,255,255,0.3)' }} />
         <div className="flex items-center justify-between px-5 mb-4">
-          <p className="text-[16px] font-bold" style={{ color: '#fff' }}>Add Food</p>
+          <p style={{ color: '#fff', fontSize: 16, fontWeight: 800 }}>Add Food</p>
           <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center"
             style={{ background: 'rgba(255,255,255,0.08)' }}>
-            <X className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.5)' }} />
+            <X className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.6)' }} />
           </button>
         </div>
 
-        {/* Search input */}
         <div className="flex gap-2 px-5 mb-4">
           <input
             autoFocus value={query} onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && doSearch()}
-            placeholder="Search food name…"
-            className="flex-1 px-3 py-2.5 rounded-xl text-[14px] focus:outline-none"
+            placeholder="Search USDA, Open Food Facts, FatSecret…"
+            className="flex-1 px-3 py-2.5 rounded-xl text-[13px] focus:outline-none"
             style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', caretColor: '#C8FF00' }}
           />
           <button onClick={doSearch} disabled={loading}
@@ -141,11 +227,10 @@ const AddFoodModal: React.FC<{
           </button>
         </div>
 
-        {/* Results */}
         <div className="overflow-y-auto flex-1 px-5 space-y-2 pb-2">
           {searched && results.length === 0 && (
-            <p className="text-center text-[13px] py-8" style={{ color: 'rgba(255,255,255,0.3)' }}>
-              No results found for "{query}"
+            <p className="text-center py-8" style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13 }}>
+              No results for "{query}"
             </p>
           )}
           {results.map((food) => (
@@ -154,13 +239,22 @@ const AddFoodModal: React.FC<{
               style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-semibold leading-tight" style={{ color: '#fff' }}>{food.name}</p>
-                  {food.brand && <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{food.brand}</p>}
-                  <p className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.3)' }}>{food.servingSize}</p>
+                  <div className="flex items-center gap-2">
+                    <p style={{ color: '#fff', fontSize: 13, fontWeight: 700 }}>{food.name}</p>
+                    {food.source && (
+                      <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9, fontWeight: 700, background: 'rgba(255,255,255,0.07)', padding: '1px 5px', borderRadius: 3 }}>
+                        {sourceLabel[food.source] ?? food.source}
+                      </span>
+                    )}
+                  </div>
+                  {food.brand && <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, marginTop: 2 }}>{food.brand}</p>}
+                  <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, marginTop: 1 }}>
+                    {food.servingSize} · P {food.protein.toFixed(1)}g  C {food.carbs.toFixed(1)}g  F {food.fat.toFixed(1)}g
+                  </p>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-[18px] font-black" style={{ color: '#C8FF00' }}>{Math.round(food.calories)}</p>
-                  <p className="text-[9px]" style={{ color: 'rgba(255,255,255,0.3)' }}>kcal</p>
+                  <p style={{ color: '#C8FF00', fontSize: 18, fontWeight: 900 }}>{Math.round(food.calories)}</p>
+                  <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 9 }}>kcal</p>
                 </div>
               </div>
             </button>
@@ -171,61 +265,65 @@ const AddFoodModal: React.FC<{
   );
 };
 
-// ── Main FoodResults ─────────────────────────────────────────────────────────
+// ─── Main FoodResults ─────────────────────────────────────────────────────────
+
+interface Props {
+  state: ScanState;
+  onSave: (foods: DetectedFood[]) => Promise<void>;
+  onScanAgain: () => void;
+  saving: boolean;
+}
 
 export const FoodResults: React.FC<Props> = ({ state, onSave, onScanAgain, saving }) => {
-  const [foods, setFoods]           = useState<DetectedFood[]>(state.foods);
-  const [showAddModal, setShowAdd]  = useState(false);
-  const [noFood]                    = useState(state.foods.length === 0);
+  const [foods, setFoods]          = useState<DetectedFood[]>(state.foods);
+  const [showAddModal, setShowAdd] = useState(false);
 
-  const totals = calcTotals(foods);
+  const totals  = useMemo(() => calcTotals(foods), [foods]);
+  const noFood  = state.foods.length === 0 && foods.length === 0;
 
   const updateFood = (idx: number, updated: DetectedFood) =>
     setFoods((prev) => prev.map((f, i) => (i === idx ? updated : f)));
 
   const removeFood = (idx: number) => setFoods((prev) => prev.filter((_, i) => i !== idx));
 
-  const addFood = (food: DetectedFood) => setFoods((prev) => [...prev, food]);
-
   return (
     <div className="space-y-4">
 
-      {/* ── No-food-detected banner ── */}
+      {/* No-food detected banner */}
       {noFood && (
         <div className="rounded-2xl px-5 py-5 text-center"
           style={{ background: 'rgba(250,199,117,0.06)', border: '1px solid rgba(250,199,117,0.18)' }}>
-          <p className="text-[15px] font-bold" style={{ color: '#FAC775' }}>No food detected</p>
-          <p className="text-[12px] mt-1 leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>
-            FatSecret couldn't identify food in this image.{'\n'}
-            You can add items manually using the button below.
+          <p style={{ color: '#FAC775', fontSize: 15, fontWeight: 800 }}>No food detected</p>
+          <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, marginTop: 4, lineHeight: 1.5 }}>
+            Couldn't identify food in this image. Add items manually below.
           </p>
         </div>
       )}
 
-      {/* ── Summary card ── */}
+      {/* Total nutrition card */}
       {foods.length > 0 && (
         <div className="rounded-2xl p-5"
           style={{ background: 'linear-gradient(160deg,#16191F,#111419)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] mb-3" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.18em', marginBottom: 12 }}>
             Total Nutrition
           </p>
           <div className="flex items-end gap-2 mb-4">
-            <span className="text-[56px] font-black leading-none tabular-nums" style={{ color: '#C8FF00' }}>
+            <span style={{ color: '#C8FF00', fontSize: 56, fontWeight: 900, lineHeight: 1 }}>
               {totals.total_calories}
             </span>
-            <span className="text-[16px] font-semibold mb-2" style={{ color: 'rgba(255,255,255,0.4)' }}>kcal</span>
+            <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 16, fontWeight: 600, marginBottom: 8 }}>kcal</span>
           </div>
           <div className="grid grid-cols-3 gap-2">
             {[
-              { label: 'Protein', val: totals.total_protein, color: '#60a5fa', unit: 'g' },
-              { label: 'Carbs',   val: totals.total_carbs,   color: '#fbbf24', unit: 'g' },
-              { label: 'Fat',     val: totals.total_fat,     color: '#f87171', unit: 'g' },
-            ].map(({ label, val, color, unit }) => (
+              { label: 'Protein', val: totals.total_protein, color: '#60a5fa' },
+              { label: 'Carbs',   val: totals.total_carbs,   color: '#fbbf24' },
+              { label: 'Fat',     val: totals.total_fat,     color: '#f87171' },
+            ].map(({ label, val, color }) => (
               <div key={label} className="rounded-xl p-3 text-center"
                 style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <p className="text-[9px] uppercase tracking-wider mb-1" style={{ color: 'rgba(255,255,255,0.3)' }}>{label}</p>
-                <p className="text-[18px] font-black tabular-nums" style={{ color }}>
-                  {val.toFixed(1)}<span className="text-[10px] font-semibold ml-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{unit}</span>
+                <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>{label}</p>
+                <p style={{ color, fontSize: 18, fontWeight: 900 }}>
+                  {val.toFixed(1)}<span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginLeft: 1 }}>g</span>
                 </p>
               </div>
             ))}
@@ -233,22 +331,30 @@ export const FoodResults: React.FC<Props> = ({ state, onSave, onScanAgain, savin
         </div>
       )}
 
-      {/* ── Food cards ── */}
+      {/* Food cards */}
       {foods.map((food, i) => (
-        <ServingEditor key={`${food.id}-${i}`} food={food}
+        <ServingEditor
+          key={`${food.id}-${i}`}
+          food={food}
           onUpdate={(u) => updateFood(i, u)}
-          onRemove={() => removeFood(i)} />
+          onRemove={() => removeFood(i)}
+        />
       ))}
 
-      {/* ── Add food button ── */}
+      {/* Health snapshot (only when foods exist) */}
+      {foods.length > 0 && (
+        <HealthSnapshot foods={foods} totals={totals} />
+      )}
+
+      {/* Add food button */}
       <button onClick={() => setShowAdd(true)}
         className="w-full py-3.5 rounded-2xl text-[14px] font-semibold flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
-        style={{ background: 'rgba(255,255,255,0.05)', border: '1px dashed rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.5)' }}>
+        style={{ background: 'rgba(255,255,255,0.05)', border: '1px dashed rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.6)' }}>
         <Plus className="w-4 h-4" /> Add food manually
       </button>
 
-      {/* ── Action buttons ── */}
-      <div className="space-y-2 pt-2">
+      {/* Actions */}
+      <div className="space-y-2 pt-1">
         <button onClick={() => onSave(foods)} disabled={saving || foods.length === 0}
           className="w-full py-4 rounded-2xl text-[16px] font-bold text-black flex items-center justify-center gap-2 active:scale-[0.98] transition-all disabled:opacity-50"
           style={{ background: '#C8FF00' }}>
@@ -257,30 +363,28 @@ export const FoodResults: React.FC<Props> = ({ state, onSave, onScanAgain, savin
         </button>
         <button onClick={onScanAgain}
           className="w-full py-4 rounded-2xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
-          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.6)' }}>
+          style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}>
           <RotateCcw className="w-4 h-4" /> Scan Again
         </button>
       </div>
 
-      {/* ── Captured image preview (small) ── */}
+      {/* Captured image strip */}
       {state.imagePreviewUrl && (
         <div className="flex items-center gap-3 rounded-2xl p-3"
           style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
           <img src={state.imagePreviewUrl} alt="Captured" className="w-14 h-14 rounded-xl object-cover" />
           <div>
-            <p className="text-[11px] font-semibold" style={{ color: 'rgba(255,255,255,0.5)' }}>Scanned image</p>
-            <p className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.25)' }}>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, fontWeight: 700 }}>Scanned image</p>
+            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, marginTop: 2 }}>
               {foods.length} item{foods.length !== 1 ? 's' : ''} detected
             </p>
           </div>
-          <div className="ml-auto flex items-center gap-1.5">
-            <Edit3 className="w-3.5 h-3.5" style={{ color: 'rgba(255,255,255,0.25)' }} />
-          </div>
+          <Edit3 className="w-3.5 h-3.5 ml-auto" style={{ color: 'rgba(255,255,255,0.2)' }} />
         </div>
       )}
 
       {showAddModal && (
-        <AddFoodModal onAdd={addFood} onClose={() => setShowAdd(false)} />
+        <AddFoodModal onAdd={(f) => setFoods((p) => [...p, f])} onClose={() => setShowAdd(false)} />
       )}
     </div>
   );

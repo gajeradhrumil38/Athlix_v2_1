@@ -14,6 +14,7 @@ export interface DetectedFood {
   fiber?: number;
   sugar?: number;
   confidence?: number;  // 0–1 from image recognition
+  source?: 'usda' | 'openfoodfacts' | 'fatsecret' | 'label'; // which provider supplied this record
 }
 
 // ─── Persisted scan row ────────────────────────────────────────────────────
@@ -112,6 +113,53 @@ export interface FatSecretFoodResponse {
   error?: { code: string; message: string };
 }
 
+// ─── Nutrition label (OCR from packaged product back panel) ──────────────────
+
+export interface LabelData {
+  productName: string;
+  servingSize: string;
+  servingGrams: number;
+  servingsPerContainer?: string;
+  calories: number;
+  totalFat: number;
+  saturatedFat: number;
+  transFat: number;
+  cholesterol: number;
+  sodium: number;
+  totalCarbs: number;
+  dietaryFiber: number;
+  totalSugars: number;
+  addedSugars: number;
+  protein: number;
+  ingredients: string;
+  vitaminD?: number;
+  calcium?: number;
+  iron?: number;
+  potassium?: number;
+}
+
+// ─── Health scoring ────────────────────────────────────────────────────────
+
+export type HealthGrade = 'A' | 'B' | 'C' | 'D' | 'E';
+
+export interface Additive {
+  name: string;
+  concern: 'high' | 'medium' | 'low';
+  effect: string;
+}
+
+export interface HealthScore {
+  overall: number;       // 0–100, higher = healthier
+  grade: HealthGrade;
+  sugarScore: number;    // 0–100
+  sodiumScore: number;   // 0–100
+  fatScore: number;      // 0–100
+  additiveScore: number; // 0–100
+  concerns: Additive[];
+  recommendation: 'eat' | 'moderate' | 'avoid';
+  reason: string;
+}
+
 // ─── UI state ──────────────────────────────────────────────────────────────
 
 export type ScanStep =
@@ -132,5 +180,6 @@ export interface ScanState {
   uploadedImageUrl: string | null;
   uploadedThumbUrl: string | null;
   foods: DetectedFood[];
+  labelData: LabelData | null;  // set when the scanned image is a nutrition facts panel
   error: string | null;
 }

@@ -267,8 +267,10 @@ export const FoodHistory: React.FC<Props> = ({ onViewDetail }) => {
       if (!match) return false;
     }
     if (s.total_calories < filters.calMin || s.total_calories > filters.calMax) return false;
-    if (filters.dateFrom && s.scan_date < filters.dateFrom) return false;
-    if (filters.dateTo   && s.scan_date > filters.dateTo + 'T23:59:59') return false;
+    // Compare date-only portions (YYYY-MM-DD) to avoid timezone/format mismatches
+    const scanDay = s.scan_date.slice(0, 10);
+    if (filters.dateFrom && scanDay < filters.dateFrom) return false;
+    if (filters.dateTo   && scanDay > filters.dateTo)   return false;
     return true;
   });
 
