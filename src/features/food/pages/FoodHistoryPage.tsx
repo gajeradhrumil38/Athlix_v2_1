@@ -49,7 +49,7 @@ export const FoodHistoryPage: React.FC = () => {
         </div>
       </div>
 
-      <FoodHistory onViewDetail={(scan) => setSelectedScan(scan)} />
+      <FoodHistory onViewDetail={(scan) => setSelectedScan(scan)} onScan={() => navigate('/food/scan')} />
 
       <AnimatePresence>
         {selectedScan && (
@@ -68,6 +68,19 @@ export const FoodHistoryPage: React.FC = () => {
       {showPriority && (
         <NutritionPrioritySheet onClose={() => setShowPriority(false)} />
       )}
+
+      {/* Floating scan button — always-visible entry to the scanner */}
+      <button
+        onClick={() => navigate('/food/scan')}
+        className="fixed z-[120] flex items-center gap-2 px-5 h-14 rounded-full text-[15px] font-bold text-black active:scale-95 transition-transform"
+        style={{
+          background: '#C8FF00',
+          right: 'max(20px, env(safe-area-inset-right))',
+          bottom: 'calc(env(safe-area-inset-bottom) + 88px)',
+          boxShadow: '0 8px 24px rgba(200,255,0,0.3), 0 2px 8px rgba(0,0,0,0.4)',
+        }}>
+        <Camera className="w-5 h-5" /> Scan
+      </button>
     </div>
   );
 };

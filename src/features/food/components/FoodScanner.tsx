@@ -70,17 +70,23 @@ const ProcessingView: React.FC<{ step: ScanStep }> = ({ step }) => {
   const { quote, tag } = HEALTH_QUOTES[idx];
 
   return (
-    <div className="flex flex-col items-center justify-center flex-1 gap-8 py-10">
+    <div className="flex flex-col items-center justify-center flex-1 gap-6 py-10">
 
       {/* Current step label */}
-      <p style={{ color: '#C8FF00', fontSize: 11, fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
-        {STEP_LABEL[step] ?? 'Processing…'}
-      </p>
+      <div className="flex items-center gap-2">
+        <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#C8FF00' }} />
+        <p style={{ color: '#C8FF00', fontSize: 11, fontWeight: 800, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+          {STEP_LABEL[step] ?? 'Processing…'}
+        </p>
+      </div>
+
+      {/* Divider */}
+      <div style={{ width: 40, height: 1, background: 'rgba(255,255,255,0.1)' }} />
 
       {/* Rotating quote */}
       <div style={{ opacity: fade ? 1 : 0, transition: 'opacity 0.38s ease', minHeight: 110 }}
         className="flex flex-col items-center gap-3 text-center px-4">
-        <p style={{ color: '#C8FF00', fontSize: 9, fontWeight: 800, letterSpacing: '0.22em', textTransform: 'uppercase' }}>
+        <p style={{ color: 'rgba(200,255,0,0.7)', fontSize: 9, fontWeight: 800, letterSpacing: '0.22em', textTransform: 'uppercase' }}>
           {tag}
         </p>
         <p style={{ color: '#fff', fontSize: 17, fontWeight: 700, lineHeight: 1.65, maxWidth: 300 }}>
@@ -211,8 +217,9 @@ export const FoodScanner: React.FC<Props> = ({ onScanComplete }) => {
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 10 * 1024 * 1024) {
-      setError('Image too large. Max size is 10 MB.');
+    // 50 MB raw — we compress to ≤300 KB before storage upload, so original size is not the bottleneck
+    if (file.size > 50 * 1024 * 1024) {
+      setError('Image too large (>50 MB). Please choose a smaller photo.');
       return;
     }
     stopCamera();
@@ -324,9 +331,9 @@ export const FoodScanner: React.FC<Props> = ({ onScanComplete }) => {
       ) : (
         <div className="flex flex-col gap-4">
 
-          {/* Camera viewfinder — <video> always in DOM so ref is always valid */}
+          {/* Camera viewfinder — fixed height avoids aspectRatio/minHeight conflict */}
           <div className="relative overflow-hidden rounded-2xl"
-            style={{ background: '#0d0f13', minHeight: cameraActive ? 0 : 280, aspectRatio: '4/3' }}>
+            style={{ background: '#0d0f13', height: 260 }}>
 
             {/* Video — always mounted, hidden when camera is off */}
             <video
@@ -411,7 +418,7 @@ export const FoodScanner: React.FC<Props> = ({ onScanComplete }) => {
               </button>
               <button onClick={() => fileInputRef.current?.click()}
                 className="w-full py-4 rounded-2xl text-[15px] font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
-                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.7)' }}>
+                style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.14)', color: '#fff' }}>
                 <Upload className="w-5 h-5" /> Upload from Gallery
               </button>
             </>
@@ -421,9 +428,14 @@ export const FoodScanner: React.FC<Props> = ({ onScanComplete }) => {
             onChange={handleFileSelect} />
 
           {/* Hint */}
-          <p className="text-center text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.25)' }}>
-            Point at your plate and tap capture.{'\n'}Works best with good lighting and the food clearly visible.
-          </p>
+          <div className="text-center space-y-0.5">
+            <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
+              Point at your plate and tap capture.
+            </p>
+            <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              Works best with good lighting and the food clearly visible.
+            </p>
+          </div>
         </div>
       )}
     </div>

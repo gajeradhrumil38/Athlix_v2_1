@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { format, parseISO } from 'date-fns';
-import { Search, SlidersHorizontal, X, UtensilsCrossed, Package } from 'lucide-react';
+import { Search, SlidersHorizontal, X, UtensilsCrossed, Package, Camera } from 'lucide-react';
 import type { FoodScan } from '../types';
 import { deleteFoodScan, getFoodScans } from '../../../lib/foodData';
 import { deleteFoodImage } from '../services/foodRecognition.service';
@@ -8,7 +8,10 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { scoreDish } from '../services/healthScore.service';
 import { useNutritionPriority } from '../hooks/useNutritionPriority';
 
-interface Props { onViewDetail: (scan: FoodScan) => void }
+interface Props {
+  onViewDetail: (scan: FoodScan) => void;
+  onScan?: () => void;
+}
 
 // ─── Mini health score ring (inline for list performance) ─────────────────────
 
@@ -16,9 +19,9 @@ function scoreColor(s: number) {
   return s >= 67 ? '#4ade80' : s >= 34 ? '#fbbf24' : '#f87171';
 }
 
-const MiniRing: React.FC<{ score: number; grade: string }> = ({ score, grade }) => {
+const MiniRing: React.FC<{ score: number; grade: string; delay?: number }> = ({ score, grade, delay = 0 }) => {
   const [animated, setAnimated] = useState(false);
-  useEffect(() => { const t = setTimeout(() => setAnimated(true), 80); return () => clearTimeout(t); }, []);
+  useEffect(() => { const t = setTimeout(() => setAnimated(true), 80 + delay); return () => clearTimeout(t); }, [delay]);
   const R = 21; const CX = 28; const SIZE = 56;
   const CIRC = 2 * Math.PI * R;
   const color  = scoreColor(score);
@@ -64,7 +67,7 @@ const SkeletonCard: React.FC = () => (
 
 // ─── History card ─────────────────────────────────────────────────────────────
 
-const HistoryCard: React.FC<{ scan: FoodScan; onView: () => void }> = ({ scan, onView }) => {
+const HistoryCard: React.FC<{ scan: FoodScan; onView: () => void; index?: number }> = ({ scan, onView, index = 0 }) => {
   const { isPriority } = useNutritionPriority();
   const dishScore = useMemo(() => scoreDish(scan.foods_detected), [scan.foods_detected]);
 
@@ -167,7 +170,7 @@ const HistoryCard: React.FC<{ scan: FoodScan; onView: () => void }> = ({ scan, o
 
         {/* Health ring + calories */}
         <div className="flex items-center gap-2.5 shrink-0">
-          <MiniRing score={dishScore.overall} grade={dishScore.grade} />
+          <MiniRing score={dishScore.overall} grade={dishScore.grade} delay={Math.min(index * 55, 500)} />
           <div className="text-right">
             <p style={{ color: '#C8FF00', fontSize: 24, fontWeight: 900, lineHeight: 1 }}>
               {scan.total_calories}
@@ -274,7 +277,7 @@ const DeleteConfirm: React.FC<{ onConfirm: () => void; onCancel: () => void; loa
 
 const PAGE_SIZE = 20;
 
-export const FoodHistory: React.FC<Props> = ({ onViewDetail }) => {
+export const FoodHistory: React.FC<Props> = ({ onViewDetail, onScan }) => {
   const { user } = useAuth();
 
   const [scans, setScans]             = useState<FoodScan[]>([]);
@@ -385,17 +388,32 @@ export const FoodHistory: React.FC<Props> = ({ onViewDetail }) => {
           {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
         </div>
       ) : visible.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <UtensilsCrossed className="w-10 h-10 mb-4" style={{ color: 'rgba(255,255,255,0.12)' }} />
-          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 15, fontWeight: 800 }}>No scans yet</p>
-          <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12, marginTop: 4 }}>
-            {hasFilters || query ? 'Try different filters or search terms.' : 'Scan your first meal to start tracking.'}
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="w-20 h-20 rounded-3xl flex items-center justify-center mb-5"
+            style={{ background: 'rgba(200,255,0,0.06)', border: '1px solid rgba(200,255,0,0.12)' }}>
+            <UtensilsCrossed className="w-9 h-9" style={{ color: 'rgba(200,255,0,0.4)' }} />
+          </div>
+          <p style={{ color: '#fff', fontSize: 17, fontWeight: 800, marginBottom: 6 }}>
+            {hasFilters || query ? 'No matches' : 'No scans yet'}
           </p>
+          <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, lineHeight: 1.5, maxWidth: 240, marginBottom: 24 }}>
+            {hasFilters || query
+              ? 'Try adjusting your filters or search terms.'
+              : 'Scan a meal, snack, or packaged product to see it here.'}
+          </p>
+          {!hasFilters && !query && onScan && (
+            <button
+              onClick={onScan}
+              className="flex items-center gap-2 px-6 py-3.5 rounded-2xl text-[14px] font-bold text-black active:scale-95 transition-all"
+              style={{ background: '#C8FF00' }}>
+              <Camera className="w-4 h-4" /> Scan Your First Meal
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
-          {visible.map((scan) => (
-            <HistoryCard key={scan.id} scan={scan} onView={() => onViewDetail(scan)} />
+          {visible.map((scan, idx) => (
+            <HistoryCard key={scan.id} scan={scan} onView={() => onViewDetail(scan)} index={idx} />
           ))}
           <div ref={loaderRef} style={{ height: 1 }} />
           {loadingMore && (

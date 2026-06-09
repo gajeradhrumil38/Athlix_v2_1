@@ -72,14 +72,11 @@ const Ring: React.FC<RingProps> = ({ score, label, size = 'sm', center }) => {
           </text>
         )}
       </svg>
-      <p style={{
-        color: '#fff',
-        fontSize: 10,
-        fontWeight: 700,
-        textTransform: 'uppercase',
-        letterSpacing: '0.1em',
-        textAlign: 'center',
-      }}>{label}</p>
+      {label ? (
+        <p style={{ color: '#fff', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center' }}>
+          {label}
+        </p>
+      ) : null}
     </div>
   );
 };
@@ -88,14 +85,15 @@ const Ring: React.FC<RingProps> = ({ score, label, size = 'sm', center }) => {
 
 const GradeCentre: React.FC<{ grade: HealthGrade; score: number }> = ({ grade, score }) => {
   const color = scoreColor(score);
+  // lg ring: SVG 120×120, cx=60. Grade (30px) centred at y=47, score (11px) at y=73 → midpoint=60 exactly.
   return (
     <>
-      <text x={60} y={52} textAnchor="middle" dominantBaseline="central"
+      <text x={60} y={47} textAnchor="middle" dominantBaseline="central"
         fill={color} fontSize={30} fontWeight="900" fontFamily="inherit">
         {grade}
       </text>
-      <text x={60} y={76} textAnchor="middle" dominantBaseline="central"
-        fill="rgba(255,255,255,0.5)" fontSize={11} fontWeight="600" fontFamily="inherit">
+      <text x={60} y={73} textAnchor="middle" dominantBaseline="central"
+        fill="rgba(255,255,255,0.45)" fontSize={11} fontWeight="700" fontFamily="inherit">
         {score}/100
       </text>
     </>
@@ -152,23 +150,27 @@ export const HealthRings: React.FC<HealthRingsProps> = ({ score }) => (
 
 // ─── Compact single ring for dish scan ───────────────────────────────────────
 
-export const DishScoreRing: React.FC<{ score: HealthScore }> = ({ score }) => (
-  <div className="flex items-center gap-4">
-    <Ring score={score.overall} label="" size="sm" />
-    <div className="flex-1 min-w-0">
-      <div className="flex items-center gap-2 mb-1">
-        <span style={{
-          fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', color: scoreColor(score.overall),
-        }}>
-          Grade {score.grade}
-        </span>
-        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.5)', fontWeight: 600 }}>
-          {score.overall}/100
-        </span>
+export const DishScoreRing: React.FC<{ score: HealthScore }> = ({ score }) => {
+  const color = scoreColor(score.overall);
+  return (
+    <div className="flex items-center gap-4">
+      {/* Ring — no label so no extra gap below SVG */}
+      <div className="shrink-0">
+        <Ring score={score.overall} label="" size="sm" />
       </div>
-      <p style={{ fontSize: 12, color: '#fff', lineHeight: 1.4, fontWeight: 500 }}>
-        {score.reason}
-      </p>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <span style={{ fontSize: 13, fontWeight: 900, letterSpacing: '0.06em', color }}>
+            Grade {score.grade}
+          </span>
+          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', fontWeight: 600 }}>
+            {score.overall}/100
+          </span>
+        </div>
+        <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', lineHeight: 1.5, fontWeight: 500 }}>
+          {score.reason}
+        </p>
+      </div>
     </div>
-  </div>
-);
+  );
+};

@@ -27,19 +27,26 @@ const DV = { protein: 50, carbs: 275, fat: 78 };
 const MacroBar: React.FC<{ label: string; value: number; dv: number; color: string }> = ({
   label, value, dv, color,
 }) => {
-  const pct = Math.min(100, Math.round((value / dv) * 100));
+  const target = Math.min(100, Math.round((value / dv) * 100));
+  // Animate from 0 on mount so the bar visibly fills
+  const [pct, setPct] = useState(0);
+  useEffect(() => {
+    const t = setTimeout(() => setPct(target), 100);
+    return () => clearTimeout(t);
+  }, [target]);
+
   return (
     <div>
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-1.5">
         <span style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>{label}</span>
         <div className="flex items-center gap-2">
           <span style={{ color: '#fff', fontSize: 12, fontWeight: 800 }}>{value.toFixed(1)}g</span>
-          <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: 600 }}>{pct}% DV</span>
+          <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: 600 }}>{target}% DV</span>
         </div>
       </div>
       <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
-        <div className="h-full rounded-full transition-all duration-700"
-          style={{ width: `${pct}%`, background: color }} />
+        <div className="h-full rounded-full"
+          style={{ width: `${pct}%`, background: color, transition: 'width 0.85s cubic-bezier(0.4,0,0.2,1)' }} />
       </div>
     </div>
   );
@@ -276,8 +283,9 @@ const MacroTile: React.FC<{
   <div className="rounded-xl p-3 text-center"
     style={{
       background: isPriority ? `${color}10` : 'rgba(255,255,255,0.04)',
-      border:     isPriority ? `1.5px solid ${color}55` : '1px solid rgba(255,255,255,0.07)',
-      position:   'relative',
+      // Always 1.5px border — avoids 1→1.5px shift causing layout reflow
+      border:   `1.5px solid ${isPriority ? `${color}55` : 'rgba(255,255,255,0.07)'}`,
+      position: 'relative',
     }}>
     {isPriority && (
       <div style={{
@@ -285,8 +293,13 @@ const MacroTile: React.FC<{
         width: 5, height: 5, borderRadius: '50%', background: color,
       }} />
     )}
-    <p style={{ color: isPriority ? color : 'rgba(255,255,255,0.4)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4, fontWeight: 700 }}>{label}</p>
-    <p style={{ color, fontSize: isPriority ? 20 : 16, fontWeight: 900 }}>
+    <p style={{
+      color: isPriority ? color : 'rgba(255,255,255,0.4)',
+      fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.12em',
+      marginBottom: 4, fontWeight: 700,
+    }}>{label}</p>
+    {/* Consistent 18px — no size jump that shifts grid height */}
+    <p style={{ color, fontSize: 18, fontWeight: 900, lineHeight: 1 }}>
       {val.toFixed(1)}<span style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', marginLeft: 1 }}>{unit}</span>
     </p>
   </div>

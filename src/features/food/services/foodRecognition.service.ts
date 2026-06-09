@@ -209,23 +209,56 @@ function blobToBase64(blob: Blob): Promise<string> {
 
 /**
  * Prepare an image specifically for Gemini Vision:
- *  1. Loads via <img> so the browser applies EXIF orientation (fixes sideways gallery photos)
- *  2. Renders to canvas at up to 1280×1280 (enough detail for food recognition)
- *  3. Applies a mild enhancement pass: contrast + brightness + saturation
- *     (helps with dark, flat, or washed-out gallery images)
- *  4. Always outputs JPEG (most reliable format for Gemini Vision)
+ *  1. EXIF rotation — load via <img> (browser applies EXIF on iOS/Chrome) with
+ *     createImageBitmap as fallback for wider HEIC/AVIF format support
+ *  2. Dimension guard — throws a clear message if the image has no pixels
+ *  3. Renders to canvas at up to 1280×1280 (enough detail for food recognition)
+ *  4. Mild canvas enhancement: contrast + brightness + saturation
+ *     (silently skipped on browsers that don't support ctx.filter)
+ *  5. Always outputs JPEG — consistent format, most reliable for Gemini Vision
  */
 async function prepareForGemini(file: File): Promise<{ data: string; mimeType: 'image/jpeg' }> {
-  const img = await fileToImage(file); // browser applies EXIF rotation here
-  const { width, height } = calcDims(img.naturalWidth, img.naturalHeight, 1280, 1280);
+  let source: HTMLImageElement | ImageBitmap | null = null;
+  let srcW = 0, srcH = 0;
+
+  // Primary path: <img> element — browser applies EXIF orientation automatically
+  try {
+    const img = await fileToImage(file);
+    srcW = img.naturalWidth;
+    srcH = img.naturalHeight;
+    source = img;
+  } catch {
+    // Fallback: createImageBitmap — wider format support (HEIC/AVIF on some platforms)
+    try {
+      const bmp = await createImageBitmap(file);
+      srcW = bmp.width;
+      srcH = bmp.height;
+      source = bmp;
+    } catch {
+      throw new Error(
+        'Could not read this image. Please try a different photo, or use the camera to take a new one.',
+      );
+    }
+  }
+
+  if (!srcW || !srcH) {
+    if (source instanceof ImageBitmap) source.close();
+    throw new Error(
+      'This image appears to be empty or corrupted. Please choose a different photo.',
+    );
+  }
+
+  const { width, height } = calcDims(srcW, srcH, 1280, 1280);
   const canvas = document.createElement('canvas');
   canvas.width  = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d')!;
-  // Mild enhancement — improves recognition for dark / low-contrast gallery shots
   ctx.filter = 'contrast(1.12) brightness(1.06) saturate(1.1)';
-  ctx.drawImage(img, 0, 0, width, height);
+  ctx.drawImage(source as CanvasImageSource, 0, 0, width, height);
   ctx.filter = 'none';
+
+  if (source instanceof ImageBitmap) source.close();
+
   const blob = await canvasToBlob(canvas, 0.92);
   const data = await blobToBase64(blob);
   return { data, mimeType: 'image/jpeg' };

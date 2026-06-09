@@ -82,12 +82,11 @@ const NutritionTable: React.FC<{ label: LabelData }> = ({ label }) => (
       <NutrientRow label="Protein"         value={`${label.protein}g`}       dv={dvPct(label.protein, DV.protein)} bold />
       {(label.vitaminD || label.calcium || label.iron || label.potassium) && (
         <div className="pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 4 }}>
-          <div className="grid grid-cols-2 gap-1">
-            {label.vitaminD   != null && <NutrientRow label="Vitamin D"  value={`${label.vitaminD}mcg`} />}
-            {label.calcium    != null && <NutrientRow label="Calcium"    value={`${label.calcium}mg`}   />}
-            {label.iron       != null && <NutrientRow label="Iron"       value={`${label.iron}mg`}      />}
-            {label.potassium  != null && <NutrientRow label="Potassium"  value={`${label.potassium}mg`} />}
-          </div>
+          {/* Full-width rows — grid would make border-bottom only span half the card */}
+          {label.vitaminD  != null && <NutrientRow label="Vitamin D"  value={`${label.vitaminD}mcg`} />}
+          {label.calcium   != null && <NutrientRow label="Calcium"    value={`${label.calcium}mg`}   />}
+          {label.iron      != null && <NutrientRow label="Iron"       value={`${label.iron}mg`}      />}
+          {label.potassium != null && <NutrientRow label="Potassium"  value={`${label.potassium}mg`} />}
         </div>
       )}
       <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, marginTop: 8, lineHeight: 1.4 }}>
