@@ -5,10 +5,12 @@ import toast from 'react-hot-toast';
 import { FoodScanner } from '../components/FoodScanner';
 import { FoodResults } from '../components/FoodResults';
 import { LabelResults } from '../components/LabelResults';
+import { RegionStandardSheet } from '../components/RegionStandardSheet';
 import type { DetectedFood, ScanState } from '../types';
 import { calcTotals } from '../services/foodRecognition.service';
 import { saveFoodScan } from '../../../lib/foodData';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useRegionStandard } from '../hooks/useRegionStandard';
 
 const INITIAL_STATE: ScanState = {
   step:             'idle',
@@ -26,6 +28,10 @@ export const FoodScannerPage: React.FC = () => {
   const navigate  = useNavigate();
   const [state, setState]   = useState<ScanState>(INITIAL_STATE);
   const [saving, setSaving] = useState(false);
+
+  // One-time region onboarding — fires only when the user has never chosen
+  const { hasChosenRegion } = useRegionStandard();
+  const [showRegionOnboarding, setShowRegionOnboarding] = useState(!hasChosenRegion);
 
   const handleScanComplete = (result: ScanState) => setState(result);
 
@@ -119,6 +125,11 @@ export const FoodScannerPage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* One-time region onboarding popup */}
+      {showRegionOnboarding && (
+        <RegionStandardSheet mode="onboarding" onClose={() => setShowRegionOnboarding(false)} />
+      )}
     </div>
   );
 };

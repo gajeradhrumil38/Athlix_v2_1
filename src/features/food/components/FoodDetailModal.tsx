@@ -1,13 +1,17 @@
 import React, { useMemo, useState } from 'react';
 import { format, parseISO } from 'date-fns';
-import { X, Trash2, Share2, Edit3, Check, UtensilsCrossed, Plus } from 'lucide-react';
+import { X, Trash2, Share2, Edit3, Check, UtensilsCrossed, Plus, Globe } from 'lucide-react';
 import type { DetectedFood, FoodScan } from '../types';
 import { calcTotals, searchFood } from '../services/foodRecognition.service';
 import { deleteFoodScan, updateFoodScan } from '../../../lib/foodData';
 import { deleteFoodImage } from '../services/foodRecognition.service';
-import { scoreDish } from '../services/healthScore.service';
-import { DishScoreRing } from './HealthRings';
+import { scoreDish, scoreLabel } from '../services/healthScore.service';
+import { DishScoreRing, HealthRings } from './HealthRings';
+import { NutritionFactsTable } from './NutritionFactsTable';
+import { CompliancePanel } from './CompliancePanel';
+import { RegionStandardSheet } from './RegionStandardSheet';
 import { useNutritionPriority } from '../hooks/useNutritionPriority';
+import { useRegionStandard } from '../hooks/useRegionStandard';
 
 interface Props {
   scan: FoodScan;
@@ -161,6 +165,12 @@ export const FoodDetailModal: React.FC<Props> = ({ scan: initialScan, onClose, o
   const totals    = useMemo(() => calcTotals(foods), [foods]);
   const dishScore = useMemo(() => scoreDish(foods),  [foods]);
   const { isPriority } = useNutritionPriority();
+  const { region, standard, comparisonRegions } = useRegionStandard();
+  const [showRegion, setShowRegion] = useState(false);
+
+  // Label scan? — full nutrition panel was persisted on the saved food
+  const labelData  = useMemo(() => foods.find((f) => f.source === 'label' && f.labelData)?.labelData, [foods]);
+  const labelScore = useMemo(() => (labelData ? scoreLabel(labelData, region) : null), [labelData, region]);
 
   // ── Save edits ─────────────────────────────────────────────────────────
 
@@ -290,13 +300,29 @@ export const FoodDetailModal: React.FC<Props> = ({ scan: initialScan, onClose, o
           </div>
         </div>
 
-        {/* Health score */}
-        {foods.length > 0 && (
+        {/* Health score — label scan shows full rings, dish shows compact ring */}
+        {labelData && labelScore ? (
+          <>
+            <button onClick={() => setShowRegion(true)}
+              className="mx-4 mb-3 w-[calc(100%-32px)] flex items-center gap-2 px-4 py-2.5 rounded-xl active:scale-[0.99] transition-all"
+              style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <Globe className="w-3.5 h-3.5" style={{ color: '#C8FF00' }} />
+              <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12 }}>
+                Scored against <span style={{ color: '#fff', fontWeight: 800 }}>{standard.flag} {standard.authority}</span>
+              </span>
+              <span style={{ color: '#C8FF00', fontSize: 11, fontWeight: 700, marginLeft: 'auto' }}>Change</span>
+            </button>
+            <div className="mx-4 mb-3 rounded-2xl px-5 py-6"
+              style={{ background: '#16191F', border: '1px solid rgba(255,255,255,0.08)' }}>
+              <HealthRings score={labelScore} />
+            </div>
+          </>
+        ) : foods.length > 0 ? (
           <div className="mx-4 mb-3 rounded-2xl px-4 py-3"
             style={{ background: '#16191F', border: '1px solid rgba(255,255,255,0.08)' }}>
             <DishScoreRing score={dishScore} />
           </div>
-        )}
+        ) : null}
 
         {/* Food list */}
         <div className="mx-4 mb-3 rounded-2xl overflow-hidden"
@@ -322,6 +348,14 @@ export const FoodDetailModal: React.FC<Props> = ({ scan: initialScan, onClose, o
 
           {editing && <QuickAddSearch onAdd={(f) => setFoods((prev) => [...prev, f])} />}
         </div>
+
+        {/* Full nutrition facts + standards comparison — for saved label scans */}
+        {labelData && (
+          <div className="mx-4 mb-3 space-y-3">
+            <NutritionFactsTable label={labelData} />
+            <CompliancePanel label={labelData} userRegion={region} comparisonRegions={comparisonRegions} />
+          </div>
+        )}
 
         {/* Edit action bar */}
         {editing && (
@@ -363,6 +397,8 @@ export const FoodDetailModal: React.FC<Props> = ({ scan: initialScan, onClose, o
             </div>
           </div>
         )}
+
+        {showRegion && <RegionStandardSheet mode="settings" onClose={() => setShowRegion(false)} />}
       </div>
     </div>
   );

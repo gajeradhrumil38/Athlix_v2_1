@@ -1,3 +1,7 @@
+// ─── Regulatory region ─────────────────────────────────────────────────────
+
+export type Region = 'who' | 'eu' | 'usa' | 'india' | 'japan';
+
 // ─── Detected food item (one entry in a scan) ─────────────────────────────
 
 export interface DetectedFood {
@@ -15,6 +19,7 @@ export interface DetectedFood {
   sugar?: number;
   confidence?: number;  // 0–1 from image recognition
   source?: 'usda' | 'openfoodfacts' | 'fatsecret' | 'label'; // which provider supplied this record
+  labelData?: LabelData; // full nutrition panel, persisted for label scans (viewable in history)
 }
 
 // ─── Persisted scan row ────────────────────────────────────────────────────
@@ -136,6 +141,8 @@ export interface LabelData {
   calcium?: number;
   iron?: number;
   potassium?: number;
+  detectedStandard?: Region | 'unknown';  // regime the product was made under (from label cues)
+  detectedStandardEvidence?: string;        // the visible cue, e.g. "FSSAI Lic. No. 10012..."
 }
 
 // ─── Health scoring ────────────────────────────────────────────────────────
@@ -146,6 +153,8 @@ export interface Additive {
   name: string;
   concern: 'high' | 'medium' | 'low';
   effect: string;
+  banned?: boolean;          // banned/restricted in the active scoring region
+  bannedRegionName?: string; // e.g. "EU" — region the ban applies to
 }
 
 export interface HealthScore {
@@ -158,6 +167,21 @@ export interface HealthScore {
   concerns: Additive[];
   recommendation: 'eat' | 'moderate' | 'avoid';
   reason: string;
+}
+
+// ─── Standards compliance ──────────────────────────────────────────────────
+
+export interface ComplianceViolation {
+  field: string;        // "Sodium", "Red 40", "Trans fat"
+  detail: string;       // "920mg/serving — high vs FDA" or "BANNED in EU"
+  severity: 'high' | 'medium';
+}
+
+export interface ComplianceResult {
+  region: Region;        // the standard being checked against
+  isUserRegion: boolean; // true if this row is the user's current region
+  meets: boolean;
+  violations: ComplianceViolation[];
 }
 
 // ─── UI state ──────────────────────────────────────────────────────────────

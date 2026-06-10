@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, SlidersHorizontal } from 'lucide-react';
+import { Camera, SlidersHorizontal, Globe } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { FoodScan } from '../types';
 import { FoodHistory } from '../components/FoodHistory';
 import { FoodDetailModal } from '../components/FoodDetailModal';
 import { NutritionPrioritySheet } from '../components/NutritionPrioritySheet';
+import { RegionStandardSheet } from '../components/RegionStandardSheet';
 
 export const FoodHistoryPage: React.FC = () => {
   const navigate = useNavigate();
   const [selectedScan, setSelectedScan]   = useState<FoodScan | null>(null);
   const [showPriority, setShowPriority]   = useState(false);
+  const [showRegion, setShowRegion]       = useState(false);
 
   const handleDeleted = (id: string) => {
     setSelectedScan(null);
@@ -35,9 +37,17 @@ export const FoodHistoryPage: React.FC = () => {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={() => setShowRegion(true)}
+            className="w-9 h-9 rounded-xl flex items-center justify-center active:scale-90 transition-all"
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+            aria-label="Food safety region">
+            <Globe className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.6)' }} />
+          </button>
+          <button
             onClick={() => setShowPriority(true)}
             className="w-9 h-9 rounded-xl flex items-center justify-center active:scale-90 transition-all"
-            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}>
+            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)' }}
+            aria-label="Priority nutrients">
             <SlidersHorizontal className="w-4 h-4" style={{ color: 'rgba(255,255,255,0.6)' }} />
           </button>
           <button
@@ -67,6 +77,10 @@ export const FoodHistoryPage: React.FC = () => {
 
       {showPriority && (
         <NutritionPrioritySheet onClose={() => setShowPriority(false)} />
+      )}
+
+      {showRegion && (
+        <RegionStandardSheet mode="settings" onClose={() => setShowRegion(false)} />
       )}
 
       {/* Floating scan button — always-visible entry to the scanner */}

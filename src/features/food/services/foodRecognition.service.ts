@@ -311,7 +311,13 @@ export async function recognizeFoodWithGemini(imageFile: File): Promise<GeminiSc
 
     'CASE A — Nutrition Facts Panel\n' +
     'If you see a printed Nutrition Facts label (black-bordered standard panel on packaged food), extract ALL numbers exactly. Return:\n' +
-    '{"scanType":"nutrition_label","label":{"productName":"","servingSize":"","servingGrams":100,"servingsPerContainer":"","calories":0,"totalFat":0,"saturatedFat":0,"transFat":0,"cholesterol":0,"sodium":0,"totalCarbs":0,"dietaryFiber":0,"totalSugars":0,"addedSugars":0,"protein":0,"ingredients":"","vitaminD":0,"calcium":0,"iron":0,"potassium":0}}\n\n' +
+    '{"scanType":"nutrition_label","label":{"productName":"","servingSize":"","servingGrams":100,"servingsPerContainer":"","calories":0,"totalFat":0,"saturatedFat":0,"transFat":0,"cholesterol":0,"sodium":0,"totalCarbs":0,"dietaryFiber":0,"totalSugars":0,"addedSugars":0,"protein":0,"ingredients":"","vitaminD":0,"calcium":0,"iron":0,"potassium":0,"detectedStandard":"unknown","detectedStandardEvidence":""}}\n\n' +
+    'detectedStandard — infer which regulatory regime the PRODUCT was made under, from visible label cues:\n' +
+    '  "india" = FSSAI logo / "FSSAI Lic. No." / veg-nonveg mark / "Marketed by … India"\n' +
+    '  "usa"   = US-format Nutrition Facts panel / "Distributed by … USA" / FDA wording\n' +
+    '  "eu"    = E-number additives (E102, E150d…) / CE mark / multiple EU languages\n' +
+    '  "japan" = Japanese label text / MHLW format\n' +
+    '  "unknown" = no clear cue. Put the cue you used in detectedStandardEvidence (short text).\n\n' +
 
     'CASE B — Food / Meal Photo\n' +
     'If you see any food — on a plate, in a bowl, on a surface, in a container, partially eaten, or mixed — identify every distinct item. Include ALL visible food even if partially obscured. Return:\n' +
