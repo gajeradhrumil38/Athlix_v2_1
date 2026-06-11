@@ -28,6 +28,62 @@ const NutrientRow: React.FC<{ label: string; value: string; dv?: number; bold?: 
   </div>
 );
 
+// ─── Sugar breakdown: natural (fruit/dairy) vs added (refined) ────────────────
+
+const ADDED_SUGAR_DV = 50; // FDA DV for added sugars (g)
+
+const SugarBreakdown: React.FC<{ totalSugars: number; addedSugars: number }> = ({ totalSugars, addedSugars }) => {
+  const added   = Math.min(Math.max(addedSugars, 0), totalSugars);
+  const natural = Math.max(0, totalSugars - added);
+  if (totalSugars <= 0) return null;
+
+  const addedPct   = Math.round((added / totalSugars) * 100);
+  const naturalPct = 100 - addedPct;
+  const addedDvPct = Math.round((added / ADDED_SUGAR_DV) * 100);
+
+  return (
+    <div className="rounded-xl px-3 py-3 mt-2" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+      <div className="flex items-center justify-between mb-2">
+        <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+          Sugar Breakdown
+        </p>
+        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: 600 }}>{totalSugars}g total</p>
+      </div>
+
+      {/* Split bar — natural vs added */}
+      <div className="flex h-2.5 rounded-full overflow-hidden mb-2.5" style={{ background: 'rgba(255,255,255,0.06)' }}>
+        {natural > 0 && <div style={{ width: `${naturalPct}%`, background: '#60a5fa' }} />}
+        {added   > 0 && <div style={{ width: `${addedPct}%`,   background: '#f87171' }} />}
+      </div>
+
+      {/* Legend */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#60a5fa' }} />
+          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>Natural</span>
+          <span style={{ color: '#fff', fontSize: 12, fontWeight: 800 }}>{natural.toFixed(natural % 1 ? 1 : 0)}g</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-2.5 h-2.5 rounded-full" style={{ background: '#f87171' }} />
+          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11 }}>Added</span>
+          <span style={{ color: '#fff', fontSize: 12, fontWeight: 800 }}>{added.toFixed(added % 1 ? 1 : 0)}g</span>
+          {added > 0 && (
+            <span style={{ color: '#f87171', fontSize: 10, fontWeight: 700 }}>· {addedDvPct}% DV</span>
+          )}
+        </div>
+      </div>
+
+      <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, lineHeight: 1.5, marginTop: 8 }}>
+        {added === 0
+          ? 'All sugar here is natural (from fruit, dairy or vegetables).'
+          : addedPct >= 50
+          ? 'Mostly added sugar — refined sugar drives blood-glucose spikes.'
+          : 'Natural sugars come with fibre and nutrients; added sugars don’t.'}
+      </p>
+    </div>
+  );
+};
+
 export const NutritionFactsTable: React.FC<{ label: LabelData }> = ({ label }) => (
   <div className="rounded-2xl overflow-hidden" style={{ background: '#16191F', border: '1px solid rgba(255,255,255,0.08)' }}>
     <div className="px-4 py-3" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
@@ -58,6 +114,8 @@ export const NutritionFactsTable: React.FC<{ label: LabelData }> = ({ label }) =
       <NutrientRow label="Dietary Fiber"      value={`${label.dietaryFiber}g`}  dv={dvPct(label.dietaryFiber, DV.fiber)} indent />
       <NutrientRow label="Total Sugars"       value={`${label.totalSugars}g`}   indent />
       {label.addedSugars > 0 && <NutrientRow label="  Incl. Added Sugars" value={`${label.addedSugars}g`} indent />}
+      {label.totalSugars > 0 && <SugarBreakdown totalSugars={label.totalSugars} addedSugars={label.addedSugars} />}
+      <div style={{ height: 6 }} />
       <NutrientRow label="Protein"            value={`${label.protein}g`}       dv={dvPct(label.protein, DV.protein)} bold />
       {(label.vitaminD || label.calcium || label.iron || label.potassium) && (
         <div className="pt-2" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 4 }}>
