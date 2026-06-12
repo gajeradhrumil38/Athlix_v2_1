@@ -23,18 +23,22 @@ import {
   Clock3,
   Dumbbell,
   Plus,
+  Minus,
   Trash2,
   Zap,
   CalendarDays,
   LayoutGrid,
   Sun,
+  Pencil,
+  Check,
+  X,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
-import { deleteWorkout, getWorkouts } from '../lib/supabaseData';
-import { convertWeight, isWeightUnit, type WeightUnit } from '../lib/units';
+import { deleteWorkout, getWorkouts, updateWorkoutSets } from '../lib/supabaseData';
+import { convertWeight, formatWeight, isWeightUnit, type WeightUnit } from '../lib/units';
 import { muscleColor } from '../lib/muscleColors';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -159,6 +163,317 @@ const ExerciseChip: React.FC<{ name: string; color: string }> = ({ name, color }
     {name.charAt(0).toUpperCase()}
   </div>
 );
+
+// ── Expandable workout card (view + inline set editing) ───────────────────────
+
+interface EditSet { weight: number; reps: number }
+interface EditGroup { name: string; muscle_group?: string; exercise_db_id?: string | null; sets: EditSet[] }
+
+/** Group a workout's flat set-rows into per-exercise groups, weights converted to `unit`. */
+const groupExerciseSets = (w: any, unit: WeightUnit): EditGroup[] => {
+  const rows = [...(w.exercises || [])].sort((a: any, b: any) => (a.order_index ?? 0) - (b.order_index ?? 0));
+  const map = new Map<string, EditGroup>();
+  for (const r of rows) {
+    const key = (r.name as string) || 'Exercise';
+    let g = map.get(key);
+    if (!g) {
+      g = { name: key, muscle_group: r.muscle_group || undefined, exercise_db_id: r.exercise_db_id || null, sets: [] };
+      map.set(key, g);
+    }
+    const from = isWeightUnit(r.unit) ? r.unit : unit;
+    const wt = convertWeight(Number(r.weight || 0), from, unit, 0.1);
+    const count = Math.max(1, Number(r.sets || 1)); // expand any aggregated rows
+    for (let i = 0; i < count; i++) g.sets.push({ weight: wt, reps: Number(r.reps || 0) });
+  }
+  return Array.from(map.values());
+};
+
+// Module-level so it keeps a stable identity — never remounts mid-typing (preserves input focus)
+const StepperField: React.FC<{
+  label: string; value: number; delta: number; onChange: (v: number) => void;
+}> = ({ label, value, delta, onChange }) => {
+  const bump = (d: number) => onChange(Math.max(0, Math.round((value + d) * 10) / 10));
+  return (
+    <div className="flex-1">
+      <p className="text-[9px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>{label}</p>
+      <div className="flex items-center gap-1">
+        <button onClick={() => bump(-delta)}
+          className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0 active:scale-90 transition-all"
+          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+          <Minus className="w-3 h-3" />
+        </button>
+        <input
+          type="number" inputMode="decimal" value={value}
+          onFocus={(e) => e.target.select()}
+          onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
+          className="w-full h-7 text-center text-[13px] font-bold rounded-lg focus:outline-none"
+          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
+        />
+        <button onClick={() => bump(delta)}
+          className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0 active:scale-90 transition-all"
+          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+          <Plus className="w-3 h-3" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const SetEditorRow: React.FC<{
+  index: number;
+  set: EditSet;
+  unit: WeightUnit;
+  accent: string;
+  onChange: (s: EditSet) => void;
+  onRemove: () => void;
+}> = ({ index, set, unit, accent, onChange, onRemove }) => (
+  <div className="flex items-end gap-2">
+    <div className="h-6 w-6 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0 mb-0.5"
+      style={{ background: `color-mix(in srgb, ${accent} 18%, var(--bg-surface))`, color: accent }}>
+      {index + 1}
+    </div>
+    <StepperField label={unit} value={set.weight} delta={2.5} onChange={(v) => onChange({ ...set, weight: v })} />
+    <StepperField label="reps"  value={set.reps}   delta={1}   onChange={(v) => onChange({ ...set, reps: v })} />
+    <button onClick={onRemove}
+      className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0 mb-0.5 active:scale-90 transition-all"
+      style={{ background: 'rgba(255,59,48,0.08)', color: 'rgba(255,80,65,0.85)' }}>
+      <X className="w-3.5 h-3.5" />
+    </button>
+  </div>
+);
+
+const WorkoutCard: React.FC<{
+  workout: any;
+  unit: WeightUnit;
+  onDelete: (id: string, title: string) => void;
+  onSaved: (id: string, exercises: any[], muscleGroups: string[]) => void;
+}> = ({ workout, unit, onDelete, onSaved }) => {
+  const { user } = useAuth();
+  const [expanded, setExpanded] = useState(false);
+  const [editing, setEditing]   = useState(false);
+  const [saving, setSaving]     = useState(false);
+  const [groups, setGroups]     = useState<EditGroup[]>(() => groupExerciseSets(workout, unit));
+
+  const accent    = getAccent(workout);
+  const names     = getExerciseNames(workout);
+  const title     = getDisplayTitle(workout);
+  const exCount   = getExerciseCount(workout);
+  const dur       = Number(workout.duration_minutes || 0);
+  const muscle    = (workout.muscle_groups || [])[0];
+  const chips     = names.slice(0, 4);
+  const extra     = names.length - chips.length;
+  const planLabel = !isGenericTitle(workout.title) && workout.title !== title ? workout.title : null;
+  const hasDetail = (workout.exercises || []).length > 0;
+
+  const beginEdit = () => { setGroups(groupExerciseSets(workout, unit)); setEditing(true); setExpanded(true); };
+  const cancelEdit = () => { setGroups(groupExerciseSets(workout, unit)); setEditing(false); };
+
+  const updateSet = (gi: number, si: number, s: EditSet) =>
+    setGroups((p) => p.map((g, i) => (i === gi ? { ...g, sets: g.sets.map((x, j) => (j === si ? s : x)) } : g)));
+  const removeSet = (gi: number, si: number) =>
+    setGroups((p) => p.map((g, i) => (i === gi ? { ...g, sets: g.sets.filter((_, j) => j !== si) } : g)));
+  const addSet = (gi: number) =>
+    setGroups((p) => p.map((g, i) => {
+      if (i !== gi) return g;
+      const last = g.sets[g.sets.length - 1];
+      return { ...g, sets: [...g.sets, last ? { ...last } : { weight: 0, reps: 10 }] };
+    }));
+
+  const save = async () => {
+    if (!user) return;
+    const api = groups
+      .map((g) => ({
+        name: g.name,
+        muscle_group: g.muscle_group,
+        exercise_db_id: g.exercise_db_id,
+        completed_sets: g.sets.map((s) => ({ reps: Math.round(s.reps) || 0, weight: s.weight || 0, unit })),
+      }))
+      .filter((g) => g.completed_sets.some((s) => s.reps > 0 || s.weight > 0));
+    if (api.length === 0) { toast.error('Keep at least one set, or delete the workout.'); return; }
+    setSaving(true);
+    try {
+      const res = await updateWorkoutSets(user.id, workout.id, api);
+      onSaved(workout.id, res.exercises, res.muscle_groups);
+      setEditing(false);
+      toast.success('Workout updated');
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to save changes');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const savedGroups = useMemo(() => groupExerciseSets(workout, unit), [workout, unit]);
+  const viewGroups  = editing ? groups : savedGroups;
+
+  return (
+    <motion.div
+      key={workout.id}
+      layout
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.97 }}
+      className="relative overflow-hidden rounded-2xl"
+      style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+    >
+      <div className="absolute inset-y-0 left-0 w-[3px] rounded-l-2xl" style={{ backgroundColor: accent }} />
+
+      {/* Header — tap to expand (div, not button: it contains a delete button + Details link) */}
+      <div
+        role="button"
+        tabIndex={hasDetail ? 0 : -1}
+        onClick={() => { if (editing) return; if (hasDetail) setExpanded((e) => !e); }}
+        onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && hasDetail && !editing) { e.preventDefault(); setExpanded((v) => !v); } }}
+        className="w-full text-left pl-4 pr-3 py-3"
+        style={{ cursor: hasDetail && !editing ? 'pointer' : 'default' }}
+      >
+        <div className="flex items-start justify-between gap-2 mb-2">
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-bold leading-snug truncate" style={{ color: 'var(--text-primary)' }}>{title}</p>
+            {muscle && <p className="text-[11px] font-medium mt-0.5" style={{ color: accent }}>{muscle}</p>}
+          </div>
+          <div className="flex items-center gap-1 shrink-0 mt-0.5">
+            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+              <button
+                onClick={() => onDelete(workout.id, workout.title)}
+                className="h-7 w-7 flex items-center justify-center rounded-lg active:scale-95 transition-all"
+                style={{ background: 'rgba(255,59,48,0.08)', color: 'rgba(255,80,65,0.85)' }}
+                aria-label="Delete"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+              <Link
+                to="/timeline"
+                className="h-7 inline-flex items-center px-2.5 rounded-lg text-[11px] font-semibold"
+                style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+              >
+                Details
+              </Link>
+            </div>
+            {/* Chevron is outside stopPropagation → tapping it also toggles expand */}
+            {hasDetail && (
+              <ChevronDown
+                className="h-4 w-4 transition-transform"
+                style={{ color: 'var(--text-muted)', transform: expanded ? 'rotate(180deg)' : 'none' }}
+              />
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--text-muted)' }}>
+            <Clock3 className="h-3 w-3 shrink-0" />
+            <span>{dur > 0 ? `${dur} min` : `${exCount} ex`}</span>
+            {planLabel && (
+              <span className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold truncate max-w-[120px]"
+                style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                {planLabel}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-0.5">
+            <div className="flex -space-x-1.5">
+              {chips.map((n) => <ExerciseChip key={n} name={n} color={accent} />)}
+            </div>
+            {extra > 0 && <span className="ml-1 text-[10px] font-semibold" style={{ color: 'var(--text-muted)' }}>+{extra}</span>}
+          </div>
+        </div>
+      </div>
+
+      {/* Expanded — exercises with sets */}
+      <AnimatePresence initial={false}>
+        {expanded && hasDetail && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="px-4 pb-4 pt-1" style={{ borderTop: '1px solid var(--border)' }}>
+              {/* Edit toggle */}
+              <div className="flex items-center justify-between py-2.5">
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: 'var(--text-muted)' }}>
+                  {viewGroups.length} exercise{viewGroups.length !== 1 ? 's' : ''}
+                </p>
+                {!editing ? (
+                  <button onClick={beginEdit}
+                    className="flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-semibold active:scale-95 transition-all"
+                    style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                    <Pencil className="w-3 h-3" /> Edit
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={cancelEdit}
+                      className="h-7 px-2.5 rounded-lg text-[11px] font-semibold active:scale-95 transition-all"
+                      style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                      Cancel
+                    </button>
+                    <button onClick={save} disabled={saving}
+                      className="flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[11px] font-bold active:scale-95 transition-all disabled:opacity-50"
+                      style={{ background: 'var(--accent)', color: '#000' }}>
+                      <Check className="w-3 h-3" /> {saving ? 'Saving…' : 'Save'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Exercise groups */}
+              <div className="space-y-2.5">
+                {viewGroups.map((g, gi) => (
+                  <div key={`${g.name}-${gi}`} className="rounded-xl p-3"
+                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="h-5 w-5 rounded text-[10px] font-bold flex items-center justify-center shrink-0"
+                        style={{ background: muscleColor(g.muscle_group ?? ''), color: '#000' }}>
+                        {g.name.charAt(0)}
+                      </div>
+                      <p className="text-[13px] font-bold truncate" style={{ color: 'var(--text-primary)' }}>{g.name}</p>
+                      <span className="ml-auto text-[10px] font-semibold" style={{ color: 'var(--text-muted)' }}>
+                        {g.sets.length} set{g.sets.length !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+
+                    {editing ? (
+                      <div className="space-y-2">
+                        {g.sets.map((s, si) => (
+                          <SetEditorRow key={si} index={si} set={s} unit={unit} accent={accent}
+                            onChange={(ns) => updateSet(gi, si, ns)} onRemove={() => removeSet(gi, si)} />
+                        ))}
+                        <button onClick={() => addSet(gi)}
+                          className="w-full mt-1 py-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
+                          style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px dashed var(--border)' }}>
+                          <Plus className="w-3 h-3" /> Add set
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {g.sets.map((s, si) => (
+                          <div key={si} className="flex items-center gap-2 text-[12px]">
+                            <span className="h-5 w-5 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0"
+                              style={{ background: `color-mix(in srgb, ${accent} 16%, var(--bg-elevated))`, color: accent }}>
+                              {si + 1}
+                            </span>
+                            <span className="font-bold" style={{ color: 'var(--text-primary)' }}>
+                              {formatWeight(s.weight, unit)}
+                            </span>
+                            <span style={{ color: 'var(--text-muted)' }}>×</span>
+                            <span className="font-bold" style={{ color: 'var(--text-primary)' }}>{s.reps}</span>
+                            <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>reps</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
 
 // ── Main ──────────────────────────────────────────────────────────────────────
 
@@ -325,86 +640,22 @@ export const Calendar: React.FC = () => {
 
   // ── Render helpers ────────────────────────────────────────────────────────────
 
-  const renderWorkoutCard = (workout: any) => {
-    const accent    = getAccent(workout);
-    const names     = getExerciseNames(workout);
-    const title     = getDisplayTitle(workout);
-    const exCount   = getExerciseCount(workout);
-    const dur       = Number(workout.duration_minutes || 0);
-    const muscle    = (workout.muscle_groups || [])[0];
-    const chips     = names.slice(0, 4);
-    const extra     = names.length - chips.length;
-    // Show plan name near clock when the stored title is a real plan name (not generic/auto)
-    const planLabel = !isGenericTitle(workout.title) && workout.title !== title ? workout.title : null;
-
-    return (
-      <motion.div
-        key={workout.id}
-        layout
-        initial={{ opacity: 0, y: 4 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.97 }}
-        className="relative overflow-hidden rounded-2xl"
-        style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
-      >
-        <div className="absolute inset-y-0 left-0 w-[3px] rounded-l-2xl" style={{ backgroundColor: accent }} />
-
-        <div className="pl-4 pr-3 py-3">
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <div className="min-w-0 flex-1">
-              <p className="text-[15px] font-bold leading-snug truncate" style={{ color: 'var(--text-primary)' }}>
-                {title}
-              </p>
-              {muscle && (
-                <p className="text-[11px] font-medium mt-0.5" style={{ color: accent }}>
-                  {muscle}
-                </p>
-              )}
-            </div>
-            <div className="flex items-center gap-1 shrink-0 mt-0.5">
-              <button
-                onClick={() => handleDelete(workout.id, workout.title)}
-                className="h-7 w-7 flex items-center justify-center rounded-lg"
-                style={{ background: 'rgba(255,59,48,0.08)', color: 'rgba(255,80,65,0.85)' }}
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-              <Link
-                to="/timeline"
-                className="h-7 inline-flex items-center px-2.5 rounded-lg text-[11px] font-semibold"
-                style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
-              >
-                Details
-              </Link>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 text-[11px]" style={{ color: 'var(--text-muted)' }}>
-              <Clock3 className="h-3 w-3 shrink-0" />
-              <span>{dur > 0 ? `${dur} min` : `${exCount} ex`}</span>
-              {planLabel && (
-                <span
-                  className="px-1.5 py-0.5 rounded-md text-[10px] font-semibold truncate max-w-[120px]"
-                  style={{ background: 'var(--bg-surface)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}
-                >
-                  {planLabel}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-0.5">
-              <div className="flex -space-x-1.5">
-                {chips.map((n) => <ExerciseChip key={n} name={n} color={accent} />)}
-              </div>
-              {extra > 0 && (
-                <span className="ml-1 text-[10px] font-semibold" style={{ color: 'var(--text-muted)' }}>+{extra}</span>
-              )}
-            </div>
-          </div>
-        </div>
-      </motion.div>
+  // Apply an in-place set edit to the workouts state (keeps summaries/volume correct)
+  const handleSetsUpdated = (id: string, exercises: any[], muscleGroups: string[]) => {
+    setWorkouts((prev) =>
+      prev.map((w) => (w.id === id ? { ...w, exercises, muscle_groups: muscleGroups } : w)),
     );
   };
+
+  const renderWorkoutCard = (workout: any) => (
+    <WorkoutCard
+      key={workout.id}
+      workout={workout}
+      unit={unit}
+      onDelete={handleDelete}
+      onSaved={handleSetsUpdated}
+    />
+  );
 
   // 5-day focal strip for Today view — selected day centre, ±1 & ±2 fade out
   const renderTodayStrip = () => {

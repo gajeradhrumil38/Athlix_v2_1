@@ -1736,6 +1736,84 @@ export const deleteWorkout = async (userId: string, workoutId: string) => {
   if (error) throw normalizeError(error, 'Failed to delete workout.');
 };
 
+/**
+ * Replace a logged workout's sets in place (same workout id, date and title).
+ * Used by the calendar card's inline editor. Returns the new flat exercise rows.
+ */
+export const updateWorkoutSets = async (
+  userId: string,
+  workoutId: string,
+  exercises: Array<{
+    name: string;
+    muscle_group?: string;
+    exercise_db_id?: string | null;
+    completed_sets: Array<{ reps: number; weight: number; unit?: ExerciseSetUnit }>;
+  }>,
+): Promise<{ exercises: LocalExercise[]; muscle_groups: string[] }> => {
+  if (!hasSupabaseConfig) {
+    const res = await localData.updateWorkoutSets(userId, workoutId, exercises);
+    return { exercises: res.exercises, muscle_groups: res.workout.muscle_groups || [] };
+  }
+
+  // Ownership guard
+  const { data: owned, error: ownErr } = await supabase
+    .from('workouts')
+    .select('id')
+    .eq('id', workoutId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (ownErr) throw normalizeError(ownErr, 'Failed to verify workout.');
+  if (!owned) throw new Error('Workout not found.');
+
+  const valid = exercises
+    .map((ex) => ({
+      ...ex,
+      completed_sets: (ex.completed_sets || []).filter(
+        (s) => Number(s.reps || 0) > 0 || Number(s.weight || 0) > 0,
+      ),
+    }))
+    .filter((ex) => ex.completed_sets.length > 0);
+
+  if (valid.length === 0) throw new Error('Keep at least one set, or delete the workout instead.');
+
+  // Build the replacement rows
+  const rows: RawRecord[] = [];
+  let order = 0;
+  valid.forEach((ex) => {
+    ex.completed_sets.forEach((set) => {
+      rows.push({
+        id: createId(),
+        workout_id: workoutId,
+        name: ex.name,
+        muscle_group: ex.muscle_group || null,
+        sets: 1,
+        reps: set.reps,
+        weight: set.weight || 0,
+        unit: set.unit || 'lbs',
+        order_index: order++,
+        exercise_db_id: ex.exercise_db_id || null,
+      });
+    });
+  });
+
+  // Replace: delete old set rows, insert new
+  const { error: delErr } = await supabase.from('exercises').delete().eq('workout_id', workoutId);
+  if (delErr) throw normalizeError(delErr, 'Failed to update workout sets.');
+
+  await insertRows('exercises', rows);
+  invalidateExerciseRowsCache();
+
+  const muscle_groups = Array.from(new Set(valid.map((ex) => ex.muscle_group).filter(Boolean) as string[]));
+  const { error: wErr } = await supabase
+    .from('workouts')
+    .update({ muscle_groups })
+    .eq('id', workoutId)
+    .eq('user_id', userId);
+  if (wErr) throw normalizeError(wErr, 'Sets saved, but failed to update the workout summary.');
+
+  return { exercises: rows as unknown as LocalExercise[], muscle_groups };
+};
+
 export const getTemplates = async (userId: string) => {
   if (!hasSupabaseConfig) return localData.getTemplates(userId);
 

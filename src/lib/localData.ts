@@ -971,6 +971,59 @@ export const deleteWorkout = async (userId: string, workoutId: string) => {
   writeDb(db);
 };
 
+export const updateWorkoutSets = async (
+  userId: string,
+  workoutId: string,
+  exercises: Array<{
+    name: string;
+    muscle_group?: string;
+    exercise_db_id?: string | null;
+    completed_sets: Array<{ reps: number; weight: number; unit?: ExerciseSetUnit }>;
+  }>,
+): Promise<{ workout: LocalWorkout; exercises: LocalExercise[] }> => {
+  const db = readDb();
+  const workout = db.workouts.find((w) => w.id === workoutId && w.user_id === userId);
+  if (!workout) throw new Error('Workout not found.');
+
+  const valid = exercises
+    .map((ex) => ({
+      ...ex,
+      completed_sets: (ex.completed_sets || []).filter(
+        (s) => Number(s.reps || 0) > 0 || Number(s.weight || 0) > 0,
+      ),
+    }))
+    .filter((ex) => ex.completed_sets.length > 0);
+
+  // Replace this workout's exercise rows
+  db.exercises = db.exercises.filter((e) => e.workout_id !== workoutId);
+  const rows: LocalExercise[] = [];
+  let order = 0;
+  valid.forEach((ex) => {
+    ex.completed_sets.forEach((set) => {
+      rows.push({
+        id: createId(),
+        workout_id: workoutId,
+        name: ex.name,
+        muscle_group: ex.muscle_group || null,
+        sets: 1,
+        reps: set.reps,
+        weight: set.weight || 0,
+        unit: set.unit || 'lbs',
+        order_index: order++,
+        exercise_db_id: ex.exercise_db_id || null,
+      } as LocalExercise);
+    });
+  });
+  db.exercises.push(...rows);
+
+  workout.muscle_groups = Array.from(
+    new Set(valid.map((ex) => ex.muscle_group).filter(Boolean) as string[]),
+  );
+
+  writeDb(db);
+  return { workout, exercises: rows };
+};
+
 export const getTemplates = async (userId: string) => {
   const db = readDb();
   return db.templates
