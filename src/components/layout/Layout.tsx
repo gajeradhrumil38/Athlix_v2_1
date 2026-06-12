@@ -273,7 +273,7 @@ export const Layout: React.FC = () => {
               paddingBottom: 'env(safe-area-inset-bottom)',
             }}
           >
-            <div className="mx-auto flex h-16 max-w-[480px] items-center justify-around px-4">
+            <div className="flex h-16 w-full items-center justify-around px-2">
               {mobileNavItems.map((item) => (
                 <NavLink
                   key={item.path}
@@ -281,7 +281,7 @@ export const Layout: React.FC = () => {
                   end={item.path === '/'}
                   onClick={() => handleTabTap(item.path)}
                   className={({ isActive }) =>
-                    `relative flex flex-col items-center justify-center gap-1 w-16 h-full transition-all duration-150 ${
+                    `relative flex flex-1 flex-col items-center justify-center gap-1 h-full transition-all duration-150 ${
                       isActive ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'
                     } ${tappedTab === item.path ? 'scale-110' : 'scale-100'}`
                   }
