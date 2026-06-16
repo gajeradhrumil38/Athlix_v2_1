@@ -5,6 +5,7 @@ import type { FoodScan } from '../types';
 import { deleteFoodScan, getFoodScans } from '../../../lib/foodData';
 import { deleteFoodImage } from '../services/foodRecognition.service';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useProgress } from '../../../contexts/ProgressContext';
 import { scoreDish } from '../services/healthScore.service';
 import { useNutritionPriority } from '../hooks/useNutritionPriority';
 
@@ -279,6 +280,7 @@ const PAGE_SIZE = 20;
 
 export const FoodHistory: React.FC<Props> = ({ onViewDetail, onScan }) => {
   const { user } = useAuth();
+  const { startProgress, doneProgress } = useProgress();
 
   const [scans, setScans]             = useState<FoodScan[]>([]);
   const [loading, setLoading]         = useState(true);
@@ -297,14 +299,18 @@ export const FoodHistory: React.FC<Props> = ({ onViewDetail, onScan }) => {
 
   const load = useCallback(async (pg: number, replace: boolean) => {
     if (!user) return;
-    pg === 0 ? setLoading(true) : setLoadingMore(true);
+    if (pg === 0) { setLoading(true); startProgress(); }
+    else setLoadingMore(true);
     try {
       const { scans: newScans, total: t } = await getFoodScans(user.id, pg, PAGE_SIZE);
       setScans((prev) => replace ? newScans : [...prev, ...newScans]);
       setTotal(t);
     } catch { /* silent */ }
-    finally { pg === 0 ? setLoading(false) : setLoadingMore(false); }
-  }, [user]);
+    finally {
+      if (pg === 0) { setLoading(false); doneProgress(); }
+      else setLoadingMore(false);
+    }
+  }, [user, startProgress, doneProgress]);
 
   useEffect(() => { load(0, true); }, [load]);
 
