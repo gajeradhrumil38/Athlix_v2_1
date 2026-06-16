@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useProgress } from '../contexts/ProgressContext';
 import { format } from 'date-fns';
 import { ChevronDown, ChevronUp, Trash2, Clock, Dumbbell, BarChart2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -283,6 +284,7 @@ const Skeleton = () => (
 
 export const Timeline: React.FC = () => {
   const { user, profile } = useAuth();
+  const { startProgress, doneProgress } = useProgress();
   const displayUnit = (profile?.unit_preference || 'lbs') as WeightUnit;
   const [workouts, setWorkouts] = useState<any[]>([]);
   const [loading, setLoading]   = useState(true);
@@ -297,11 +299,12 @@ export const Timeline: React.FC = () => {
   useEffect(() => {
     if (!user) { setWorkouts([]); setLoading(false); return; }
     setLoading(true);
+    startProgress();
     getWorkouts(user.id, { includeExercises: true })
       .then((data) => setWorkouts(data || []))
       .catch(() => toast.error('Failed to load timeline'))
-      .finally(() => setLoading(false));
-  }, [user, refreshKey]);
+      .finally(() => { setLoading(false); doneProgress(); });
+  }, [user, refreshKey, startProgress, doneProgress]);
 
   const handleDelete = async (id: string) => {
     if (!user) return;
