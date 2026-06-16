@@ -1,6 +1,6 @@
 # Global Progress Bar — Loading UX Design
 
-**Goal:** Replace all in-page circular spinners with a single thin progress bar at the top of the screen that triggers on every Supabase data fetch and route navigation.
+**Goal:** Deliver a complete, layered loading UX: a full-screen branded splash on cold start, then a thin top progress bar that fires on every data fetch once the app is running.
 
 **Architecture:** A React context tracks a global fetch counter. The `ProgressBar` component watches that counter and renders a 2px fixed bar at the very top of the viewport. Every page's `fetchData` function calls `startProgress()` before fetching and `doneProgress()` when done (or on error). First-load skeletons remain for pages with no cached data.
 
@@ -65,16 +65,40 @@
 
 ---
 
-## 3. What Stays Unchanged
+## 3. Initial App Load — Splash Screen (Layer 1)
+
+`src/components/layout/LoadingScreen.tsx` — already implemented, explicitly in scope as the first layer of the loading UX.
+
+**When it shows:** `App.tsx` renders `<LoadingScreen />` while `loading` is true from `useAuth()` — i.e. while Supabase resolves the session on cold start (first page visit, hard refresh).
+
+**What it shows:**
+- Full-screen `#0a0c10` background
+- Animated gradient "A" logo (lime → purple → green cycle, 2.4 s)
+- Ambient radial glow behind the letter with pulse animation
+- No text, no spinner — pure brand moment
+
+**Transition:** Once auth resolves, `LoadingScreen` unmounts and the app renders. The progress bar then immediately triggers for the first data fetch, giving a seamless hand-off: splash → bar → content.
+
+**Implementation task:** Verify the existing `LoadingScreen` is rendered correctly during auth load and add a brief `opacity` fade-out transition so it doesn't hard-cut when dismissed:
+
+```tsx
+// App.tsx — add exit animation class
+if (loading) return <LoadingScreen />;
+```
+
+The component itself already handles the animation; no changes needed to `LoadingScreen.tsx` unless a fade-out is desired (nice-to-have, not required).
+
+---
+
+## 4. What Stays Unchanged
 
 - **Button spinners** (`Loader2 animate-spin` inside Save / Delete / Connect buttons) — these are mutation feedback, not data-loading feedback. Leave them as-is.
 - **WHOOP Dashboard `RingSkeleton`** — individual widget skeletons stay; the bar handles the outer page-level feedback.
-- **`LoadingScreen`** (initial app boot) — the full-screen animated "A" logo on first auth check stays. It's a different concern (app not yet mounted).
 - **Food scanner / AI chat loading states** — these are real-time streaming operations with their own UX; don't touch them.
 
 ---
 
-## 4. Bar Animation Spec
+## 5. Bar Animation Spec
 
 ```
 isLoading = true  → animate width: 0% → 85%, duration 1500ms, ease-out, stay at 85%
@@ -89,7 +113,7 @@ The `completing` state keeps the bar mounted during the fade-out.
 
 ---
 
-## 5. Skeleton Spec for Progress Page
+## 6. Skeleton Spec for Progress Page
 
 Replaces the current centered spinner. Renders only when `loading && exercises.length === 0`.
 
@@ -102,7 +126,7 @@ All blocks use the existing `.skeleton` / `animate-pulse` classes already in the
 
 ---
 
-## 6. Hook Usage Pattern
+## 7. Hook Usage Pattern
 
 Every page that fetches data uses this pattern:
 
@@ -121,7 +145,7 @@ const fetchData = useCallback(async () => {
 
 ---
 
-## 7. Out of Scope
+## 8. Out of Scope
 
 - Caching / stale-while-revalidate (separate feature if needed later)
 - Route-transition-only triggering (decided against — all fetches trigger the bar)
