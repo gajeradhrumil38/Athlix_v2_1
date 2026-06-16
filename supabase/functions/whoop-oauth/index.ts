@@ -139,7 +139,7 @@ Deno.serve(async (req: Request) => {
 
       const cacheTtl = tab === 'day' ? CACHE_TTL_DAY_MS : CACHE_TTL_RANGE_MS;
       const suffix = tab === 'day' ? 'latest' : `${startDate}:${endDate}`;
-      const cacheKeys = [`recovery:${suffix}`, `sleep:${suffix}`, `cycles:${suffix}`];
+      const cacheKeys = [`recovery:${suffix}`, `sleep:${suffix}`, `cycles:${suffix}`, `workouts:${suffix}`];
 
       // Check DB cache for all three keys at once
       const { data: cachedRows } = await sb
@@ -176,6 +176,9 @@ Deno.serve(async (req: Request) => {
           [`cycles:${suffix}`]: tab === 'day'
             ? '/v2/cycle?limit=5'
             : `/v2/cycle?start=${startDate}&end=${endDate}&limit=25`,
+          [`workouts:${suffix}`]: tab === 'day'
+            ? '/v2/activity/workout?limit=10'
+            : `/v2/activity/workout?start=${startDate}&end=${endDate}&limit=25`,
         };
 
         await Promise.all(staleKeys.map(async (key) => {
@@ -195,6 +198,7 @@ Deno.serve(async (req: Request) => {
         recovery: freshData.get(`recovery:${suffix}`) ?? { records: [] },
         sleep: freshData.get(`sleep:${suffix}`) ?? { records: [] },
         cycles: freshData.get(`cycles:${suffix}`) ?? { records: [] },
+        workouts: freshData.get(`workouts:${suffix}`) ?? { records: [] },
         from_cache: staleKeys.length === 0,
       });
     }

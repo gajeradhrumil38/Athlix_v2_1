@@ -6,13 +6,15 @@ import {
   Share2, X, Cloud, RefreshCw,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { format, startOfDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, subMonths, addMonths } from 'date-fns';
+import { format, startOfDay, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, subMonths, addMonths, subDays } from 'date-fns';
 import { getRuns, deleteRun, loadRunsFromCloud, deleteRunFromCloud, mergeRuns } from '../utils/storage';
 import type { SavedRun } from '../utils/storage';
 import { RunRouteBackground } from '../components/RunRouteBackground';
 import { formatDuration, formatPace } from '../utils/gpsCalculations';
 import type { GpsPoint } from '../utils/gpsCalculations';
 import { useAuth } from '../../../contexts/AuthContext';
+import { whoopService } from '../../whoop/services/whoopService';
+import type { WhoopWorkout } from '../../whoop/types';
 
 // ── Demo runs (shown only when user has zero real runs) ──────────────────────
 const DEMO_PATH_5MI = [
@@ -349,6 +351,50 @@ const CalendarModal: React.FC<{
   );
 };
 
+// ── WHOOP HR zone helpers (used in run detail overlay) ───────────────────────
+const W_ZONE_COLORS = ['#374151', '#60a5fa', '#4ade80', '#fbbf24', '#f97316', '#ef4444'];
+
+const WZoneBar: React.FC<{ zones: WhoopWorkout['zone_durations'] }> = ({ zones }) => {
+  if (!zones) return null;
+  const values = [zones.zone_zero, zones.zone_one, zones.zone_two, zones.zone_three, zones.zone_four, zones.zone_five];
+  const total = values.reduce((a, b) => a + b, 0);
+  if (total === 0) return null;
+  return (
+    <div className="flex w-full overflow-hidden" style={{ borderRadius: 4, gap: 1, height: 8 }}>
+      {values.map((v, i) => {
+        const pct = (v / total) * 100;
+        if (pct < 0.5) return null;
+        return <div key={i} style={{ width: `${pct}%`, background: W_ZONE_COLORS[i], minWidth: 2 }} />;
+      })}
+    </div>
+  );
+};
+
+const WZoneLegend: React.FC<{ zones: WhoopWorkout['zone_durations'] }> = ({ zones }) => {
+  if (!zones) return null;
+  const values = [zones.zone_zero, zones.zone_one, zones.zone_two, zones.zone_three, zones.zone_four, zones.zone_five];
+  const total = values.reduce((a, b) => a + b, 0);
+  if (total === 0) return null;
+  const toMin = (ms: number) => Math.round(ms / 60000);
+  const labels = ['Rest', 'Recovery', 'Aerobic', 'Moderate', 'Threshold', 'Max'];
+  return (
+    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1.5">
+      {values.map((v, i) => {
+        const pct = (v / total) * 100;
+        if (pct < 1) return null;
+        return (
+          <div key={i} className="flex items-center gap-1">
+            <div style={{ width: 6, height: 6, borderRadius: 2, background: W_ZONE_COLORS[i], flexShrink: 0 }} />
+            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>
+              {labels[i]} · {toMin(v)}m
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 type RunTab = 'all' | 'outdoor' | 'treadmill';
@@ -365,6 +411,7 @@ export const RunHistory: React.FC = () => {
   const [showCalendar, setShowCalendar] = useState(false);
   const [calFilterDate, setCalFilterDate] = useState<Date | null>(null);
   const distanceUnit = useDistanceUnit();
+  const [whoopWorkouts, setWhoopWorkouts] = useState<WhoopWorkout[]>([]);
 
   // Load cloud runs once on mount
   useEffect(() => {
@@ -373,6 +420,19 @@ export const RunHistory: React.FC = () => {
     loadRunsFromCloud(user.id)
       .then(setCloudRuns)
       .finally(() => setCloudLoading(false));
+  }, [user]);
+
+  // Load WHOOP workouts for the last 60 days — used to enrich run detail with HR data
+  useEffect(() => {
+    if (!user) return;
+    whoopService.getConnectionInfo(user.id).then((info) => {
+      if (!info?.connected) return;
+      const start = subDays(new Date(), 60).toISOString();
+      const end = new Date().toISOString();
+      return whoopService.fetchAll('month', start, end);
+    }).then((data) => {
+      if (data) setWhoopWorkouts(data.workouts);
+    }).catch(() => {/* non-critical */});
   }, [user]);
 
   const refreshCloud = useCallback(() => {
@@ -961,6 +1021,72 @@ export const RunHistory: React.FC = () => {
                     </div>
                   </motion.div>
                 )}
+
+                {/* WHOOP HR data — matched by workout start time ± 2h */}
+                {(() => {
+                  const runMs = selected.timestamp;
+                  const match = whoopWorkouts.find(
+                    (w) => Math.abs(runMs - new Date(w.start).getTime()) < 2 * 60 * 60 * 1000,
+                  );
+                  if (!match) return null;
+                  return (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.42 }}
+                      className="w-full p-4"
+                      style={{
+                        background: 'rgba(16,18,24,0.165)',
+                        backdropFilter: 'blur(18px) saturate(150%)',
+                        WebkitBackdropFilter: 'blur(18px) saturate(150%)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: 20,
+                        boxShadow: '0 10px 34px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.05) inset',
+                      }}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-[10px] font-black uppercase tracking-[0.22em] text-white/40">
+                          WHOOP HEART RATE
+                        </span>
+                        <span style={{ fontSize: 9, color: 'rgba(200,255,0,0.5)', fontWeight: 700, letterSpacing: '0.06em' }}>
+                          {match.sport_name.toUpperCase()}
+                        </span>
+                      </div>
+                      <div className="flex gap-4 mb-3">
+                        {match.average_heart_rate != null && (
+                          <div>
+                            <div style={{ fontSize: 22, fontWeight: 900, color: '#f87171', lineHeight: 1 }}>
+                              {match.average_heart_rate}
+                            </div>
+                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 700, letterSpacing: '0.07em' }}>
+                              AVG BPM
+                            </div>
+                          </div>
+                        )}
+                        {match.max_heart_rate != null && (
+                          <div>
+                            <div style={{ fontSize: 22, fontWeight: 900, color: '#ef4444', lineHeight: 1 }}>
+                              {match.max_heart_rate}
+                            </div>
+                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 700, letterSpacing: '0.07em' }}>
+                              MAX BPM
+                            </div>
+                          </div>
+                        )}
+                        {match.strain != null && (
+                          <div>
+                            <div style={{ fontSize: 22, fontWeight: 900, color: '#C8FF00', lineHeight: 1 }}>
+                              {match.strain.toFixed(1)}
+                            </div>
+                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 700, letterSpacing: '0.07em' }}>
+                              STRAIN
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <WZoneBar zones={match.zone_durations} />
+                      <WZoneLegend zones={match.zone_durations} />
+                    </motion.div>
+                  );
+                })()}
 
                 <motion.p
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}

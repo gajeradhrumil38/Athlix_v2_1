@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import type { WhoopRecovery, WhoopSleep, WhoopCycle } from '../types';
+import type { WhoopRecovery, WhoopSleep, WhoopCycle, WhoopWorkout } from '../types';
 import { supabase } from '../../../lib/supabase';
 
 const EDGE_FN = 'https://mrntwydykqsdawpklumf.supabase.co/functions/v1';
@@ -82,6 +82,47 @@ function parseCycles(raw: { records?: unknown[] }): WhoopCycle[] {
   });
 }
 
+const SPORT_NAMES: Record<number, string> = {
+  0: 'Activity', 1: 'Running', 16: 'Cycling', 35: 'Swimming',
+  44: 'Walking', 45: 'Weight Training', 63: 'Hiking', 71: 'CrossFit',
+  126: 'Yoga', 127: 'Pilates', 169: 'HIIT', 189: 'Rowing',
+  190: 'Elliptical', 231: 'Jump Rope', 232: 'Rock Climbing',
+  257: 'Pickleball', 264: 'Dance', 268: 'Jiu Jitsu', 269: 'Triathlon',
+};
+
+function parseWorkouts(raw: { records?: unknown[] }): WhoopWorkout[] {
+  return ((raw?.records ?? []) as Record<string, unknown>[])
+    .filter((r) => r.score_state === 'SCORED' || r.score_state === 'PENDING_SCORE')
+    .map((r) => {
+      const score = r.score as Record<string, unknown> | undefined;
+      const zones = score?.zone_duration as Record<string, number> | undefined;
+      const startMs = new Date(r.start as string).getTime();
+      const endMs = new Date(r.end as string).getTime();
+      return {
+        id: r.id as number,
+        date: format(new Date(r.start as string), 'yyyy-MM-dd'),
+        start: r.start as string,
+        end: r.end as string,
+        sport_id: r.sport_id as number,
+        sport_name: SPORT_NAMES[r.sport_id as number] ?? 'Workout',
+        duration_milli: endMs - startMs,
+        strain: score?.strain as number | undefined,
+        average_heart_rate: score?.average_heart_rate as number | undefined,
+        max_heart_rate: score?.max_heart_rate as number | undefined,
+        kilojoules: score?.kilojoule as number | undefined,
+        distance_meter: score?.distance_meter as number | undefined,
+        zone_durations: zones ? {
+          zone_zero: zones.zone_zero_milli ?? 0,
+          zone_one: zones.zone_one_milli ?? 0,
+          zone_two: zones.zone_two_milli ?? 0,
+          zone_three: zones.zone_three_milli ?? 0,
+          zone_four: zones.zone_four_milli ?? 0,
+          zone_five: zones.zone_five_milli ?? 0,
+        } : undefined,
+      };
+    });
+}
+
 async function getJwt(): Promise<string | undefined> {
   const { data: { session } } = await supabase.auth.getSession();
   return session?.access_token;
@@ -91,6 +132,7 @@ export interface WhoopAllData {
   recovery: WhoopRecovery[];
   sleep: WhoopSleep[];
   cycles: WhoopCycle[];
+  workouts: WhoopWorkout[];
   fromCache: boolean;
 }
 
@@ -203,6 +245,7 @@ export const whoopService = {
       recovery: { records?: unknown[] };
       sleep: { records?: unknown[] };
       cycles: { records?: unknown[] };
+      workouts: { records?: unknown[] };
       from_cache: boolean;
     };
 
@@ -210,6 +253,7 @@ export const whoopService = {
       recovery: parseRecovery(raw.recovery),
       sleep: parseSleep(raw.sleep),
       cycles: parseCycles(raw.cycles),
+      workouts: parseWorkouts(raw.workouts ?? {}),
       fromCache: raw.from_cache,
     };
 

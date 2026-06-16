@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { format, subDays } from 'date-fns';
-import { Activity, X } from 'lucide-react';
+import { Activity, ChevronDown, X } from 'lucide-react';
 import { whoopService } from '../services/whoopService';
 import { useAuth } from '../../../contexts/AuthContext';
-import type { WhoopRecovery, WhoopSleep, WhoopCycle } from '../types';
+import type { WhoopRecovery, WhoopSleep, WhoopCycle, WhoopWorkout } from '../types';
 
 type Tab = 'day' | 'week' | 'month';
 
@@ -183,6 +183,285 @@ const RingSkeleton: React.FC = () => (
   </div>
 );
 
+// ── Step counter card ──────────────────────────────────────────
+const STEP_GOAL = 10_000;
+
+/** Format with thousands separator: 12456 → "12,456" */
+const fmtStepsFull = (n: number) => n.toLocaleString();
+
+type StepsCardProps = {
+  cycles: WhoopCycle[];
+  tab: Tab;
+};
+
+const StepsCard: React.FC<StepsCardProps> = ({ cycles, tab }) => {
+  if (!cycles.length) return null;
+
+  // ── Compute totals ────────────────────────────────────────────
+  // Re-derive from raw_kilojoules for maximum accuracy (avoids rounding from the parse step)
+  const today = cycles[0];
+  const todaySteps = Math.round(today.raw_kilojoules * 23.9);
+
+  // Group cycles by calendar date and sum steps per day
+  const byDate = new Map<string, number>();
+  cycles.forEach((c) => {
+    const existing = byDate.get(c.date) ?? 0;
+    byDate.set(c.date, existing + Math.round(c.raw_kilojoules * 23.9));
+  });
+
+  const dayEntries = Array.from(byDate.entries())
+    .sort((a, b) => b[0].localeCompare(a[0])) // newest first
+    .slice(0, tab === 'day' ? 7 : tab === 'week' ? 7 : 30);
+
+  const totalSteps = dayEntries.reduce((s, [, v]) => s + v, 0);
+  const avgPerDay = dayEntries.length > 0 ? Math.round(totalSteps / dayEntries.length) : 0;
+
+  const barMax = Math.max(...dayEntries.map(([, v]) => v), STEP_GOAL);
+
+  // Day progress toward goal
+  const progressPct = Math.min((todaySteps / STEP_GOAL) * 100, 100);
+  const progressColor = todaySteps >= STEP_GOAL ? '#4ade80' : todaySteps >= 7000 ? '#fbbf24' : '#4FC3F7';
+
+  // Show at most 7 day bars
+  const barDays = dayEntries.slice(0, 7);
+
+  return (
+    <div
+      className="mx-4 mb-4 rounded-2xl p-3"
+      style={{ background: 'rgba(79,195,247,0.06)', border: '1px solid rgba(79,195,247,0.12)' }}
+    >
+      {/* Header row */}
+      <div className="flex items-center justify-between mb-2.5">
+        <div className="flex items-center gap-2">
+          <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase' }}>
+            Steps
+          </span>
+          <span style={{ fontSize: 8, color: 'rgba(79,195,247,0.5)', fontWeight: 600 }}>
+            est. from kilojoules
+          </span>
+        </div>
+        {tab !== 'day' && (
+          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', fontWeight: 600 }}>
+            {dayEntries.length}d total
+          </span>
+        )}
+      </div>
+
+      {tab === 'day' ? (
+        <>
+          {/* Big step count */}
+          <div className="flex items-end gap-2 mb-2">
+            <span style={{ fontSize: 32, fontWeight: 900, color: progressColor, lineHeight: 1, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
+              {fmtStepsFull(todaySteps)}
+            </span>
+            <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)', fontWeight: 600, marginBottom: 4 }}>
+              / {fmtStepsFull(STEP_GOAL)}
+            </span>
+          </div>
+
+          {/* Goal progress bar */}
+          <div className="relative w-full rounded-full overflow-hidden mb-1" style={{ height: 6, background: 'rgba(255,255,255,0.08)' }}>
+            <div
+              className="absolute left-0 top-0 h-full rounded-full"
+              style={{ width: `${progressPct}%`, background: progressColor, transition: 'width 0.8s ease' }}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', fontWeight: 600 }}>
+              {progressPct >= 100 ? 'Goal reached' : `${Math.round(progressPct)}% of daily goal`}
+            </span>
+            {todaySteps < STEP_GOAL && (
+              <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', fontWeight: 600 }}>
+                {fmtStepsFull(STEP_GOAL - todaySteps)} to go
+              </span>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          {/* Total + average */}
+          <div className="flex items-end gap-4 mb-3">
+            <div>
+              <div style={{ fontSize: 28, fontWeight: 900, color: '#4FC3F7', lineHeight: 1, letterSpacing: '-0.02em', fontVariantNumeric: 'tabular-nums' }}>
+                {fmtStepsFull(totalSteps)}
+              </div>
+              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 700, letterSpacing: '0.06em', marginTop: 2 }}>
+                TOTAL
+              </div>
+            </div>
+            <div style={{ marginBottom: 2 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: 'rgba(79,195,247,0.7)', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>
+                {fmtStepsFull(avgPerDay)}
+              </div>
+              <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', fontWeight: 700, letterSpacing: '0.06em', marginTop: 2 }}>
+                /DAY AVG
+              </div>
+            </div>
+          </div>
+
+          {/* Per-day bar chart (last 7 days) */}
+          {barDays.length > 1 && (
+            <div className="flex items-end gap-1" style={{ height: 40 }}>
+              {barDays.map(([date, steps]) => {
+                const barH = Math.max(3, Math.round((steps / barMax) * 36));
+                const isGoal = steps >= STEP_GOAL;
+                const barColor = isGoal ? '#4ade80' : steps >= 7000 ? '#4FC3F7' : 'rgba(79,195,247,0.35)';
+                return (
+                  <div key={date} className="flex-1 flex flex-col items-center gap-1">
+                    <div style={{ height: 36, display: 'flex', alignItems: 'flex-end', width: '100%' }}>
+                      <div style={{ width: '100%', height: barH, borderRadius: 3, background: barColor }} />
+                    </div>
+                    <span style={{ fontSize: 7, color: 'rgba(255,255,255,0.25)', fontWeight: 700 }}>
+                      {format(new Date(date + 'T12:00:00'), 'E')[0]}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Goal hit count */}
+          {(() => {
+            const goalDays = dayEntries.filter(([, v]) => v >= STEP_GOAL).length;
+            if (goalDays === 0) return null;
+            return (
+              <div className="mt-1.5" style={{ fontSize: 9, color: 'rgba(79,195,247,0.5)', fontWeight: 600 }}>
+                {goalDays}/{dayEntries.length} days hit {fmtStepsFull(STEP_GOAL)} goal
+              </div>
+            );
+          })()}
+        </>
+      )}
+    </div>
+  );
+};
+
+// ── HR zone colours (zone 0 = resting/gray, 1-5 = blue→red) ──
+const ZONE_COLORS = ['#374151', '#60a5fa', '#4ade80', '#fbbf24', '#f97316', '#ef4444'];
+const ZONE_LABELS = ['Rest', 'Recovery', 'Aerobic', 'Moderate', 'Threshold', 'Max'];
+
+const ZoneBar: React.FC<{ zones: WhoopWorkout['zone_durations']; height?: number }> = ({ zones, height = 6 }) => {
+  if (!zones) return null;
+  const values = [zones.zone_zero, zones.zone_one, zones.zone_two, zones.zone_three, zones.zone_four, zones.zone_five];
+  const total = values.reduce((a, b) => a + b, 0);
+  if (total === 0) return null;
+  return (
+    <div className="flex w-full overflow-hidden" style={{ borderRadius: height, gap: 1, height }}>
+      {values.map((v, i) => {
+        const pct = (v / total) * 100;
+        if (pct < 0.5) return null;
+        return <div key={i} style={{ width: `${pct}%`, background: ZONE_COLORS[i], minWidth: 2 }} />;
+      })}
+    </div>
+  );
+};
+
+const ZoneLegend: React.FC<{ zones: WhoopWorkout['zone_durations'] }> = ({ zones }) => {
+  if (!zones) return null;
+  const values = [zones.zone_zero, zones.zone_one, zones.zone_two, zones.zone_three, zones.zone_four, zones.zone_five];
+  const total = values.reduce((a, b) => a + b, 0);
+  if (total === 0) return null;
+  const toMin = (ms: number) => Math.round(ms / 60000);
+  return (
+    <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+      {values.map((v, i) => {
+        const pct = (v / total) * 100;
+        if (pct < 1) return null;
+        return (
+          <div key={i} className="flex items-center gap-1">
+            <div style={{ width: 6, height: 6, borderRadius: 2, background: ZONE_COLORS[i], flexShrink: 0 }} />
+            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.4)', fontWeight: 700, letterSpacing: '0.05em' }}>
+              Z{i} · {toMin(v)}m
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+const fmtDuration = (ms: number) => {
+  const totalMin = Math.round(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+};
+
+const WorkoutCard: React.FC<{ w: WhoopWorkout }> = ({ w }) => {
+  const [expanded, setExpanded] = useState(false);
+  const strainColor = w.strain == null ? 'rgba(255,255,255,0.5)'
+    : w.strain >= 18 ? '#ef4444'
+    : w.strain >= 14 ? '#f97316'
+    : w.strain >= 10 ? '#fbbf24'
+    : '#60a5fa';
+
+  return (
+    <div
+      className="rounded-xl overflow-hidden"
+      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+    >
+      <button
+        type="button"
+        onClick={() => setExpanded((p) => !p)}
+        className="w-full flex items-center gap-3 px-3 py-2.5 text-left cursor-pointer"
+      >
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <span style={{ fontSize: 12, fontWeight: 800, color: 'white' }}>{w.sport_name}</span>
+            {w.strain != null && (
+              <span style={{ fontSize: 10, fontWeight: 700, color: strainColor, marginLeft: 2 }}>
+                {w.strain.toFixed(1)}
+              </span>
+            )}
+          </div>
+          <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontWeight: 600 }}>
+            {format(new Date(w.start), 'h:mm a')} · {fmtDuration(w.duration_milli)}
+          </div>
+        </div>
+        <div className="flex items-center gap-3 shrink-0">
+          {w.average_heart_rate != null && (
+            <div className="text-right">
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#f87171', lineHeight: 1 }}>
+                {w.average_heart_rate}
+              </div>
+              <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)', fontWeight: 700, letterSpacing: '0.05em' }}>
+                AVG BPM
+              </div>
+            </div>
+          )}
+          {w.max_heart_rate != null && (
+            <div className="text-right">
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#ef4444', lineHeight: 1 }}>
+                {w.max_heart_rate}
+              </div>
+              <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.3)', fontWeight: 700, letterSpacing: '0.05em' }}>
+                MAX BPM
+              </div>
+            </div>
+          )}
+          <ChevronDown
+            size={14}
+            style={{ color: 'rgba(255,255,255,0.25)', transition: 'transform 0.2s', transform: expanded ? 'rotate(180deg)' : 'none' }}
+          />
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="px-3 pb-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          <ZoneBar zones={w.zone_durations} height={8} />
+          <ZoneLegend zones={w.zone_durations} />
+          {w.distance_meter != null && w.distance_meter > 0 && (
+            <div className="mt-2" style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', fontWeight: 600 }}>
+              {(w.distance_meter / 1000).toFixed(2)} km
+              {w.kilojoules != null && ` · ${Math.round(w.kilojoules * 0.239)} kcal`}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 /* ── Main dashboard ────────────────────────────────────────── */
 export const WhoopDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -193,6 +472,8 @@ export const WhoopDashboard: React.FC = () => {
   const [recovery, setRecovery] = useState<WhoopRecovery[]>([]);
   const [sleep, setSleep] = useState<WhoopSleep[]>([]);
   const [steps, setSteps] = useState<WhoopCycle[]>([]);
+  const [workouts, setWorkouts] = useState<WhoopWorkout[]>([]);
+  const [showWorkouts, setShowWorkouts] = useState(false);
   const [loading, setLoading] = useState(false);
   const [stale, setStale] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -216,6 +497,7 @@ export const WhoopDashboard: React.FC = () => {
       setRecovery(result.recovery);
       setSleep(result.sleep);
       setSteps(result.cycles);
+      setWorkouts(result.workouts);
       setStale(result.fromCache);
     } catch (err) {
       setError(friendlyError(err));
@@ -261,16 +543,6 @@ export const WhoopDashboard: React.FC = () => {
   const avgSleep = tab !== 'day' ? numAvg(sleep.map((s) => s.sleep_performance_percentage)) : null;
   const avgStrain = tab !== 'day' ? numAvg(steps.filter((s) => s.strain_score != null).map((s) => s.strain_score!)) : null;
   const lastDate = recovery[0]?.date ? format(new Date(recovery[0].date), 'MMM d') : null;
-
-  const todayStepCount = tab === 'day' ? (todayStep?.estimated_steps ?? null) : null;
-  const periodStepTotal = tab !== 'day' && steps.length > 0
-    ? steps.reduce((sum, c) => sum + c.estimated_steps, 0)
-    : null;
-  const fmtSteps = (n: number | null) => {
-    if (n == null) return '—';
-    if (n >= 1000) return `${(n / 1000).toFixed(1)}k`;
-    return `${n}`;
-  };
 
   const hasSubStats = tab === 'day'
     ? (hrv != null || rhr != null || inBedHours != null || strain != null)
@@ -377,7 +649,6 @@ export const WhoopDashboard: React.FC = () => {
               {rhr != null && <Stat label="RHR" value={`${rhr}bpm`} color="#f87171" onInfo={() => setActiveInfo('RHR')} />}
               {inBedHours && <Stat label="In Bed" value={`${inBedHours}h`} color="#60a5fa" onInfo={() => setActiveInfo('IN BED')} />}
               {strain != null && <Stat label="Strain" value={strain.toFixed(1)} color="#C8FF00" onInfo={() => setActiveInfo('STRAIN')} />}
-              {todayStepCount != null && <Stat label="Steps" value={fmtSteps(todayStepCount)} color="#4FC3F7" onInfo={() => setActiveInfo('STEPS')} />}
             </div>
           ) : (
             <div className="flex gap-2">
@@ -385,7 +656,35 @@ export const WhoopDashboard: React.FC = () => {
               {avgRhr != null && <Stat label="Avg RHR" value={`${Math.round(avgRhr)}`} color="#f87171" onInfo={() => setActiveInfo('RHR')} />}
               {avgSleep != null && <Stat label="Avg Sleep" value={`${Math.round(avgSleep)}%`} color="#60a5fa" onInfo={() => setActiveInfo('IN BED')} />}
               {avgStrain != null && <Stat label="Avg Strain" value={avgStrain.toFixed(1)} color="#C8FF00" onInfo={() => setActiveInfo('STRAIN')} />}
-              {periodStepTotal != null && <Stat label="Steps" value={fmtSteps(periodStepTotal)} color="#4FC3F7" onInfo={() => setActiveInfo('STEPS')} />}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Step counter */}
+      {!loading && !error && steps.length > 0 && (
+        <StepsCard cycles={steps} tab={tab} />
+      )}
+
+      {/* Workouts section */}
+      {!loading && !error && workouts.length > 0 && (
+        <div className="px-4 pb-4" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, marginTop: -2 }}>
+          <button
+            type="button"
+            onClick={() => setShowWorkouts((p) => !p)}
+            className="w-full flex items-center justify-between mb-2 cursor-pointer"
+          >
+            <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' }}>
+              Workouts · {workouts.length}
+            </span>
+            <ChevronDown
+              size={12}
+              style={{ color: 'rgba(255,255,255,0.25)', transition: 'transform 0.2s', transform: showWorkouts ? 'rotate(180deg)' : 'none' }}
+            />
+          </button>
+          {showWorkouts && (
+            <div className="flex flex-col gap-2">
+              {workouts.slice(0, 8).map((w) => <WorkoutCard key={w.id} w={w} />)}
             </div>
           )}
         </div>

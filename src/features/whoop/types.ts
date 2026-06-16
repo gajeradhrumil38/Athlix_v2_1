@@ -29,3 +29,26 @@ export interface WhoopCycle {
   average_heart_rate?: number;
   max_heart_rate?: number;
 }
+
+export interface WhoopWorkout {
+  id: number;
+  date: string;
+  start: string;
+  end: string;
+  sport_id: number;
+  sport_name: string;
+  duration_milli: number;
+  strain?: number;
+  average_heart_rate?: number;
+  max_heart_rate?: number;
+  kilojoules?: number;
+  distance_meter?: number;
+  zone_durations?: {
+    zone_zero: number;
+    zone_one: number;
+    zone_two: number;
+    zone_three: number;
+    zone_four: number;
+    zone_five: number;
+  };
+}
