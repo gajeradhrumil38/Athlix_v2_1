@@ -1,6 +1,6 @@
 import React from 'react'
 
-export const LoadingScreen: React.FC = () => (
+export const LoadingScreen: React.FC<{ fading?: boolean }> = ({ fading = false }) => (
   <div
     style={{
       position: 'fixed',
@@ -9,6 +9,10 @@ export const LoadingScreen: React.FC = () => (
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
+      opacity: fading ? 0 : 1,
+      transition: 'opacity 350ms ease',
+      zIndex: 9998,
+      pointerEvents: fading ? 'none' : 'auto',
     }}
   >
     <svg width="0" height="0" style={{ position: 'absolute' }}>

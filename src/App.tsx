@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { HeartRateProvider } from './contexts/HeartRateContext';
@@ -29,8 +29,30 @@ import { SkincareRoutinePage } from './features/skincare/SkincareRoutinePage';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, isPasswordRecovery } = useAuth();
-  if (loading) return <LoadingScreen />;
+  const [splashFading, setSplashFading] = useState(false);
+  const [splashDone, setSplashDone] = useState(false);
+
+  useEffect(() => {
+    if (!loading && !splashDone) {
+      setSplashFading(true);
+      const t = setTimeout(() => setSplashDone(true), 380);
+      return () => clearTimeout(t);
+    }
+  }, [loading, splashDone]);
+
   if (isPasswordRecovery) return <ResetPassword />;
+
+  // During initial auth check or while the splash is fading out
+  if (!splashDone) {
+    return (
+      <>
+        {/* Mount children underneath during fade so Home starts fetching + bar fires */}
+        {!loading && user && <>{children}</>}
+        <LoadingScreen fading={splashFading} />
+      </>
+    );
+  }
+
   if (!user) return <Navigate to="/auth" replace />;
   return <>{children}</>;
 };
