@@ -70,6 +70,10 @@ async function whoopGet(accessToken: string, path: string): Promise<any> {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (res.status === 404) return { records: [], next_token: null };
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`WHOOP API ${res.status}: ${text || res.statusText}`);
+  }
   return res.json().catch(() => ({}));
 }
 

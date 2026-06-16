@@ -2254,6 +2254,7 @@ export const addCustomExercise = async (
     'id',
   );
 
+  _libCache = null;
   return item;
 };
 
@@ -2269,6 +2270,20 @@ const getCachedLibrary = async (userId: string) => {
   const rows = await fetchExerciseLibraryRows(userId);
   _libCache = { userId, rows, ts: now };
   return rows;
+};
+
+export const getCustomExerciseSlugMap = async (
+  userId: string,
+): Promise<Map<string, { slug: string; type: 'primary' | 'secondary' }[]>> => {
+  const all = await getCachedLibrary(userId);
+  const map = new Map<string, { slug: string; type: 'primary' | 'secondary' }[]>();
+  all.forEach((item) => {
+    const slugs = item.muscle_slugs as { slug: string; type: 'primary' | 'secondary' }[] | undefined;
+    if (item.is_custom && slugs && slugs.length > 0) {
+      map.set((item.name as string).toLowerCase(), slugs);
+    }
+  });
+  return map;
 };
 
 export const searchExerciseLibrary = async (userId: string, query: string) => {

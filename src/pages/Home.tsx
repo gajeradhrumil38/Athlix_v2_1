@@ -8,7 +8,7 @@ import { WeeklyRing } from '../components/home/WeeklyRing';
 import { GoalEditSheet } from '../components/home/GoalEditSheet';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
-import { getBodyWeightLogs, getPersonalRecords, getWorkouts } from '../lib/supabaseData';
+import { getBodyWeightLogs, getCustomExerciseSlugMap, getPersonalRecords, getWorkouts } from '../lib/supabaseData';
 import { parseDateAtStartOfDay } from '../lib/dates';
 import { getExerciseMuscleProfile, getMuscleSlugLabel, PRIMARY_LOAD_WEIGHT, SECONDARY_LOAD_WEIGHT } from '../lib/exerciseMuscles';
 import { convertWeight, isWeightUnit, type WeightUnit } from '../lib/units';
@@ -115,6 +115,7 @@ export const Home: React.FC = () => {
   const [prs, setPrs] = useState<any[]>([]);
   const [weightLogs, setWeightLogs] = useState<any[]>([]);
   
+  const [exerciseSlugMap, setExerciseSlugMap] = useState<Map<string, { slug: string; type: 'primary' | 'secondary' }[]>>(new Map());
   const [muscleView, setMuscleView] = useState<'front' | 'back'>('front');
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
 
@@ -152,6 +153,11 @@ export const Home: React.FC = () => {
       return () => clearInterval(interval);
     }
   }, [prs.length]);
+
+  useEffect(() => {
+    if (!user) return;
+    getCustomExerciseSlugMap(user.id).then(setExerciseSlugMap).catch(() => {/* non-critical */});
+  }, [user]);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
@@ -257,7 +263,8 @@ export const Home: React.FC = () => {
     workouts.forEach((workout) => {
       const workoutGroups = new Set<string>();
       (workout.exercises || []).forEach((ex: any) => {
-        const profile = getExerciseMuscleProfile(ex.name, ex.muscle_group);
+        const slugs = exerciseSlugMap.get((ex.name ?? '').toLowerCase());
+        const profile = getExerciseMuscleProfile(ex.name, ex.muscle_group, slugs);
         const exerciseLoad = (toDisplayExerciseWeight(ex) * Number(ex.reps || 0) * Number(ex.sets || 0)) || 0;
         profile.primary.forEach((region) => {
           if (!data[region]) data[region] = { sessions: 0, sets: 0, load: 0, relativeLoad: 0 };
@@ -285,7 +292,7 @@ export const Home: React.FC = () => {
     });
 
     return data;
-  }, [workouts, bodyWeightKg, toDisplayExerciseWeight]);
+  }, [workouts, bodyWeightKg, toDisplayExerciseWeight, exerciseSlugMap]);
 
   const trainedMuscleGroups = Object.keys(muscleData);
 
@@ -296,7 +303,8 @@ export const Home: React.FC = () => {
       (workout.exercises || []).forEach((ex: any) => {
         const sets = Number(ex.sets || 0) || 0;
         const exerciseLoad = (toDisplayExerciseWeight(ex) * Number(ex.reps || 0) * Number(ex.sets || 0)) || 0;
-        const profile = getExerciseMuscleProfile(ex.name, ex.muscle_group);
+        const slugs2 = exerciseSlugMap.get((ex.name ?? '').toLowerCase());
+        const profile = getExerciseMuscleProfile(ex.name, ex.muscle_group, slugs2);
         profile.targets.forEach(({ slug, weight }) => {
           if (!data[slug]) data[slug] = { sessions: 0, sets: 0, load: 0, relativeLoad: 0 };
           data[slug].sets += sets * weight;
@@ -314,7 +322,7 @@ export const Home: React.FC = () => {
       });
     });
     return data;
-  }, [rangeWorkouts, bodyWeightKg, toDisplayExerciseWeight]);
+  }, [rangeWorkouts, bodyWeightKg, toDisplayExerciseWeight, exerciseSlugMap]);
 
   useEffect(() => {
     if (viewMode !== 'Day') return;

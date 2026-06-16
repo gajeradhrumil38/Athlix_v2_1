@@ -140,10 +140,10 @@ export const whoopService = {
   async getConnectionInfo(userId: string): Promise<{ connected: boolean; connectedAt?: string } | null> {
     const { data } = await supabase
       .from('whoop_tokens')
-      .select('created_at')
+      .select('connected_at')
       .eq('user_id', userId)
       .single();
-    return data ? { connected: true, connectedAt: data.created_at as string } : { connected: false };
+    return data ? { connected: true, connectedAt: data.connected_at as string } : { connected: false };
   },
 
   async connect(userId: string, token: string): Promise<void> {

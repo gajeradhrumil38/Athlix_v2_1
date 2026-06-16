@@ -167,7 +167,7 @@ const ExerciseChip: React.FC<{ name: string; color: string }> = ({ name, color }
 // ── Expandable workout card (view + inline set editing) ───────────────────────
 
 interface EditSet { weight: number; reps: number }
-interface EditGroup { name: string; muscle_group?: string; exercise_db_id?: string | null; sets: EditSet[] }
+interface EditGroup { name: string; muscle_group?: string; exercise_db_id?: string | null; sets: EditSet[]; isCardio: boolean }
 
 /** Group a workout's flat set-rows into per-exercise groups, weights converted to `unit`. */
 const groupExerciseSets = (w: any, unit: WeightUnit): EditGroup[] => {
@@ -177,7 +177,8 @@ const groupExerciseSets = (w: any, unit: WeightUnit): EditGroup[] => {
     const key = (r.name as string) || 'Exercise';
     let g = map.get(key);
     if (!g) {
-      g = { name: key, muscle_group: r.muscle_group || undefined, exercise_db_id: r.exercise_db_id || null, sets: [] };
+      const isCardio = (r.muscle_group || '').toLowerCase() === 'cardio';
+      g = { name: key, muscle_group: r.muscle_group || undefined, exercise_db_id: r.exercise_db_id || null, sets: [], isCardio };
       map.set(key, g);
     }
     const from = isWeightUnit(r.unit) ? r.unit : unit;
@@ -454,12 +455,21 @@ const WorkoutCard: React.FC<{
                               style={{ background: `color-mix(in srgb, ${accent} 16%, var(--bg-elevated))`, color: accent }}>
                               {si + 1}
                             </span>
-                            <span className="font-bold" style={{ color: 'var(--text-primary)' }}>
-                              {formatWeight(s.weight, unit)}
-                            </span>
-                            <span style={{ color: 'var(--text-muted)' }}>×</span>
-                            <span className="font-bold" style={{ color: 'var(--text-primary)' }}>{s.reps}</span>
-                            <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>reps</span>
+                            {g.isCardio ? (
+                              <>
+                                <span className="font-bold" style={{ color: 'var(--text-primary)' }}>{s.reps}</span>
+                                <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>reps</span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="font-bold" style={{ color: 'var(--text-primary)' }}>
+                                  {formatWeight(s.weight, unit)}
+                                </span>
+                                <span style={{ color: 'var(--text-muted)' }}>×</span>
+                                <span className="font-bold" style={{ color: 'var(--text-primary)' }}>{s.reps}</span>
+                                <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>reps</span>
+                              </>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -1121,8 +1131,9 @@ export const Calendar: React.FC = () => {
       </div>
 
       {/* ── Backdrop to close month picker ── */}
+      {/* z-[19]: below the sticky header (z-20) so it doesn't block the picker inside it */}
       {showMonthPicker && (
-        <div className="fixed inset-0 z-40" onClick={() => setShowMonthPicker(false)} />
+        <div className="fixed inset-0 z-[19]" onClick={() => setShowMonthPicker(false)} />
       )}
 
       {/* ── Body ── */}

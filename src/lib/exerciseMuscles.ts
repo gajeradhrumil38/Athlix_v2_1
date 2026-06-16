@@ -617,10 +617,31 @@ export const getExerciseRegionWeights = (targets: ExerciseMuscleTarget[]) => {
   }));
 };
 
+export const buildProfileFromSlugs = (
+  muscleSlugs: { slug: string; type: 'primary' | 'secondary' }[],
+): ExerciseMuscleProfile => {
+  const valid = muscleSlugs.filter((s) => s.slug in MUSCLE_SLUG_REGION_MAP);
+  const targets: ExerciseMuscleTarget[] = valid.map((s) =>
+    target(s.slug as MuscleSlug, s.type === 'primary' ? PRIMARY_LOAD_WEIGHT : SECONDARY_LOAD_WEIGHT),
+  );
+  const primaryRegions = uniqueRegions(
+    valid.filter((s) => s.type === 'primary').map((s) => MUSCLE_SLUG_REGION_MAP[s.slug as MuscleSlug]),
+  );
+  const secondaryRegions = uniqueRegions(
+    valid.filter((s) => s.type === 'secondary').map((s) => MUSCLE_SLUG_REGION_MAP[s.slug as MuscleSlug]),
+  );
+  return buildProfile(targets, primaryRegions, secondaryRegions);
+};
+
 export const getExerciseMuscleProfile = (
   exerciseName: string,
   fallbackMuscleGroup?: string | null,
+  muscleSlugs?: { slug: string; type: 'primary' | 'secondary' }[],
 ): ExerciseMuscleProfile => {
+  if (muscleSlugs && muscleSlugs.length > 0) {
+    return buildProfileFromSlugs(muscleSlugs);
+  }
+
   for (const profile of EXERCISE_MUSCLE_PATTERNS) {
     if (profile.patterns.some((pattern) => pattern.test(exerciseName))) {
       return buildProfile(profile.targets, profile.primaryRegions, profile.secondaryRegions);
