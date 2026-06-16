@@ -3,7 +3,6 @@ import type { WhoopRecovery, WhoopSleep, WhoopCycle, WhoopWorkout } from '../typ
 import { supabase } from '../../../lib/supabase';
 
 const EDGE_FN = 'https://mrntwydykqsdawpklumf.supabase.co/functions/v1';
-const BASE = 'https://api.prod.whoop.com/developer';
 const WHOOP_CLIENT_ID = 'd00b485b-7052-4a22-ad29-c57ab43f0817';
 const WHOOP_REDIRECT_URI = `${EDGE_FN}/whoop-oauth`;
 const WHOOP_AUTH_URL = 'https://api.prod.whoop.com/oauth/oauth2/auth';
@@ -188,17 +187,19 @@ export const whoopService = {
     return data ? { connected: true, connectedAt: data.connected_at as string } : { connected: false };
   },
 
-  async connect(userId: string, token: string): Promise<void> {
-    const res = await fetch(`${BASE}/v2/user/profile/basic`, {
-      headers: { Authorization: `Bearer ${token}` },
+  async connect(_userId: string, token: string): Promise<void> {
+    const jwt = await getJwt();
+    if (!jwt) throw new Error('Not authenticated');
+    const res = await fetch(`${EDGE_FN}/whoop-oauth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
+      body: JSON.stringify({ action: 'store_token', token }),
     });
-    if (!res.ok) throw new Error('Invalid token');
-    await supabase.from('whoop_tokens').upsert({
-      user_id: userId,
-      access_token: token,
-      refresh_token: null,
-      expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string };
+      const err = Object.assign(new Error(body.error ?? 'Could not connect'), { status: res.status });
+      throw err;
+    }
   },
 
   async disconnect(userId: string): Promise<void> {
@@ -207,10 +208,18 @@ export const whoopService = {
   },
 
   async validateToken(token: string): Promise<{ user_id: number; email: string; first_name: string; last_name: string }> {
-    const res = await fetch(`${BASE}/v2/user/profile/basic`, {
-      headers: { Authorization: `Bearer ${token}` },
+    // Route through edge function to avoid CORS restrictions
+    const jwt = await getJwt();
+    if (!jwt) throw new Error('Not authenticated');
+    const res = await fetch(`${EDGE_FN}/whoop-oauth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
+      body: JSON.stringify({ action: 'store_token', token }),
     });
-    if (!res.ok) throw new Error('Invalid token');
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as { error?: string };
+      throw new Error(body.error ?? 'Invalid token');
+    }
     return res.json();
   },
 

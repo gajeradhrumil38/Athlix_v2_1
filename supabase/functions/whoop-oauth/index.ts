@@ -223,6 +223,34 @@ Deno.serve(async (req: Request) => {
       return json(data, whoopRes.status);
     }
 
+    // ── store_token: validate and store a manually pasted access token ──
+    if (action === 'store_token') {
+      const token = body.token as string;
+      if (!token) return json({ error: 'Missing token' }, 400);
+
+      // Validate token server-side (avoids CORS restrictions in browser)
+      const profileRes = await fetch(PROFILE_URL, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!profileRes.ok) {
+        const text = await profileRes.text().catch(() => '');
+        return json({ error: text || 'Invalid or expired WHOOP token' }, 401);
+      }
+
+      const profile = await profileRes.json().catch(() => ({})) as any;
+
+      const { error: dbErr } = await sb.from('whoop_tokens').upsert({
+        user_id: user.id,
+        access_token: token,
+        refresh_token: '',
+        expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+        whoop_user_id: profile.user_id ?? null,
+      });
+
+      if (dbErr) return json({ error: 'Failed to save token' }, 500);
+      return json({ ok: true });
+    }
+
     return json({ error: 'Unknown action' }, 400);
   }
 

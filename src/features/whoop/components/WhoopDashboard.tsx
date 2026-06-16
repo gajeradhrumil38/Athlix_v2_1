@@ -4,6 +4,7 @@ import { Activity, ChevronDown, X, LinkIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { whoopService } from '../services/whoopService';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useProgress } from '../../../contexts/ProgressContext';
 import type { WhoopRecovery, WhoopSleep, WhoopCycle, WhoopWorkout } from '../types';
 
 type Tab = 'day' | 'week' | 'month';
@@ -467,6 +468,7 @@ const WorkoutCard: React.FC<{ w: WhoopWorkout }> = ({ w }) => {
 export const WhoopDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { startProgress, doneProgress } = useProgress();
   const [connected, setConnected] = useState(false);
   const [connectionLoading, setConnectionLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('day');
@@ -491,6 +493,7 @@ export const WhoopDashboard: React.FC = () => {
 
   const fetchAll = useCallback(async () => {
     if (!connected || !user?.id) return;
+    startProgress();
     setLoading(true);
     setError(null);
     try {
@@ -504,9 +507,10 @@ export const WhoopDashboard: React.FC = () => {
     } catch (err) {
       setError(friendlyError(err));
     } finally {
+      doneProgress();
       setLoading(false);
     }
-  }, [connected, tab, user?.id]);
+  }, [connected, tab, user?.id, startProgress, doneProgress]);
 
   useEffect(() => { void fetchAll(); }, [fetchAll]);
 
