@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AppIcon, IconName } from '../../config/icons';
 import { AiChat } from '../ai/AiChat';
+import { ProgressBar } from './ProgressBar';
 
 const navItems: { path: string; icon: IconName; label: string }[] = [
   { path: '/',          icon: 'Home',      label: 'Home'      },
@@ -111,6 +112,7 @@ export const Layout: React.FC = () => {
       className="flex bg-[var(--bg-base)] text-[var(--text-primary)] overflow-hidden"
       style={viewportHeight > 0 ? { height: `${viewportHeight}px` } : undefined}
     >
+      <ProgressBar />
       {/* ── Desktop sidebar ───────────────────────────── */}
       <aside className="hidden md:flex flex-col w-60 shrink-0 border-r border-[var(--border)] bg-[var(--bg-surface)]">
         {/* Logo */}

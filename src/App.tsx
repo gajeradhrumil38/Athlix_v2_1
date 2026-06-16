@@ -8,6 +8,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { HeartRateProvider } from './contexts/HeartRateContext';
 import { RestTimerProvider } from './contexts/RestTimerContext';
+import { ProgressProvider } from './contexts/ProgressContext';
 import { Layout } from './components/layout/Layout';
 import { LoadingScreen } from './components/layout/LoadingScreen';
 import { Auth } from './pages/Auth';
@@ -72,14 +73,16 @@ const AppRoutes = () => {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <HeartRateProvider>
-        <RestTimerProvider>
-          <HashRouter>
-            <AppRoutes />
-          </HashRouter>
-        </RestTimerProvider>
-      </HeartRateProvider>
-    </AuthProvider>
+    <ProgressProvider>
+      <AuthProvider>
+        <HeartRateProvider>
+          <RestTimerProvider>
+            <HashRouter>
+              <AppRoutes />
+            </HashRouter>
+          </RestTimerProvider>
+        </HeartRateProvider>
+      </AuthProvider>
+    </ProgressProvider>
   );
 }
