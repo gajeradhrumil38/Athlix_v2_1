@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useHeartRate, type HeartRateSample } from '../contexts/HeartRateContext';
+import { useProgress } from '../contexts/ProgressContext';
 import {
   addDays,
   addMonths,
@@ -204,6 +205,7 @@ const formatStoredDate = (value: unknown, pattern: string) => {
 
 export const Progress: React.FC = () => {
   const { user, profile } = useAuth();
+  const { startProgress, doneProgress } = useProgress();
   const displayUnit = profile?.unit_preference || 'lbs';
   const [activeTab, setActiveTab] = useState<'overview' | 'food' | 'dopamine' | 'weight' | 'livehr'>('livehr');
   const navigate = useNavigate();
@@ -675,6 +677,7 @@ export const Progress: React.FC = () => {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
+    startProgress();
     try {
       if (!user) { setWeightLogs([]); setWorkouts([]); setExercises([]); return; }
       const thirtyDaysAgo = format(subDays(new Date(), 30), 'yyyy-MM-dd');
@@ -707,9 +710,10 @@ export const Progress: React.FC = () => {
     } catch (error) {
       console.error('Error fetching progress data:', error);
     } finally {
+      doneProgress();
       setLoading(false);
     }
-  }, [user, displayUnit]);
+  }, [user, displayUnit, startProgress, doneProgress]);
 
   const handleLogWeight = async () => {
     if (!newWeight || !user) return;
@@ -850,14 +854,20 @@ export const Progress: React.FC = () => {
     return muscles.map((m) => ({ muscle: m, current: cur[m] || 0, previous: prev[m] || 0 })).sort((a, b) => b.current - a.current);
   }, [exercises, currentWeekWorkouts, previousWeekWorkouts]);
 
-  if (loading) {
+  if (loading && exercises.length === 0) {
     return (
-      <div className="flex flex-col justify-center items-center h-64 gap-4">
-        <div className="relative">
-          <div className="w-12 h-12 rounded-full border-2 border-[var(--accent)]/20 animate-pulse" />
-          <div className="absolute inset-0 animate-spin rounded-full border-t-2 border-[var(--accent)]" />
+      <div className="p-4 space-y-3">
+        <div className="grid grid-cols-3 gap-3">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="animate-pulse bg-white/5 rounded-xl h-16" />
+          ))}
         </div>
-        <p className="text-[12px] uppercase tracking-[0.2em] text-[var(--text-muted)] animate-pulse">Loading analytics</p>
+        <div className="animate-pulse bg-white/5 rounded-xl h-40" />
+        <div className="grid grid-cols-2 gap-3">
+          {[0, 1].map((i) => (
+            <div key={i} className="animate-pulse bg-white/5 rounded-xl h-24" />
+          ))}
+        </div>
       </div>
     );
   }
