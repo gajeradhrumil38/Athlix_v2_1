@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Trophy, ArrowRight, Flame, Zap, AlertTriangle, Scale, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useProgress } from '../contexts/ProgressContext';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, format, isSameDay, isSameWeek, isSameMonth, addWeeks, subWeeks, subDays, addDays, addMonths, subMonths, isAfter, startOfDay } from 'date-fns';
 import { MuscleMap, MuscleData } from '../components/home/MuscleMap';
 import { WeeklyRing } from '../components/home/WeeklyRing';
@@ -94,6 +95,7 @@ const BACK_VIEW_SLUGS = new Set([
 // --- Main Component ---
 export const Home: React.FC = () => {
   const { user, profile } = useAuth();
+  const { startProgress, doneProgress } = useProgress();
   const displayUnit = profile?.unit_preference || 'lbs';
   const location = useLocation();
   const navigate = useNavigate();
@@ -156,6 +158,7 @@ export const Home: React.FC = () => {
 
   const fetchData = useCallback(async () => {
     if (!user) return;
+    startProgress();
     setLoading(true);
     setError(null);
 
@@ -217,9 +220,10 @@ export const Home: React.FC = () => {
       console.error('Error fetching data:', err);
       setError(err.message || 'Failed to load data');
     } finally {
+      doneProgress();
       setLoading(false);
     }
-  }, [user, currentDate, viewMode]);
+  }, [user, currentDate, viewMode, startProgress, doneProgress]);
 
   useEffect(() => {
     fetchData();
