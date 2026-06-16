@@ -669,12 +669,13 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({
 
         {/* ── Create Exercise sticky footer ── */}
         <div
-          className="shrink-0 px-4 pt-2 pb-2"
+          className="shrink-0 px-4 pt-2 pb-[max(10px,env(safe-area-inset-bottom))]"
           style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-base)' }}
         >
           <button
+            type="button"
             onClick={() => setShowCreate(true)}
-            className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-[13px] font-semibold transition-all active:scale-[0.99]"
+            className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-[13px] font-semibold transition-all active:scale-[0.99] cursor-pointer"
             style={{
               background: 'color-mix(in srgb, var(--accent) 10%, transparent)',
               border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',

@@ -1,10 +1,10 @@
 import React from 'react'
 import {
   Home, Calendar, FileText, Activity, Plus,
-  Search, Check, X, ChevronLeft, ChevronRight,
+  Search, Check, X, ChevronLeft, ChevronRight, ChevronDown,
   TrendingUp, Settings, MoreHorizontal, History,
   ClipboardList, Footprints, Utensils, Sparkles,
-  Dumbbell,
+  Dumbbell, Loader2,
 } from 'lucide-react'
 
 // Central registry of all UI icons used in the app
@@ -28,6 +28,8 @@ export const ICONS = {
   Food: Utensils,
   Skincare: Sparkles,
   CreateExercise: Dumbbell,
+  ExpandDown: ChevronDown,
+  Spinner: Loader2,
 }
 
 export type IconName = keyof typeof ICONS
