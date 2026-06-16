@@ -37,6 +37,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
+import { useProgress } from '../contexts/ProgressContext';
 import { deleteWorkout, getWorkouts, updateWorkoutSets } from '../lib/supabaseData';
 import { convertWeight, formatWeight, isWeightUnit, type WeightUnit } from '../lib/units';
 import { muscleColor } from '../lib/muscleColors';
@@ -489,6 +490,7 @@ const WorkoutCard: React.FC<{
 
 export const Calendar: React.FC = () => {
   const { user, profile } = useAuth();
+  const { startProgress, doneProgress } = useProgress();
   const unit = (profile?.unit_preference || 'lbs') as WeightUnit;
   const navigate = useNavigate();
 
@@ -520,6 +522,7 @@ export const Calendar: React.FC = () => {
   useEffect(() => {
     if (!user) { setLoading(false); return; }
     setLoading(true);
+    startProgress();
 
     let start: Date;
     let end: Date;
@@ -547,8 +550,8 @@ export const Calendar: React.FC = () => {
         setWorkouts(deduped);
       })
       .catch(() => setWorkouts([]))
-      .finally(() => setLoading(false));
-  }, [user, anchor, viewMode, refreshKey]);
+      .finally(() => { setLoading(false); doneProgress(); });
+  }, [user, anchor, viewMode, refreshKey, startProgress, doneProgress]);
 
   // ── Derived ─────────────────────────────────────────────────────────────────
 
