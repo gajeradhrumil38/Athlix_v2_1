@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { format, subDays } from 'date-fns';
-import { Activity, ChevronDown, X } from 'lucide-react';
+import { Activity, ChevronDown, X, LinkIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { whoopService } from '../services/whoopService';
 import { useAuth } from '../../../contexts/AuthContext';
 import type { WhoopRecovery, WhoopSleep, WhoopCycle, WhoopWorkout } from '../types';
@@ -465,6 +466,7 @@ const WorkoutCard: React.FC<{ w: WhoopWorkout }> = ({ w }) => {
 /* ── Main dashboard ────────────────────────────────────────── */
 export const WhoopDashboard: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [connected, setConnected] = useState(false);
   const [connectionLoading, setConnectionLoading] = useState(true);
   const [tab, setTab] = useState<Tab>('day');
@@ -508,9 +510,49 @@ export const WhoopDashboard: React.FC = () => {
 
   useEffect(() => { void fetchAll(); }, [fetchAll]);
 
-  if (connectionLoading) return null;
+  if (connectionLoading) {
+    return (
+      <div
+        className="rounded-2xl animate-pulse overflow-hidden"
+        style={{
+          background: 'linear-gradient(160deg, #0d1117 0%, #111827 100%)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          height: 80,
+        }}
+      />
+    );
+  }
 
-  if (!connected) return null;
+  if (!connected) {
+    return (
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{
+          background: 'linear-gradient(160deg, #0d1117 0%, #111827 100%)',
+          border: '1px solid rgba(255,255,255,0.08)',
+        }}
+      >
+        <div className="flex items-center justify-between px-4 py-4">
+          <div className="flex items-center gap-2">
+            <Activity className="w-4 h-4" style={{ color: '#C8FF00' }} />
+            <span style={{ color: 'white', fontSize: 13, fontWeight: 800, letterSpacing: '0.08em' }}>WHOOP</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/settings')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-opacity hover:opacity-80"
+            style={{ background: 'rgba(200,255,0,0.12)', border: '1px solid rgba(200,255,0,0.25)' }}
+          >
+            <LinkIcon className="w-3 h-3" style={{ color: '#C8FF00' }} />
+            <span style={{ color: '#C8FF00', fontSize: 11, fontWeight: 700 }}>Connect</span>
+          </button>
+        </div>
+        <p className="px-4 pb-4 text-[11px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          Link your WHOOP in Settings to see recovery, sleep and strain data here.
+        </p>
+      </div>
+    );
+  }
 
   // ── Compute ring values ────────────────────────────────────
   let recoveryVal: number | null = null;
