@@ -149,7 +149,8 @@ CREATE TABLE public.exercise_library (
   muscle_group TEXT NOT NULL,
   is_custom BOOLEAN DEFAULT false,
   user_id UUID REFERENCES auth.users ON DELETE CASCADE,
-  exercise_db_id TEXT
+  exercise_db_id TEXT,
+  muscle_slugs JSONB DEFAULT '[]'::jsonb
 );
 
 -- Rest Timer Preferences

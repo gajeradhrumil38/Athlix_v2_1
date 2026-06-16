@@ -154,11 +154,6 @@ export const Home: React.FC = () => {
     }
   }, [prs.length]);
 
-  useEffect(() => {
-    if (!user) return;
-    getCustomExerciseSlugMap(user.id).then(setExerciseSlugMap).catch(() => {/* non-critical */});
-  }, [user]);
-
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
@@ -183,7 +178,7 @@ export const Home: React.FC = () => {
       const rangeStartStr = format(rangeStart, 'yyyy-MM-dd');
       const rangeEndStr = format(rangeEnd, 'yyyy-MM-dd');
 
-      const [workoutsRes, allWorkoutsRes, prsRes, weightRes, rangeWorkoutsRes, todaysWorkoutRes] = await Promise.all([
+      const [workoutsRes, allWorkoutsRes, prsRes, weightRes, rangeWorkoutsRes, todaysWorkoutRes, slugMapRes] = await Promise.all([
         getWorkouts(user.id, {
           startDate: weekStartStr,
           endDate: weekEndStr,
@@ -206,6 +201,7 @@ export const Home: React.FC = () => {
           includeExercises: true,
           limit: 1,
         }),
+        getCustomExerciseSlugMap(user.id),
       ]);
 
       setWorkouts(workoutsRes || []);
@@ -213,6 +209,7 @@ export const Home: React.FC = () => {
       setPrs(prsRes || []);
       setRangeWorkouts(rangeWorkoutsRes || []);
       setTodaysWorkout((todaysWorkoutRes && todaysWorkoutRes[0]) || null);
+      setExerciseSlugMap(slugMapRes);
       setWeightLogs(
         (weightRes || []).filter((log) => log.date >= format(subDays(new Date(), 30), 'yyyy-MM-dd')).reverse(),
       );
