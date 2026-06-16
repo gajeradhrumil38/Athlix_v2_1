@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Search, X, Plus, History, LayoutGrid, ChevronLeft, ClipboardList, Play, Check, Pencil, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, X, Plus, History, LayoutGrid, ChevronLeft, ClipboardList, Play, Check, Pencil, Trash2, Dumbbell } from 'lucide-react';
+import { CreateExerciseSheet } from './CreateExerciseSheet';
 import { getMachineLabel } from '../../lib/machineLabels';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
@@ -191,6 +192,7 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({
 }) => {
   const { user } = useAuth();
 
+  const [showCreate, setShowCreate] = useState(false);
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'recent' | 'muscle' | 'plans' | 'search'>(defaultTab);
   const [selectedMuscle, setSelectedMuscle] = useState<string | null>(null);
@@ -451,7 +453,7 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({
         </div>
 
         {/* ── Content ── */}
-        <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+24px)]">
+        <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-3 pb-[calc(env(safe-area-inset-bottom)+88px)]">
 
           {/* Recent tab */}
           {activeTab === 'recent' && !search && (
@@ -665,6 +667,25 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({
           )}
         </div>
 
+        {/* ── Create Exercise sticky footer ── */}
+        <div
+          className="shrink-0 px-4 pt-2 pb-2"
+          style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-base)' }}
+        >
+          <button
+            onClick={() => setShowCreate(true)}
+            className="w-full h-11 rounded-xl flex items-center justify-center gap-2 text-[13px] font-semibold transition-all active:scale-[0.99]"
+            style={{
+              background: 'color-mix(in srgb, var(--accent) 10%, transparent)',
+              border: '1px solid color-mix(in srgb, var(--accent) 30%, transparent)',
+              color: 'var(--accent)',
+            }}
+          >
+            <Dumbbell className="w-4 h-4" />
+            Create Custom Exercise
+          </button>
+        </div>
+
         {/* ── Multi-select sticky footer ── */}
         {selectedMap.size > 0 && (
           <div
@@ -682,6 +703,23 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({
           </div>
         )}
       </motion.div>
+
+      {/* ── Create Exercise sheet (stacked above picker) ── */}
+      <AnimatePresence>
+        {showCreate && (
+          <CreateExerciseSheet
+            onClose={() => setShowCreate(false)}
+            onCreated={(exercise) => {
+              onSelect({
+                id: exercise.id,
+                name: exercise.name,
+                muscleGroup: exercise.muscleGroup,
+              });
+              onClose();
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

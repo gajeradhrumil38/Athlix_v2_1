@@ -120,6 +120,7 @@ export interface LocalExerciseLibraryItem {
   is_custom: boolean;
   user_id?: string | null;
   exercise_db_id?: string | null;
+  muscle_slugs?: { slug: string; type: 'primary' | 'secondary' }[];
 }
 
 export interface LocalHeartRateSession {
@@ -1249,7 +1250,12 @@ export const getExerciseLibraryByGroup = async (userId: string, muscleGroup: str
     .sort((a, b) => a.name.localeCompare(b.name));
 };
 
-export const addCustomExercise = async (userId: string, name: string, muscleGroup: string) => {
+export const addCustomExercise = async (
+  userId: string,
+  name: string,
+  muscleGroup: string,
+  muscleSlugs: { slug: string; type: 'primary' | 'secondary' }[] = [],
+) => {
   const db = readDb();
   const normalized = name.trim();
   const normalizedName = normalizeExerciseName(normalized);
@@ -1273,6 +1279,7 @@ export const addCustomExercise = async (userId: string, name: string, muscleGrou
     is_custom: true,
     user_id: userId,
     exercise_db_id: matchedAssetId,
+    muscle_slugs: muscleSlugs,
   };
 
   db.exerciseLibrary.push(item);

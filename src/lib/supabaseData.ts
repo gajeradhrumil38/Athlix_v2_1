@@ -2208,8 +2208,13 @@ export const getExerciseLibraryByGroup = async (userId: string, muscleGroup: str
     .sort((a, b) => a.name.localeCompare(b.name));
 };
 
-export const addCustomExercise = async (userId: string, name: string, muscleGroup: string) => {
-  if (!hasSupabaseConfig) return localData.addCustomExercise(userId, name, muscleGroup);
+export const addCustomExercise = async (
+  userId: string,
+  name: string,
+  muscleGroup: string,
+  muscleSlugs: { slug: string; type: 'primary' | 'secondary' }[] = [],
+) => {
+  if (!hasSupabaseConfig) return localData.addCustomExercise(userId, name, muscleGroup, muscleSlugs);
 
   const normalizedName = name.trim();
   const searchRows = await fetchExerciseLibraryRows(userId, normalizedName, muscleGroup);
@@ -2234,6 +2239,7 @@ export const addCustomExercise = async (userId: string, name: string, muscleGrou
     is_custom: true,
     user_id: userId,
     exercise_db_id: matchedAssetId,
+    muscle_slugs: muscleSlugs,
   };
 
   await upsertRows(
@@ -2242,6 +2248,7 @@ export const addCustomExercise = async (userId: string, name: string, muscleGrou
       {
         ...item,
         is_custom: true,
+        muscle_slugs: muscleSlugs,
       },
     ],
     'id',
