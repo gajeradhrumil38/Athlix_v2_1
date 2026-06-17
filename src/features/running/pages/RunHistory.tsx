@@ -138,34 +138,36 @@ const MiniRoute: React.FC<{ path: GpsPoint[]; size?: number }> = ({ path, size =
 };
 
 // ── Mini ring metric (mirrors ActiveRun's RingMetric at 92px) ────────────────
-const MiniRingMetric: React.FC<{ pct: number; value: string; unit: string; pr?: boolean }> = ({ pct, value, unit, pr }) => {
-  const S = 92, cx = 46, cy = 46, R = 37;
+const MiniRingMetric: React.FC<{ pct: number; value: string; unit: string; pr?: boolean; large?: boolean }> = ({ pct, value, unit, pr, large = false }) => {
+  const S = large ? 210 : 92;
+  const cx = S / 2, cy = S / 2;
+  const R = large ? 88 : 37;
+  const sw = large ? 10 : 5.5;
   const C = 2 * Math.PI * R;
   const arc = Math.min(1, Math.max(0.04, pct));
   const color = pr ? '#fac775' : '#C8FF00';
+  const glowOpacity = large ? 0.14 : 0.12;
   return (
     <div style={{ position: 'relative', width: S, height: S, flexShrink: 0 }}>
-      {/* Radial glow behind arc — avoids iOS Safari SVG-filter + overflow:hidden bug */}
       <div style={{
         position: 'absolute', inset: 0, borderRadius: '50%', pointerEvents: 'none',
         background: pr
-          ? 'radial-gradient(circle, rgba(250,199,117,0.12) 0%, transparent 68%)'
-          : 'radial-gradient(circle, rgba(200,255,0,0.12) 0%, transparent 68%)',
+          ? `radial-gradient(circle, rgba(250,199,117,${glowOpacity}) 0%, transparent 68%)`
+          : `radial-gradient(circle, rgba(200,255,0,${glowOpacity}) 0%, transparent 68%)`,
       }} />
       <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`}
         style={{ display: 'block', transform: 'rotate(-90deg)' }}>
-        {/* Track */}
-        <circle cx={cx} cy={cy} r={R} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="5.5" />
-        {/* Progress arc */}
+        <circle cx={cx} cy={cy} r={R} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth={sw} />
         <circle cx={cx} cy={cy} r={R} fill="none"
-          stroke={color} strokeWidth="5.5" strokeLinecap="round"
+          stroke={color} strokeWidth={sw} strokeLinecap="round"
           strokeDasharray={C} strokeDashoffset={C * (1 - arc)} />
       </svg>
-      {/* Center label */}
       <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: 3 }}>
-        <span className="font-victory tabular-nums font-black leading-none text-white" style={{ fontSize: 20 }}>{value}</span>
-        <span className="font-victory font-black" style={{ fontSize: 10, color, letterSpacing: '0.14em' }}>{unit}</span>
+        alignItems: 'center', justifyContent: 'center', gap: large ? 6 : 3 }}>
+        <span className="font-victory tabular-nums font-black text-white"
+          style={{ fontSize: large ? 58 : 20, lineHeight: large ? 0.84 : 1 }}>{value}</span>
+        <span className="font-victory font-black"
+          style={{ fontSize: large ? 14 : 10, color, letterSpacing: '0.16em', lineHeight: 1 }}>{unit}</span>
       </div>
     </div>
   );
@@ -931,7 +933,7 @@ export const RunHistory: React.FC = () => {
               <RunRouteBackground path={selected.path} />
 
               <div className="absolute inset-0"
-                style={{ background: 'linear-gradient(to bottom, rgba(13,15,20,0.04) 0%, rgba(13,15,20,0.08) 30%, rgba(13,15,20,0.55) 55%, rgba(13,15,20,0.92) 70%, #0d0f14 80%)' }} />
+                style={{ background: 'linear-gradient(to bottom, rgba(13,15,20,0) 0%, rgba(13,15,20,0.05) 20%, rgba(13,15,20,0.55) 44%, rgba(13,15,20,0.95) 60%, #0d0f14 72%)' }} />
 
               {/* Top bar */}
               <div className="absolute left-0 right-0 top-0 flex items-center justify-between px-4"
@@ -985,178 +987,180 @@ export const RunHistory: React.FC = () => {
                 </motion.div>
               )}
 
-              {/* Stats pinned to bottom */}
+              {/* Stats — no-box vertical layout, blends into gradient */}
               <div
-                className="absolute bottom-0 left-0 right-0 z-10 flex flex-col items-center gap-3 px-5 cursor-default"
-                style={{ paddingBottom: 'max(28px, env(safe-area-inset-bottom))' }}
+                className="absolute bottom-0 left-0 right-0 z-10 cursor-default"
                 onClick={(e) => e.stopPropagation()}
               >
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.14, type: 'spring', stiffness: 240, damping: 22 }}
-                  className="flex items-baseline gap-2">
-                  <span className="font-victory font-black leading-none tabular-nums text-white"
-                    style={{ fontSize: 80, letterSpacing: '-0.01em' }}>
-                    {dist(selected.distance).toFixed(2)}
-                  </span>
-                  <span className="font-victory text-[26px] font-black" style={{ color: 'var(--accent)' }}>
-                    {distanceUnit.toUpperCase()}
-                  </span>
-                </motion.div>
-
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.26 }}
-                  className="w-full grid grid-cols-4 gap-0 overflow-hidden"
+                <div
+                  className="overflow-y-auto flex flex-col items-center"
                   style={{
-                    background: 'rgba(16,18,24,0.55)',
-                    backdropFilter: 'blur(18px) saturate(150%)',
-                    WebkitBackdropFilter: 'blur(18px) saturate(150%)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 20,
-                    boxShadow: '0 10px 34px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.05) inset',
+                    maxHeight: '74vh',
+                    paddingBottom: 'max(28px, env(safe-area-inset-bottom))',
+                    WebkitOverflowScrolling: 'touch',
                   }}
                 >
-                  {[
-                    { label: 'TIME', value: formatDuration(selected.duration), sub: null },
-                    { label: 'PACE', value: selected.pace > 0 ? formatPace(paceDisplay(selected.pace)) : '--:--', sub: `/${distanceUnit}` },
-                    { label: 'CAL', value: String(cal), sub: 'kcal' },
-                    { label: 'EFFORT', value: null, sub: null },
-                  ].map((stat, i) => (
-                    <div key={i} className="flex-1 flex flex-col items-center justify-center gap-1.5 py-3.5"
-                      style={{ borderLeft: i > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
-                      <span className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: 'rgba(255,255,255,0.45)' }}>{stat.label}</span>
-                      {stat.value !== null ? (
-                        <>
-                          <span className="font-victory text-[24px] font-black tabular-nums leading-none text-white">{stat.value}</span>
-                          {stat.sub && <span className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.38)' }}>{stat.sub}</span>}
-                        </>
-                      ) : (
-                        <div className="flex flex-col items-center gap-1.5">
-                          <EffortBars effort={effort} />
-                          <span className="text-[11px] font-black" style={{ color: 'rgba(255,255,255,0.5)' }}>{effort}/5</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </motion.div>
-
-                {/* Splits */}
-                {selected.splits && selected.splits.length > 0 && (
+                  {/* Large ring */}
                   <motion.div
-                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36 }}
-                    className="w-full p-4"
-                    style={{
-                      background: 'rgba(16,18,24,0.55)',
-                      backdropFilter: 'blur(18px) saturate(150%)',
-                      WebkitBackdropFilter: 'blur(18px) saturate(150%)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: 20,
-                      boxShadow: '0 10px 34px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.05) inset',
-                    }}>
-                    <div className="mb-3.5 flex items-center justify-between">
-                      <span className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                        SPLITS · /{distanceUnit}
+                    initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.12, type: 'spring', stiffness: 220, damping: 24 }}
+                    className="mt-2 mb-1"
+                  >
+                    <MiniRingMetric
+                      pct={selected.distance / maxDist}
+                      value={dist(selected.distance).toFixed(2)}
+                      unit={distanceUnit.toUpperCase()}
+                      pr={pr}
+                      large
+                    />
+                  </motion.div>
+
+                  {/* Vertical stat rows — no card, text directly on gradient */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.22 }}
+                    className="w-full"
+                  >
+                    {[
+                      {
+                        label: 'PACE',
+                        value: selected.pace > 0 ? formatPace(paceDisplay(selected.pace)) : '--:--',
+                        sub: `/${distanceUnit}`,
+                        accent: true,
+                      },
+                      { label: 'TIME', value: formatDuration(selected.duration), sub: 'elapsed', accent: false },
+                      { label: 'CALORIES', value: String(cal), sub: 'kcal', accent: false },
+                    ].map((s, i) => (
+                      <div key={i} className="flex items-center justify-between px-6 py-3"
+                        style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                        <span className="text-[11px] font-black uppercase tracking-[0.2em]"
+                          style={{ color: 'rgba(255,255,255,0.38)' }}>
+                          {s.label}
+                        </span>
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="font-victory text-[28px] font-black tabular-nums leading-none"
+                            style={{ color: s.accent ? '#C8FF00' : 'white' }}>
+                            {s.value}
+                          </span>
+                          {s.sub && (
+                            <span className="text-[11px] font-semibold"
+                              style={{ color: s.accent ? 'rgba(200,255,0,0.55)' : 'rgba(255,255,255,0.38)' }}>
+                              {s.sub}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Effort row */}
+                    <div className="flex items-center justify-between px-6 py-3"
+                      style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                      <span className="text-[11px] font-black uppercase tracking-[0.2em]"
+                        style={{ color: 'rgba(255,255,255,0.38)' }}>
+                        EFFORT
                       </span>
-                    </div>
-                    <div className="flex flex-col gap-2.5">
-                      {(() => {
-                        const paces = selected.splits!.map((s) => s.pace);
-                        const bestP = Math.min(...paces);
-                        return selected.splits!.map((split, idx) => {
-                          const barPct = bestP > 0 ? Math.min(1, bestP / split.pace) : 0.5;
-                          const isBest = split.pace === bestP;
-                          return (
-                            <div key={idx} className="flex items-center gap-3">
-                              <span className="w-5 text-right text-[11px] font-black" style={{ color: 'rgba(255,255,255,0.45)' }}>{idx + 1}</span>
-                              <div className="flex-1 h-[5px] rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }}>
-                                <div className="h-full rounded-full" style={{
-                                  width: `${barPct * 100}%`,
-                                  background: isBest ? 'var(--accent)' : 'rgba(200,255,0,0.45)',
-                                  boxShadow: isBest ? '0 0 8px rgba(200,255,0,0.5)' : 'none',
-                                }} />
-                              </div>
-                              <span className="text-[11px] font-black tabular-nums text-white">
-                                {formatPace(paceDisplay(split.pace))}
-                              </span>
-                            </div>
-                          );
-                        });
-                      })()}
+                      <div className="flex items-center gap-2.5">
+                        <EffortBars effort={effort} />
+                        <span className="font-victory text-[22px] font-black leading-none text-white">
+                          {effort}<span className="text-[12px] font-semibold" style={{ color: 'rgba(255,255,255,0.38)' }}>/5</span>
+                        </span>
+                      </div>
                     </div>
                   </motion.div>
-                )}
 
-                {/* WHOOP HR data — matched by workout start time ± 2h */}
-                {(() => {
-                  const runMs = selected.timestamp;
-                  const match = whoopWorkouts.find(
-                    (w) => Math.abs(runMs - new Date(w.start).getTime()) < 2 * 60 * 60 * 1000,
-                  );
-                  if (!match) return null;
-                  return (
+                  {/* Splits — secondary, minimal, no bars */}
+                  {selected.splits && selected.splits.length > 0 && (
                     <motion.div
-                      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.42 }}
-                      className="w-full p-4"
-                      style={{
-                        background: 'rgba(16,18,24,0.55)',
-                        backdropFilter: 'blur(18px) saturate(150%)',
-                        WebkitBackdropFilter: 'blur(18px) saturate(150%)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: 20,
-                        boxShadow: '0 10px 34px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.05) inset',
-                      }}
+                      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.32 }}
+                      className="w-full px-6 py-3"
+                      style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
                     >
-                      <div className="flex items-center justify-between mb-3.5">
-                        <span className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                          WHOOP HEART RATE
-                        </span>
-                        <span style={{ fontSize: 10, color: 'rgba(200,255,0,0.65)', fontWeight: 700, letterSpacing: '0.06em' }}>
-                          {match.sport_name.toUpperCase()}
-                        </span>
+                      <span className="text-[10px] font-black uppercase tracking-[0.22em]"
+                        style={{ color: 'rgba(255,255,255,0.26)' }}>
+                        SPLITS · /{distanceUnit}
+                      </span>
+                      <div className="flex flex-wrap gap-x-5 gap-y-1.5 mt-2">
+                        {(() => {
+                          const paces = selected.splits!.map((s) => s.pace);
+                          const bestP = Math.min(...paces);
+                          return selected.splits!.map((split, idx) => {
+                            const isBest = split.pace === bestP;
+                            return (
+                              <div key={idx} className="flex items-baseline gap-1">
+                                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.28)', fontWeight: 700 }}>{idx + 1}</span>
+                                <span className="font-victory tabular-nums font-black"
+                                  style={{ fontSize: 14, color: isBest ? '#C8FF00' : 'rgba(255,255,255,0.52)' }}>
+                                  {formatPace(paceDisplay(split.pace))}
+                                </span>
+                              </div>
+                            );
+                          });
+                        })()}
                       </div>
-                      <div className="flex gap-5 mb-3.5">
-                        {match.average_heart_rate != null && (
-                          <div>
-                            <div style={{ fontSize: 24, fontWeight: 900, color: '#f87171', lineHeight: 1 }}>
-                              {match.average_heart_rate}
-                            </div>
-                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontWeight: 700, letterSpacing: '0.06em', marginTop: 4 }}>
-                              AVG BPM
-                            </div>
-                          </div>
-                        )}
-                        {match.max_heart_rate != null && (
-                          <div>
-                            <div style={{ fontSize: 24, fontWeight: 900, color: '#ef4444', lineHeight: 1 }}>
-                              {match.max_heart_rate}
-                            </div>
-                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontWeight: 700, letterSpacing: '0.06em', marginTop: 4 }}>
-                              MAX BPM
-                            </div>
-                          </div>
-                        )}
-                        {match.strain != null && (
-                          <div>
-                            <div style={{ fontSize: 24, fontWeight: 900, color: '#C8FF00', lineHeight: 1 }}>
-                              {match.strain.toFixed(1)}
-                            </div>
-                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontWeight: 700, letterSpacing: '0.06em', marginTop: 4 }}>
-                              STRAIN
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <WZoneBar zones={match.zone_durations} />
-                      <WZoneLegend zones={match.zone_durations} />
                     </motion.div>
-                  );
-                })()}
+                  )}
 
-                <motion.p
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
-                  className="text-[11px] font-semibold" style={{ color: 'rgba(255,255,255,0.28)' }}>
-                  © {new Date().getFullYear()} Athlix · Map © OpenStreetMap &amp; CARTO
-                </motion.p>
+                  {/* WHOOP — no card, blended */}
+                  {(() => {
+                    const runMs = selected.timestamp;
+                    const match = whoopWorkouts.find(
+                      (w) => Math.abs(runMs - new Date(w.start).getTime()) < 2 * 60 * 60 * 1000,
+                    );
+                    if (!match) return null;
+                    return (
+                      <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.38 }}
+                        className="w-full px-6 py-3"
+                        style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
+                      >
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-[10px] font-black uppercase tracking-[0.2em]"
+                            style={{ color: 'rgba(255,255,255,0.26)' }}>
+                            WHOOP
+                          </span>
+                          <span style={{ fontSize: 10, color: 'rgba(200,255,0,0.48)', fontWeight: 700, letterSpacing: '0.06em' }}>
+                            {match.sport_name.toUpperCase()}
+                          </span>
+                        </div>
+                        <div className="flex gap-6 mb-3">
+                          {match.average_heart_rate != null && (
+                            <div className="flex items-baseline gap-1">
+                              <span className="font-victory text-[22px] font-black leading-none" style={{ color: '#f87171' }}>
+                                {match.average_heart_rate}
+                              </span>
+                              <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', fontWeight: 700, letterSpacing: '0.06em' }}>AVG BPM</span>
+                            </div>
+                          )}
+                          {match.max_heart_rate != null && (
+                            <div className="flex items-baseline gap-1">
+                              <span className="font-victory text-[22px] font-black leading-none" style={{ color: '#ef4444' }}>
+                                {match.max_heart_rate}
+                              </span>
+                              <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', fontWeight: 700, letterSpacing: '0.06em' }}>MAX</span>
+                            </div>
+                          )}
+                          {match.strain != null && (
+                            <div className="flex items-baseline gap-1">
+                              <span className="font-victory text-[22px] font-black leading-none" style={{ color: '#C8FF00' }}>
+                                {match.strain.toFixed(1)}
+                              </span>
+                              <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', fontWeight: 700, letterSpacing: '0.06em' }}>STRAIN</span>
+                            </div>
+                          )}
+                        </div>
+                        <WZoneBar zones={match.zone_durations} />
+                        <WZoneLegend zones={match.zone_durations} />
+                      </motion.div>
+                    );
+                  })()}
+
+                  <motion.p
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+                    className="px-6 pb-1 text-[10px] font-semibold w-full"
+                    style={{ color: 'rgba(255,255,255,0.18)', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: 12 }}>
+                    © {new Date().getFullYear()} Athlix · Map © OpenStreetMap &amp; CARTO
+                  </motion.p>
+                </div>
               </div>
             </motion.div>
           );
