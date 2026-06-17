@@ -163,9 +163,9 @@ const MiniRingMetric: React.FC<{ pct: number; value: string; unit: string; pr?: 
       </svg>
       {/* Center label */}
       <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-        <span className="font-victory tabular-nums font-black leading-none text-white" style={{ fontSize: 21 }}>{value}</span>
-        <span className="font-victory font-black" style={{ fontSize: 8, color, letterSpacing: '0.16em' }}>{unit}</span>
+        alignItems: 'center', justifyContent: 'center', gap: 3 }}>
+        <span className="font-victory tabular-nums font-black leading-none text-white" style={{ fontSize: 20 }}>{value}</span>
+        <span className="font-victory font-black" style={{ fontSize: 10, color, letterSpacing: '0.14em' }}>{unit}</span>
       </div>
     </div>
   );
@@ -557,7 +557,7 @@ export const RunHistory: React.FC = () => {
           <span className="font-victory text-[22px] font-black tracking-[0.18em] text-white uppercase leading-tight">
             RUN HISTORY
           </span>
-          <span className="text-[11px] font-semibold text-white/30">
+          <span className="text-[12px] font-semibold text-white/50">
             {allRuns.length} {allRuns.length === 1 ? 'run' : 'runs'} total
           </span>
         </div>
@@ -606,10 +606,10 @@ export const RunHistory: React.FC = () => {
         <div className="px-4 pb-3">
           <div className="relative overflow-hidden p-4"
             style={{
-              background: 'rgba(16,18,24,0.165)',
+              background: 'rgba(16,18,24,0.55)',
               backdropFilter: 'blur(18px) saturate(150%)',
               WebkitBackdropFilter: 'blur(18px) saturate(150%)',
-              border: '1px solid rgba(255,255,255,0.08)',
+              border: '1px solid rgba(255,255,255,0.1)',
               borderRadius: 20,
               boxShadow: '0 10px 34px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.05) inset',
             }}>
@@ -620,29 +620,29 @@ export const RunHistory: React.FC = () => {
             <div className="relative z-10">
               <div className="flex items-end justify-between">
                 <div>
-                  <span className="text-[9px] font-black uppercase tracking-[0.24em]" style={{ color: 'var(--accent)' }}>
+                  <span className="text-[10px] font-black uppercase tracking-[0.24em]" style={{ color: 'var(--accent)' }}>
                     THIS WEEK
                   </span>
-                  <div className="flex items-baseline gap-1.5 mt-2 mb-1">
+                  <div className="flex items-baseline gap-2 mt-2 mb-1.5">
                     <span className="font-victory text-[44px] font-black leading-none text-white tabular-nums">
                       {dist(weeklyStats.weekKm).toFixed(1)}
                     </span>
-                    <span className="font-victory text-[18px] font-black" style={{ color: 'var(--accent)' }}>{distanceUnit.toUpperCase()}</span>
+                    <span className="font-victory text-[20px] font-black" style={{ color: 'var(--accent)' }}>{distanceUnit.toUpperCase()}</span>
                   </div>
-                  <div className="text-[11px] font-semibold mb-3" style={{ color: 'rgba(255,255,255,0.42)' }}>
-                    <span style={{ color: weeklyStats.weekChange >= 0 ? 'var(--accent)' : 'rgba(255,100,100,0.8)' }}>
+                  <div className="text-[12px] font-semibold mb-3" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                    <span style={{ color: weeklyStats.weekChange >= 0 ? 'var(--accent)' : 'rgba(255,100,100,0.9)' }}>
                       {weeklyStats.weekChange >= 0 ? '+' : ''}{dist(weeklyStats.weekChange).toFixed(1)} {distanceUnit}
                     </span>
                     {' '}vs last week
                   </div>
-                  <div className="flex gap-5">
+                  <div className="flex gap-6">
                     <div>
-                      <span className="text-[8px] font-black uppercase tracking-[0.15em] text-white/30">TIME</span>
-                      <p className="font-victory text-[18px] font-black text-white mt-0.5">{formatDuration(weeklyStats.weekTime)}</p>
+                      <span className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">TIME</span>
+                      <p className="font-victory text-[18px] font-black text-white mt-1">{formatDuration(weeklyStats.weekTime)}</p>
                     </div>
                     <div>
-                      <span className="text-[8px] font-black uppercase tracking-[0.15em] text-white/30">RUNS</span>
-                      <p className="font-victory text-[18px] font-black text-white mt-0.5">{weeklyStats.weekCount}</p>
+                      <span className="text-[10px] font-black uppercase tracking-[0.15em] text-white/40">RUNS</span>
+                      <p className="font-victory text-[18px] font-black text-white mt-1">{weeklyStats.weekCount}</p>
                     </div>
                   </div>
                 </div>
@@ -660,8 +660,8 @@ export const RunHistory: React.FC = () => {
           const labels: Record<RunTab, string> = { all: 'All', outdoor: 'Outdoor', treadmill: 'Treadmill' };
           return (
             <button key={tab} onClick={() => setRunTab(tab)}
-              className={`relative py-2.5 text-[12px] font-black uppercase tracking-[0.14em] transition-all ${tab === 'all' ? 'pl-0 pr-4' : 'px-4'}`}
-              style={{ color: active ? 'var(--accent)' : 'rgba(255,255,255,0.3)' }}>
+              className={`relative py-3 text-[13px] font-black uppercase tracking-[0.14em] transition-all ${tab === 'all' ? 'pl-0 pr-4' : 'px-4'}`}
+              style={{ color: active ? 'var(--accent)' : 'rgba(255,255,255,0.45)' }}>
               {labels[tab]}
               {active && (
                 <motion.div layoutId="tabUnderline"
@@ -723,55 +723,57 @@ export const RunHistory: React.FC = () => {
                   transition={{ delay: Math.min(idx * 0.04, 0.3) }}
                   className="overflow-visible"
                   style={{
-                    background: 'rgba(16,18,24,0.165)',
+                    background: 'rgba(16,18,24,0.55)',
                     backdropFilter: 'blur(18px) saturate(150%)',
                     WebkitBackdropFilter: 'blur(18px) saturate(150%)',
-                    border: pr ? '1px solid rgba(200,255,0,0.28)' : '1px solid rgba(255,255,255,0.08)',
+                    border: pr ? '1px solid rgba(200,255,0,0.35)' : '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 20,
-                    boxShadow: '0 10px 34px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.05) inset',
+                    boxShadow: pr
+                      ? '0 0 18px rgba(200,255,0,0.06), 0 10px 34px rgba(0,0,0,0.5)'
+                      : '0 10px 34px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.05) inset',
                   }}
                 >
                   <button onClick={() => setSelected(run)}
                     className="w-full text-left transition-all active:scale-[0.98]">
 
                     {/* Header row: date · time · badges */}
-                    <div className="flex items-center gap-2 px-4 pt-3.5 pb-2.5">
+                    <div className="flex items-center gap-2 px-4 pt-4 pb-3">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-victory text-[13px] font-black leading-none tracking-[0.1em]"
-                            style={{ color: pr ? '#fac775' : 'rgba(255,255,255,0.55)' }}>
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <span className="font-victory text-[15px] font-black leading-none tracking-[0.08em]"
+                            style={{ color: pr ? '#fac775' : 'rgba(255,255,255,0.88)' }}>
                             {format(new Date(run.timestamp), 'EEE, MMM d').toUpperCase()}
                           </span>
-                          <span className="text-[11px] font-semibold text-white/25">
+                          <span className="text-[12px] font-semibold" style={{ color: 'rgba(255,255,255,0.5)' }}>
                             {format(new Date(run.timestamp), 'h:mm a')}
                           </span>
                           {run.fromCloud && !demo && (
-                            <Cloud className="h-3 w-3 shrink-0" style={{ color: 'rgba(255,255,255,0.18)' }} />
+                            <Cloud className="h-3 w-3 shrink-0" style={{ color: 'rgba(255,255,255,0.35)' }} />
                           )}
                         </div>
-                        <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[9px] font-semibold text-white/20 tracking-[0.08em]">
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[11px] font-semibold tracking-[0.06em]" style={{ color: 'rgba(255,255,255,0.38)' }}>
                             {demo ? 'Cedar Rapids, IA' : 'Outdoor'}
                           </span>
                           {pr && (
-                            <span className="rounded-full px-1.5 py-0.5 text-[7px] font-black tracking-[0.1em]"
+                            <span className="rounded-full px-2 py-0.5 text-[9px] font-black tracking-[0.08em]"
                               style={{ background: 'linear-gradient(135deg, #fac775 0%, #d99a3a 100%)', color: '#000' }}>
                               PERSONAL BEST
                             </span>
                           )}
                           {demo && (
-                            <span className="rounded px-1.5 py-0.5 text-[7px] font-black uppercase tracking-[0.1em]"
-                              style={{ background: 'rgba(200,255,0,0.08)', color: 'rgba(200,255,0,0.45)', border: '1px solid rgba(200,255,0,0.14)' }}>
+                            <span className="rounded px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.08em]"
+                              style={{ background: 'rgba(200,255,0,0.1)', color: 'rgba(200,255,0,0.6)', border: '1px solid rgba(200,255,0,0.18)' }}>
                               DEMO
                             </span>
                           )}
                         </div>
                       </div>
-                      <ChevronRight className="h-4 w-4 shrink-0" style={{ color: 'rgba(255,255,255,0.15)' }} />
+                      <ChevronRight className="h-4 w-4 shrink-0" style={{ color: 'rgba(255,255,255,0.32)' }} />
                     </div>
 
                     {/* Divider */}
-                    <div style={{ height: 1, background: 'rgba(255,255,255,0.04)', marginLeft: 16, marginRight: 16 }} />
+                    <div style={{ height: 1, background: 'rgba(255,255,255,0.08)', marginLeft: 16, marginRight: 16 }} />
 
                     {/* Body: ring + stats + route */}
                     <div className="flex items-center gap-4 px-4 py-3.5">
@@ -784,31 +786,34 @@ export const RunHistory: React.FC = () => {
                       />
 
                       {/* Stats grid */}
-                      <div className="flex-1 grid grid-cols-2 gap-x-3 gap-y-2.5">
+                      <div className="flex-1 grid grid-cols-2 gap-x-4 gap-y-3">
                         <div>
-                          <span className="text-[8px] font-black uppercase tracking-[0.18em]" style={{ color: 'rgba(255,255,255,0.3)' }}>TIME</span>
-                          <p className="font-victory text-[20px] font-black leading-none text-white tabular-nums mt-0.5">
+                          <span className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: 'rgba(255,255,255,0.45)' }}>TIME</span>
+                          <p className="font-victory text-[20px] font-black leading-none text-white tabular-nums mt-1">
                             {formatDuration(run.duration)}
                           </p>
                         </div>
                         <div>
-                          <span className="text-[8px] font-black uppercase tracking-[0.18em]" style={{ color: 'rgba(255,255,255,0.3)' }}>PACE</span>
-                          <div className="flex items-baseline gap-0.5 mt-0.5">
+                          <span className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: 'rgba(255,255,255,0.45)' }}>PACE</span>
+                          <div className="flex items-baseline gap-1.5 mt-1">
                             <span className="font-victory text-[20px] font-black leading-none text-white tabular-nums">
                               {p > 0 ? formatPace(p) : '--:--'}
                             </span>
-                            <span className="text-[8px] font-bold" style={{ color: 'rgba(255,255,255,0.25)' }}>/{distanceUnit}</span>
+                            <span className="text-[10px] font-bold" style={{ color: 'rgba(255,255,255,0.4)' }}>/{distanceUnit}</span>
                           </div>
                         </div>
                         <div>
-                          <span className="text-[8px] font-black uppercase tracking-[0.18em]" style={{ color: 'rgba(255,255,255,0.3)' }}>CAL</span>
-                          <p className="font-victory text-[20px] font-black leading-none text-white tabular-nums mt-0.5">
-                            {Math.round(run.distance * 65)}
-                          </p>
+                          <span className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: 'rgba(255,255,255,0.45)' }}>CAL</span>
+                          <div className="flex items-baseline gap-1.5 mt-1">
+                            <span className="font-victory text-[20px] font-black leading-none text-white tabular-nums">
+                              {Math.round(run.distance * 65)}
+                            </span>
+                            <span className="text-[10px] font-bold" style={{ color: 'rgba(255,255,255,0.4)' }}>kcal</span>
+                          </div>
                         </div>
                         <div>
-                          <span className="text-[8px] font-black uppercase tracking-[0.18em]" style={{ color: 'rgba(255,255,255,0.3)' }}>SPLITS</span>
-                          <p className="font-victory text-[20px] font-black leading-none text-white tabular-nums mt-0.5">
+                          <span className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: 'rgba(255,255,255,0.45)' }}>SPLITS</span>
+                          <p className="font-victory text-[20px] font-black leading-none text-white tabular-nums mt-1">
                             {run.splits?.length ?? 0}
                           </p>
                         </div>
@@ -820,13 +825,13 @@ export const RunHistory: React.FC = () => {
                   </button>
 
                   {/* Delete strip */}
-                  <div className="flex items-center justify-end px-4 pb-3"
-                    style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div className="flex items-center justify-end px-4 pb-3.5"
+                    style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
                     <button onClick={() => setConfirmDelete(run)}
-                      className="flex items-center gap-1.5 py-1 px-2 rounded-lg transition-all active:scale-95 group"
+                      className="flex items-center gap-1.5 py-1.5 px-2.5 rounded-lg transition-all active:scale-95 group"
                       aria-label="Delete run">
-                      <Trash2 className="h-3.5 w-3.5 text-white/15 group-hover:text-red-400 transition-colors" />
-                      <span className="text-[10px] font-semibold text-white/10 group-hover:text-red-400/70 transition-colors">
+                      <Trash2 className="h-3.5 w-3.5 transition-colors" style={{ color: 'rgba(255,255,255,0.28)' }} />
+                      <span className="text-[11px] font-semibold transition-colors" style={{ color: 'rgba(255,255,255,0.28)' }}>
                         Delete
                       </span>
                     </button>
@@ -1003,10 +1008,10 @@ export const RunHistory: React.FC = () => {
                   initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.26 }}
                   className="w-full grid grid-cols-4 gap-0 overflow-hidden"
                   style={{
-                    background: 'rgba(16,18,24,0.165)',
+                    background: 'rgba(16,18,24,0.55)',
                     backdropFilter: 'blur(18px) saturate(150%)',
                     WebkitBackdropFilter: 'blur(18px) saturate(150%)',
-                    border: '1px solid rgba(255,255,255,0.08)',
+                    border: '1px solid rgba(255,255,255,0.1)',
                     borderRadius: 20,
                     boxShadow: '0 10px 34px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.05) inset',
                   }}
@@ -1014,21 +1019,21 @@ export const RunHistory: React.FC = () => {
                   {[
                     { label: 'TIME', value: formatDuration(selected.duration), sub: null },
                     { label: 'PACE', value: selected.pace > 0 ? formatPace(paceDisplay(selected.pace)) : '--:--', sub: `/${distanceUnit}` },
-                    { label: 'CAL', value: String(cal), sub: null },
+                    { label: 'CAL', value: String(cal), sub: 'kcal' },
                     { label: 'EFFORT', value: null, sub: null },
                   ].map((stat, i) => (
-                    <div key={i} className="flex flex-col items-center gap-1 py-3 px-1"
-                      style={{ borderLeft: i > 0 ? '1px solid rgba(255,255,255,0.06)' : 'none' }}>
-                      <span className="text-[8px] font-black uppercase tracking-[0.16em] text-white/30">{stat.label}</span>
+                    <div key={i} className="flex-1 flex flex-col items-center justify-center gap-1.5 py-3.5"
+                      style={{ borderLeft: i > 0 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
+                      <span className="text-[10px] font-black uppercase tracking-[0.16em]" style={{ color: 'rgba(255,255,255,0.45)' }}>{stat.label}</span>
                       {stat.value !== null ? (
                         <>
-                          <span className="font-victory text-[20px] font-black tabular-nums leading-none text-white">{stat.value}</span>
-                          {stat.sub && <span className="text-[9px] font-bold text-white/20">{stat.sub}</span>}
+                          <span className="font-victory text-[24px] font-black tabular-nums leading-none text-white">{stat.value}</span>
+                          {stat.sub && <span className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.38)' }}>{stat.sub}</span>}
                         </>
                       ) : (
-                        <div className="flex items-center gap-1.5 mt-1">
+                        <div className="flex flex-col items-center gap-1.5">
                           <EffortBars effort={effort} />
-                          <span className="text-[11px] font-black text-white/40">{effort}/5</span>
+                          <span className="text-[11px] font-black" style={{ color: 'rgba(255,255,255,0.5)' }}>{effort}/5</span>
                         </div>
                       )}
                     </div>
@@ -1041,19 +1046,19 @@ export const RunHistory: React.FC = () => {
                     initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36 }}
                     className="w-full p-4"
                     style={{
-                      background: 'rgba(16,18,24,0.165)',
+                      background: 'rgba(16,18,24,0.55)',
                       backdropFilter: 'blur(18px) saturate(150%)',
                       WebkitBackdropFilter: 'blur(18px) saturate(150%)',
-                      border: '1px solid rgba(255,255,255,0.08)',
+                      border: '1px solid rgba(255,255,255,0.1)',
                       borderRadius: 20,
                       boxShadow: '0 10px 34px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.05) inset',
                     }}>
-                    <div className="mb-3 flex items-center justify-between">
-                      <span className="text-[10px] font-black uppercase tracking-[0.22em] text-white/40">
+                    <div className="mb-3.5 flex items-center justify-between">
+                      <span className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.5)' }}>
                         SPLITS · /{distanceUnit}
                       </span>
                     </div>
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-2.5">
                       {(() => {
                         const paces = selected.splits!.map((s) => s.pace);
                         const bestP = Math.min(...paces);
@@ -1062,7 +1067,7 @@ export const RunHistory: React.FC = () => {
                           const isBest = split.pace === bestP;
                           return (
                             <div key={idx} className="flex items-center gap-3">
-                              <span className="w-5 text-right text-[10px] font-black text-white/30">{idx + 1}</span>
+                              <span className="w-5 text-right text-[11px] font-black" style={{ color: 'rgba(255,255,255,0.45)' }}>{idx + 1}</span>
                               <div className="flex-1 h-[5px] rounded-full" style={{ background: 'rgba(255,255,255,0.08)' }}>
                                 <div className="h-full rounded-full" style={{
                                   width: `${barPct * 100}%`,
@@ -1093,49 +1098,49 @@ export const RunHistory: React.FC = () => {
                       initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.42 }}
                       className="w-full p-4"
                       style={{
-                        background: 'rgba(16,18,24,0.165)',
+                        background: 'rgba(16,18,24,0.55)',
                         backdropFilter: 'blur(18px) saturate(150%)',
                         WebkitBackdropFilter: 'blur(18px) saturate(150%)',
-                        border: '1px solid rgba(255,255,255,0.08)',
+                        border: '1px solid rgba(255,255,255,0.1)',
                         borderRadius: 20,
                         boxShadow: '0 10px 34px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.05) inset',
                       }}
                     >
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-[10px] font-black uppercase tracking-[0.22em] text-white/40">
+                      <div className="flex items-center justify-between mb-3.5">
+                        <span className="text-[11px] font-black uppercase tracking-[0.2em]" style={{ color: 'rgba(255,255,255,0.5)' }}>
                           WHOOP HEART RATE
                         </span>
-                        <span style={{ fontSize: 9, color: 'rgba(200,255,0,0.5)', fontWeight: 700, letterSpacing: '0.06em' }}>
+                        <span style={{ fontSize: 10, color: 'rgba(200,255,0,0.65)', fontWeight: 700, letterSpacing: '0.06em' }}>
                           {match.sport_name.toUpperCase()}
                         </span>
                       </div>
-                      <div className="flex gap-4 mb-3">
+                      <div className="flex gap-5 mb-3.5">
                         {match.average_heart_rate != null && (
                           <div>
-                            <div style={{ fontSize: 22, fontWeight: 900, color: '#f87171', lineHeight: 1 }}>
+                            <div style={{ fontSize: 24, fontWeight: 900, color: '#f87171', lineHeight: 1 }}>
                               {match.average_heart_rate}
                             </div>
-                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 700, letterSpacing: '0.07em' }}>
+                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontWeight: 700, letterSpacing: '0.06em', marginTop: 4 }}>
                               AVG BPM
                             </div>
                           </div>
                         )}
                         {match.max_heart_rate != null && (
                           <div>
-                            <div style={{ fontSize: 22, fontWeight: 900, color: '#ef4444', lineHeight: 1 }}>
+                            <div style={{ fontSize: 24, fontWeight: 900, color: '#ef4444', lineHeight: 1 }}>
                               {match.max_heart_rate}
                             </div>
-                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 700, letterSpacing: '0.07em' }}>
+                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontWeight: 700, letterSpacing: '0.06em', marginTop: 4 }}>
                               MAX BPM
                             </div>
                           </div>
                         )}
                         {match.strain != null && (
                           <div>
-                            <div style={{ fontSize: 22, fontWeight: 900, color: '#C8FF00', lineHeight: 1 }}>
+                            <div style={{ fontSize: 24, fontWeight: 900, color: '#C8FF00', lineHeight: 1 }}>
                               {match.strain.toFixed(1)}
                             </div>
-                            <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.3)', fontWeight: 700, letterSpacing: '0.07em' }}>
+                            <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.45)', fontWeight: 700, letterSpacing: '0.06em', marginTop: 4 }}>
                               STRAIN
                             </div>
                           </div>
@@ -1149,7 +1154,7 @@ export const RunHistory: React.FC = () => {
 
                 <motion.p
                   initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
-                  className="text-[10px] font-semibold text-white/15">
+                  className="text-[11px] font-semibold" style={{ color: 'rgba(255,255,255,0.28)' }}>
                   © {new Date().getFullYear()} Athlix · Map © OpenStreetMap &amp; CARTO
                 </motion.p>
               </div>
