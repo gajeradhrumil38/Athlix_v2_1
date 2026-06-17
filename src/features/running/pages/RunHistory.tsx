@@ -137,23 +137,35 @@ const MiniRoute: React.FC<{ path: GpsPoint[]; size?: number }> = ({ path, size =
   );
 };
 
-// ── Mini ring metric (mirrors ActiveRun's RingMetric at 90px) ────────────────
+// ── Mini ring metric (mirrors ActiveRun's RingMetric at 92px) ────────────────
 const MiniRingMetric: React.FC<{ pct: number; value: string; unit: string; pr?: boolean }> = ({ pct, value, unit, pr }) => {
-  const R = 36, C = 2 * Math.PI * R;
+  const S = 92, cx = 46, cy = 46, R = 37;
+  const C = 2 * Math.PI * R;
+  const arc = Math.min(1, Math.max(0.04, pct));
+  const color = pr ? '#fac775' : '#C8FF00';
   return (
-    <div style={{ position: 'relative', width: 90, height: 90, flexShrink: 0 }}>
-      <svg width="90" height="90" viewBox="0 0 90 90" style={{ transform: 'rotate(-90deg)', overflow: 'visible' }}>
-        <circle cx="45" cy="45" r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="5.5" />
-        <circle cx="45" cy="45" r={R} fill="none"
-          stroke={pr ? '#fac775' : 'var(--accent)'}
-          strokeWidth="5.5" strokeLinecap="round"
-          strokeDasharray={C} strokeDashoffset={C * (1 - Math.min(1, Math.max(0.04, pct)))}
-          style={{ filter: pr ? 'drop-shadow(0 0 7px rgba(250,199,117,0.55))' : 'drop-shadow(0 0 7px rgba(200,255,0,0.5))' }} />
+    <div style={{ position: 'relative', width: S, height: S, flexShrink: 0 }}>
+      {/* Radial glow behind arc — avoids iOS Safari SVG-filter + overflow:hidden bug */}
+      <div style={{
+        position: 'absolute', inset: 0, borderRadius: '50%', pointerEvents: 'none',
+        background: pr
+          ? 'radial-gradient(circle, rgba(250,199,117,0.12) 0%, transparent 68%)'
+          : 'radial-gradient(circle, rgba(200,255,0,0.12) 0%, transparent 68%)',
+      }} />
+      <svg width={S} height={S} viewBox={`0 0 ${S} ${S}`}
+        style={{ display: 'block', transform: 'rotate(-90deg)' }}>
+        {/* Track */}
+        <circle cx={cx} cy={cy} r={R} fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="5.5" />
+        {/* Progress arc */}
+        <circle cx={cx} cy={cy} r={R} fill="none"
+          stroke={color} strokeWidth="5.5" strokeLinecap="round"
+          strokeDasharray={C} strokeDashoffset={C * (1 - arc)} />
       </svg>
+      {/* Center label */}
       <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-        <span className="font-victory tabular-nums font-black leading-none text-white" style={{ fontSize: 22 }}>{value}</span>
-        <span className="font-victory font-black" style={{ fontSize: 8, color: pr ? '#fac775' : 'var(--accent)', letterSpacing: '0.16em' }}>{unit}</span>
+        <span className="font-victory tabular-nums font-black leading-none text-white" style={{ fontSize: 21 }}>{value}</span>
+        <span className="font-victory font-black" style={{ fontSize: 8, color, letterSpacing: '0.16em' }}>{unit}</span>
       </div>
     </div>
   );
@@ -709,7 +721,7 @@ export const RunHistory: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ delay: Math.min(idx * 0.04, 0.3) }}
-                  className="overflow-hidden"
+                  className="overflow-visible"
                   style={{
                     background: 'rgba(16,18,24,0.165)',
                     backdropFilter: 'blur(18px) saturate(150%)',
