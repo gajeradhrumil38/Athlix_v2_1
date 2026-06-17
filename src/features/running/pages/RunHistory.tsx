@@ -1000,22 +1000,22 @@ export const RunHistory: React.FC = () => {
                     WebkitOverflowScrolling: 'touch',
                   }}
                 >
-                  {/* Large ring */}
+                  {/* Distance hero */}
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.12, type: 'spring', stiffness: 220, damping: 24 }}
-                    className="mt-2 mb-1"
+                    initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.12, type: 'spring', stiffness: 240, damping: 22 }}
+                    className="flex items-baseline justify-center gap-2 mt-4 mb-1 px-6"
                   >
-                    <MiniRingMetric
-                      pct={selected.distance / maxDist}
-                      value={dist(selected.distance).toFixed(2)}
-                      unit={distanceUnit.toUpperCase()}
-                      pr={pr}
-                      large
-                    />
+                    <span className="font-victory font-black leading-none tabular-nums text-white"
+                      style={{ fontSize: 88, letterSpacing: '-0.02em', lineHeight: 0.88 }}>
+                      {dist(selected.distance).toFixed(2)}
+                    </span>
+                    <span className="font-victory font-black" style={{ fontSize: 28, color: pr ? '#fac775' : '#C8FF00', lineHeight: 1 }}>
+                      {distanceUnit.toUpperCase()}
+                    </span>
                   </motion.div>
 
-                  {/* Vertical stat rows — no card, text directly on gradient */}
+                  {/* Vertical stat rows — centered, label above value */}
                   <motion.div
                     initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.22 }}
@@ -1031,19 +1031,19 @@ export const RunHistory: React.FC = () => {
                       { label: 'TIME', value: formatDuration(selected.duration), sub: 'elapsed', accent: false },
                       { label: 'CALORIES', value: String(cal), sub: 'kcal', accent: false },
                     ].map((s, i) => (
-                      <div key={i} className="flex items-center justify-between px-6 py-3"
+                      <div key={i} className="flex flex-col items-center px-6 py-3.5"
                         style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                        <span className="text-[11px] font-black uppercase tracking-[0.2em]"
+                        <span className="text-[11px] font-black uppercase tracking-[0.2em] mb-1.5"
                           style={{ color: 'rgba(255,255,255,0.38)' }}>
                           {s.label}
                         </span>
                         <div className="flex items-baseline gap-1.5">
-                          <span className="font-victory text-[28px] font-black tabular-nums leading-none"
+                          <span className="font-victory text-[36px] font-black tabular-nums leading-none"
                             style={{ color: s.accent ? '#C8FF00' : 'white' }}>
                             {s.value}
                           </span>
                           {s.sub && (
-                            <span className="text-[11px] font-semibold"
+                            <span className="text-[13px] font-semibold"
                               style={{ color: s.accent ? 'rgba(200,255,0,0.55)' : 'rgba(255,255,255,0.38)' }}>
                               {s.sub}
                             </span>
@@ -1053,16 +1053,16 @@ export const RunHistory: React.FC = () => {
                     ))}
 
                     {/* Effort row */}
-                    <div className="flex items-center justify-between px-6 py-3"
+                    <div className="flex flex-col items-center px-6 py-3.5"
                       style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                      <span className="text-[11px] font-black uppercase tracking-[0.2em]"
+                      <span className="text-[11px] font-black uppercase tracking-[0.2em] mb-1.5"
                         style={{ color: 'rgba(255,255,255,0.38)' }}>
                         EFFORT
                       </span>
                       <div className="flex items-center gap-2.5">
                         <EffortBars effort={effort} />
-                        <span className="font-victory text-[22px] font-black leading-none text-white">
-                          {effort}<span className="text-[12px] font-semibold" style={{ color: 'rgba(255,255,255,0.38)' }}>/5</span>
+                        <span className="font-victory text-[28px] font-black leading-none text-white">
+                          {effort}<span className="text-[14px] font-semibold" style={{ color: 'rgba(255,255,255,0.38)' }}>/5</span>
                         </span>
                       </div>
                     </div>
@@ -1075,11 +1075,11 @@ export const RunHistory: React.FC = () => {
                       className="w-full px-6 py-3"
                       style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
                     >
-                      <span className="text-[10px] font-black uppercase tracking-[0.22em]"
+                      <span className="text-[10px] font-black uppercase tracking-[0.22em] block text-center"
                         style={{ color: 'rgba(255,255,255,0.26)' }}>
                         SPLITS · /{distanceUnit}
                       </span>
-                      <div className="flex flex-wrap gap-x-5 gap-y-1.5 mt-2">
+                      <div className="flex flex-wrap justify-center gap-x-5 gap-y-1.5 mt-2">
                         {(() => {
                           const paces = selected.splits!.map((s) => s.pace);
                           const bestP = Math.min(...paces);
@@ -1113,16 +1113,16 @@ export const RunHistory: React.FC = () => {
                         className="w-full px-6 py-3"
                         style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
                       >
-                        <div className="flex items-center justify-between mb-3">
+                        <div className="flex flex-col items-center mb-3">
                           <span className="text-[10px] font-black uppercase tracking-[0.2em]"
                             style={{ color: 'rgba(255,255,255,0.26)' }}>
                             WHOOP
                           </span>
-                          <span style={{ fontSize: 10, color: 'rgba(200,255,0,0.48)', fontWeight: 700, letterSpacing: '0.06em' }}>
+                          <span style={{ fontSize: 10, color: 'rgba(200,255,0,0.48)', fontWeight: 700, letterSpacing: '0.06em', marginTop: 2 }}>
                             {match.sport_name.toUpperCase()}
                           </span>
                         </div>
-                        <div className="flex gap-6 mb-3">
+                        <div className="flex justify-center gap-6 mb-3">
                           {match.average_heart_rate != null && (
                             <div className="flex items-baseline gap-1">
                               <span className="font-victory text-[22px] font-black leading-none" style={{ color: '#f87171' }}>
