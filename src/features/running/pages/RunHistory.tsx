@@ -137,6 +137,28 @@ const MiniRoute: React.FC<{ path: GpsPoint[]; size?: number }> = ({ path, size =
   );
 };
 
+// ── Mini ring metric (mirrors ActiveRun's RingMetric at 90px) ────────────────
+const MiniRingMetric: React.FC<{ pct: number; value: string; unit: string; pr?: boolean }> = ({ pct, value, unit, pr }) => {
+  const R = 36, C = 2 * Math.PI * R;
+  return (
+    <div style={{ position: 'relative', width: 90, height: 90, flexShrink: 0 }}>
+      <svg width="90" height="90" viewBox="0 0 90 90" style={{ transform: 'rotate(-90deg)', overflow: 'visible' }}>
+        <circle cx="45" cy="45" r={R} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="5.5" />
+        <circle cx="45" cy="45" r={R} fill="none"
+          stroke={pr ? '#fac775' : 'var(--accent)'}
+          strokeWidth="5.5" strokeLinecap="round"
+          strokeDasharray={C} strokeDashoffset={C * (1 - Math.min(1, Math.max(0.04, pct)))}
+          style={{ filter: pr ? 'drop-shadow(0 0 7px rgba(250,199,117,0.55))' : 'drop-shadow(0 0 7px rgba(200,255,0,0.5))' }} />
+      </svg>
+      <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+        <span className="font-victory tabular-nums font-black leading-none text-white" style={{ fontSize: 22 }}>{value}</span>
+        <span className="font-victory font-black" style={{ fontSize: 8, color: pr ? '#fac775' : 'var(--accent)', letterSpacing: '0.16em' }}>{unit}</span>
+      </div>
+    </div>
+  );
+};
+
 // ── Effort bars ───────────────────────────────────────────────────────────────
 const EffortBars: React.FC<{ effort: number }> = ({ effort }) => (
   <div className="flex items-end gap-[3px]">
@@ -468,6 +490,8 @@ export const RunHistory: React.FC = () => {
     return runs;
   }, [allRuns, runTab, calFilterDate]);
 
+  const maxDist = useMemo(() => Math.max(...allRuns.map((r) => r.distance), 1), [allRuns]);
+
   // Weekly stats
   const weeklyStats = useMemo(() => {
     const now = Date.now();
@@ -696,67 +720,90 @@ export const RunHistory: React.FC = () => {
                   }}
                 >
                   <button onClick={() => setSelected(run)}
-                    className="w-full px-4 py-3.5 text-left transition-all active:scale-[0.98]">
-                    {/* Layout: stats on left, mini map on right */}
-                    <div className="flex items-stretch gap-3">
-                      {/* Left: date + stats */}
+                    className="w-full text-left transition-all active:scale-[0.98]">
+
+                    {/* Header row: date · time · badges */}
+                    <div className="flex items-center gap-2 px-4 pt-3.5 pb-2.5">
                       <div className="flex-1 min-w-0">
-                        {/* Row 1 */}
-                        <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                          <span className="font-victory text-[15px] font-black leading-none"
-                            style={{ color: pr ? 'var(--accent)' : 'white' }}>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-victory text-[13px] font-black leading-none tracking-[0.1em]"
+                            style={{ color: pr ? '#fac775' : 'rgba(255,255,255,0.55)' }}>
                             {format(new Date(run.timestamp), 'EEE, MMM d').toUpperCase()}
                           </span>
+                          <span className="text-[11px] font-semibold text-white/25">
+                            {format(new Date(run.timestamp), 'h:mm a')}
+                          </span>
+                          {run.fromCloud && !demo && (
+                            <Cloud className="h-3 w-3 shrink-0" style={{ color: 'rgba(255,255,255,0.18)' }} />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[9px] font-semibold text-white/20 tracking-[0.08em]">
+                            {demo ? 'Cedar Rapids, IA' : 'Outdoor'}
+                          </span>
                           {pr && (
-                            <span className="rounded-full px-1.5 py-0.5 text-[8px] font-black tracking-[0.1em]"
+                            <span className="rounded-full px-1.5 py-0.5 text-[7px] font-black tracking-[0.1em]"
                               style={{ background: 'linear-gradient(135deg, #fac775 0%, #d99a3a 100%)', color: '#000' }}>
-                              PR
+                              PERSONAL BEST
                             </span>
                           )}
                           {demo && (
-                            <span className="rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-[0.1em]"
-                              style={{ background: 'rgba(200,255,0,0.1)', color: 'rgba(200,255,0,0.5)', border: '1px solid rgba(200,255,0,0.15)' }}>
+                            <span className="rounded px-1.5 py-0.5 text-[7px] font-black uppercase tracking-[0.1em]"
+                              style={{ background: 'rgba(200,255,0,0.08)', color: 'rgba(200,255,0,0.45)', border: '1px solid rgba(200,255,0,0.14)' }}>
                               DEMO
                             </span>
                           )}
-                          {run.fromCloud && !demo && (
-                            <Cloud className="h-3 w-3 shrink-0" style={{ color: 'rgba(255,255,255,0.2)' }} />
-                          )}
                         </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 shrink-0" style={{ color: 'rgba(255,255,255,0.15)' }} />
+                    </div>
 
-                        <p className="mb-2.5 text-[10px] font-semibold text-white/25">
-                          {format(new Date(run.timestamp), 'EEEE · h:mm a')} · {demo ? 'Cedar Rapids, IA' : 'Outdoor'}
-                        </p>
+                    {/* Divider */}
+                    <div style={{ height: 1, background: 'rgba(255,255,255,0.04)', marginLeft: 16, marginRight: 16 }} />
 
-                        {/* Stats */}
-                        <div className="flex items-stretch">
-                          <div className="flex items-baseline gap-1 pr-3 shrink-0">
-                            <span className="font-victory text-[26px] font-black tabular-nums leading-none text-white">
-                              {d.toFixed(2)}
-                            </span>
-                            <span className="text-[9px] font-bold text-white/30 uppercase">{distanceUnit}</span>
-                          </div>
-                          <div className="self-center h-7 w-px bg-white/[0.08] shrink-0" />
-                          <div className="flex items-baseline px-3 shrink-0">
-                            <span className="font-victory text-[18px] font-black tabular-nums leading-none text-white">
-                              {formatDuration(run.duration)}
-                            </span>
-                          </div>
-                          <div className="self-center h-7 w-px bg-white/[0.08] shrink-0" />
-                          <div className="flex flex-col justify-center pl-3 shrink-0">
-                            <span className="font-victory text-[18px] font-black tabular-nums leading-none text-white">
+                    {/* Body: ring + stats + route */}
+                    <div className="flex items-center gap-4 px-4 py-3.5">
+                      {/* Ring */}
+                      <MiniRingMetric
+                        pct={run.distance / maxDist}
+                        value={d.toFixed(2)}
+                        unit={distanceUnit.toUpperCase()}
+                        pr={pr}
+                      />
+
+                      {/* Stats grid */}
+                      <div className="flex-1 grid grid-cols-2 gap-x-3 gap-y-2.5">
+                        <div>
+                          <span className="text-[8px] font-black uppercase tracking-[0.18em]" style={{ color: 'rgba(255,255,255,0.3)' }}>TIME</span>
+                          <p className="font-victory text-[20px] font-black leading-none text-white tabular-nums mt-0.5">
+                            {formatDuration(run.duration)}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-[8px] font-black uppercase tracking-[0.18em]" style={{ color: 'rgba(255,255,255,0.3)' }}>PACE</span>
+                          <div className="flex items-baseline gap-0.5 mt-0.5">
+                            <span className="font-victory text-[20px] font-black leading-none text-white tabular-nums">
                               {p > 0 ? formatPace(p) : '--:--'}
                             </span>
-                            <span className="text-[8px] font-bold text-white/25">/{distanceUnit}</span>
+                            <span className="text-[8px] font-bold" style={{ color: 'rgba(255,255,255,0.25)' }}>/{distanceUnit}</span>
                           </div>
+                        </div>
+                        <div>
+                          <span className="text-[8px] font-black uppercase tracking-[0.18em]" style={{ color: 'rgba(255,255,255,0.3)' }}>CAL</span>
+                          <p className="font-victory text-[20px] font-black leading-none text-white tabular-nums mt-0.5">
+                            {Math.round(run.distance * 65)}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-[8px] font-black uppercase tracking-[0.18em]" style={{ color: 'rgba(255,255,255,0.3)' }}>SPLITS</span>
+                          <p className="font-victory text-[20px] font-black leading-none text-white tabular-nums mt-0.5">
+                            {run.splits?.length ?? 0}
+                          </p>
                         </div>
                       </div>
 
-                      {/* Right: mini route map */}
-                      <div className="flex flex-col items-end justify-between shrink-0">
-                        <ChevronRight className="h-4 w-4 text-white/20 mb-1" />
-                        <MiniRoute path={run.path} size={68} />
-                      </div>
+                      {/* Mini route */}
+                      <MiniRoute path={run.path} size={64} />
                     </div>
                   </button>
 
