@@ -516,7 +516,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
           ?? resolveExerciseInputType(exerciseOption.name);
         const defaults = getDefaultSetValues(inputType);
         const perSetData = summary?.perSetData;
-        const totalSets = Math.max(1, Math.min(20, Number(summary?.sets || 3)));
+        const totalSets = summary ? Math.max(1, Math.min(20, Number(summary.sets))) : 1;
         const seedWeight = Number(summary?.weight ?? defaults.weight);
         const seedReps = Number(summary?.reps ?? defaults.reps);
 
