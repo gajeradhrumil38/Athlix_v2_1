@@ -24,6 +24,8 @@ import {
   Dumbbell,
   Plus,
   Trash2,
+  Copy,
+  X,
   Zap,
   CalendarDays,
   LayoutGrid,
@@ -189,6 +191,39 @@ const groupExerciseSets = (w: any, unit: WeightUnit): EditGroup[] => {
 };
 
 
+const CalValueBox: React.FC<{
+  value: string; label: string; step: number;
+  onMinus: () => void; onPlus: () => void;
+}> = ({ value, label, step, onMinus, onPlus }) => {
+  const stepLabel = `${step}`;
+  return (
+    <div className="relative flex h-[82px] w-full overflow-hidden rounded-xl border"
+      style={{ background: 'var(--bg-base)', borderColor: 'var(--border)' }}>
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
+      <button type="button" onClick={onMinus}
+        className="flex h-full w-[48px] shrink-0 flex-col items-center justify-center gap-0.5 active:bg-white/[0.04] transition-colors"
+        style={{ color: 'var(--text-muted)', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
+        <span className="text-[22px] font-light leading-none select-none">−</span>
+        <span className="text-[9px] font-semibold leading-none opacity-50 select-none">{stepLabel}</span>
+      </button>
+      <div className="flex flex-1 flex-col items-center justify-center gap-[3px]">
+        <div className="font-victory tabular-nums text-[34px] leading-none font-black" style={{ color: 'var(--text-primary)' }}>
+          {value}
+        </div>
+        <div className="text-[10px] font-bold tracking-[0.16em] uppercase" style={{ color: 'var(--text-secondary)' }}>
+          {label}
+        </div>
+      </div>
+      <button type="button" onClick={onPlus}
+        className="flex h-full w-[48px] shrink-0 flex-col items-center justify-center gap-0.5 active:bg-white/[0.04] transition-colors"
+        style={{ color: 'var(--accent)', borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
+        <span className="text-[22px] font-light leading-none select-none">+</span>
+        <span className="text-[9px] font-semibold leading-none opacity-50 select-none">{stepLabel}</span>
+      </button>
+    </div>
+  );
+};
+
 const WorkoutCard: React.FC<{
   workout: any;
   unit: WeightUnit;
@@ -224,6 +259,16 @@ const WorkoutCard: React.FC<{
       if (i !== gi) return g;
       const last = g.sets[g.sets.length - 1];
       return { ...g, sets: [...g.sets, last ? { ...last } : { weight: 0, reps: 10 }] };
+    }));
+  const removeGroup = (gi: number) =>
+    setGroups((p) => p.filter((_, i) => i !== gi));
+  const copySet = (gi: number, si: number) =>
+    setGroups((p) => p.map((g, i) => {
+      if (i !== gi) return g;
+      const copy = { ...g.sets[si] };
+      const next = [...g.sets];
+      next.splice(si + 1, 0, copy);
+      return { ...g, sets: next };
     }));
 
   const save = async () => {
@@ -373,56 +418,90 @@ const WorkoutCard: React.FC<{
                     <div key={`${g.name}-${gi}`} className="rounded-[14px] overflow-hidden"
                       style={{ background: 'var(--bg-base)', border: '1px solid var(--border)' }}>
 
-                      {/* Exercise header — only shown when multiple exercises */}
-                      {viewGroups.length > 1 && (
+                      {/* Exercise header — multi-exercise always; single exercise only in edit mode */}
+                      {(viewGroups.length > 1 || editing) && (
                         <div className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
                           <div className="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center text-[14px] font-black shrink-0"
                             style={{ background: `color-mix(in srgb, ${exColor} 14%, var(--bg-elevated))`, color: exColor }}>
                             {g.name.charAt(0)}
                           </div>
                           <p className="flex-1 text-[15px] font-bold truncate" style={{ color: 'var(--text-primary)' }}>{g.name}</p>
-                          <span className="text-[12px] font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>
-                            {g.sets.length} set{g.sets.length !== 1 ? 's' : ''}
-                          </span>
+                          {editing ? (
+                            <button
+                              onClick={() => removeGroup(gi)}
+                              className="h-7 w-7 flex items-center justify-center rounded-lg active:scale-90 transition-transform shrink-0"
+                              style={{ background: 'rgba(255,59,48,0.08)', color: 'rgba(255,80,65,0.85)' }}
+                              aria-label="Remove exercise">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          ) : (
+                            <span className="text-[12px] font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>
+                              {g.sets.length} set{g.sets.length !== 1 ? 's' : ''}
+                            </span>
+                          )}
                         </div>
                       )}
 
-                      {/* Unified set rows — same visual in view and edit; +/- fade in on edit */}
-                      <div className="flex flex-col gap-2.5 p-3">
-                        {g.sets.map((s, si) => (
-                          <div key={si}
-                            className="grid overflow-hidden rounded-[12px]"
-                            style={{
-                              gridTemplateColumns: '44px 1fr 1fr',
-                              border: '1px solid var(--border)',
-                              background: 'rgba(255,255,255,0.012)',
-                            }}>
-
-                            {/* Set number + remove overlay */}
-                            <div className="relative flex items-center justify-center font-victory text-[26px]"
-                              style={{ background: 'rgba(200,255,0,0.05)', color: '#C8FF00', borderRight: '1px solid var(--border)' }}>
-                              {si + 1}
-                              <button
-                                onClick={() => removeSet(gi, si)}
-                                className="absolute top-1 right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold transition-opacity duration-200"
-                                style={{ background: 'rgba(255,59,48,0.85)', color: '#fff', opacity: editing ? 1 : 0, pointerEvents: editing ? 'auto' : 'none' }}>
-                                ×
-                              </button>
-                            </div>
-
-                            {/* Weight cell */}
-                            <div className="flex items-center">
-                              <div className="flex flex-col items-center justify-center py-3 shrink-0 transition-opacity duration-200"
-                                style={{ width: 34, opacity: editing && !g.isCardio ? 1 : 0, pointerEvents: editing && !g.isCardio ? 'auto' : 'none' }}>
-                                <button
-                                  onClick={() => updateSet(gi, si, { ...s, weight: Math.max(0, Math.round((s.weight - 2.5) * 10) / 10) })}
-                                  className="w-6 h-6 rounded-md flex items-center justify-center text-[12px] font-bold leading-none active:scale-90 transition-transform"
-                                  style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
-                                  −
-                                </button>
-                                <span className="text-[8px] font-semibold mt-0.5" style={{ color: 'var(--text-muted)' }}>2.5</span>
+                      {editing ? (
+                        /* Edit mode — ValueBox cards matching the workout logger's SetRow style */
+                        <div className="p-3 space-y-4">
+                          {g.sets.map((s, si) => {
+                            const weightStep = unit === 'kg' ? 1.25 : 2.5;
+                            return (
+                              <div key={si} className="space-y-2">
+                                {/* Set badge */}
+                                <span className="inline-block text-[10px] font-bold rounded-md px-2 py-0.5"
+                                  style={{ background: 'rgba(200,255,0,0.08)', color: '#C8FF00', border: '1px solid rgba(200,255,0,0.2)' }}>
+                                  Set {si + 1}
+                                </span>
+                                {/* Value boxes */}
+                                <div className="grid grid-cols-2 gap-2">
+                                  {!g.isCardio && (
+                                    <CalValueBox
+                                      value={formatWeight(s.weight, unit)} label={unit} step={weightStep}
+                                      onMinus={() => updateSet(gi, si, { ...s, weight: Math.max(0, Math.round((s.weight - weightStep) * 10) / 10) })}
+                                      onPlus={() => updateSet(gi, si, { ...s, weight: Math.round((s.weight + weightStep) * 10) / 10 })}
+                                    />
+                                  )}
+                                  <CalValueBox
+                                    value={String(s.reps)} label="reps" step={1}
+                                    onMinus={() => updateSet(gi, si, { ...s, reps: Math.max(0, s.reps - 1) })}
+                                    onPlus={() => updateSet(gi, si, { ...s, reps: s.reps + 1 })}
+                                  />
+                                </div>
+                                {/* Set actions */}
+                                <div className="flex gap-2">
+                                  <button onClick={() => copySet(gi, si)}
+                                    className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-lg text-[11px] font-semibold active:scale-95 transition-transform"
+                                    style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                                    <Copy className="w-3 h-3" /> Copy set
+                                  </button>
+                                  <button onClick={() => removeSet(gi, si)}
+                                    className="flex-1 flex items-center justify-center gap-1.5 h-8 rounded-lg text-[11px] font-semibold active:scale-95 transition-transform"
+                                    style={{ background: 'rgba(255,59,48,0.08)', color: 'rgba(255,80,65,0.9)' }}>
+                                    <X className="w-3 h-3" /> Remove
+                                  </button>
+                                </div>
                               </div>
-                              <div className="flex-1 flex flex-col items-center justify-center py-3 min-w-0">
+                            );
+                          })}
+                          <button onClick={() => addSet(gi)}
+                            className="w-full py-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
+                            style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px dashed var(--border)' }}>
+                            <Plus className="w-3 h-3" /> Add set
+                          </button>
+                        </div>
+                      ) : (
+                        /* View mode — 3-col grid with lime set numbers */
+                        <div className="flex flex-col gap-2.5 p-3">
+                          {g.sets.map((s, si) => (
+                            <div key={si} className="grid overflow-hidden rounded-[12px]"
+                              style={{ gridTemplateColumns: '44px 1fr 1fr', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.012)' }}>
+                              <div className="flex items-center justify-center font-victory text-[26px]"
+                                style={{ background: 'rgba(200,255,0,0.05)', color: '#C8FF00', borderRight: '1px solid var(--border)' }}>
+                                {si + 1}
+                              </div>
+                              <div className="flex flex-col items-center justify-center gap-0.5 py-3 px-2">
                                 <span className="font-victory text-[32px] leading-none text-white tabular-nums">
                                   {g.isCardio ? '—' : formatWeight(s.weight, unit)}
                                 </span>
@@ -430,56 +509,15 @@ const WorkoutCard: React.FC<{
                                   {g.isCardio ? '' : unit}
                                 </span>
                               </div>
-                              <div className="flex flex-col items-center justify-center py-3 shrink-0 transition-opacity duration-200"
-                                style={{ width: 34, opacity: editing && !g.isCardio ? 1 : 0, pointerEvents: editing && !g.isCardio ? 'auto' : 'none' }}>
-                                <button
-                                  onClick={() => updateSet(gi, si, { ...s, weight: Math.round((s.weight + 2.5) * 10) / 10 })}
-                                  className="w-6 h-6 rounded-md flex items-center justify-center text-[13px] font-bold leading-none active:scale-90 transition-transform"
-                                  style={{ background: 'var(--bg-elevated)', color: '#C8FF00' }}>
-                                  +
-                                </button>
-                                <span className="text-[8px] font-semibold mt-0.5" style={{ color: '#C8FF00' }}>2.5</span>
-                              </div>
-                            </div>
-
-                            {/* Reps cell */}
-                            <div className="flex items-center" style={{ borderLeft: '1px solid var(--border)' }}>
-                              <div className="flex flex-col items-center justify-center py-3 shrink-0 transition-opacity duration-200"
-                                style={{ width: 34, opacity: editing ? 1 : 0, pointerEvents: editing ? 'auto' : 'none' }}>
-                                <button
-                                  onClick={() => updateSet(gi, si, { ...s, reps: Math.max(0, s.reps - 1) })}
-                                  className="w-6 h-6 rounded-md flex items-center justify-center text-[12px] font-bold leading-none active:scale-90 transition-transform"
-                                  style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
-                                  −
-                                </button>
-                                <span className="text-[8px] font-semibold mt-0.5" style={{ color: 'var(--text-muted)' }}>1</span>
-                              </div>
-                              <div className="flex-1 flex flex-col items-center justify-center py-3 min-w-0">
+                              <div className="flex flex-col items-center justify-center gap-0.5 py-3 px-2"
+                                style={{ borderLeft: '1px solid var(--border)' }}>
                                 <span className="font-victory text-[32px] leading-none text-white tabular-nums">{s.reps}</span>
                                 <span className="text-[9px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--text-muted)' }}>reps</span>
                               </div>
-                              <div className="flex flex-col items-center justify-center py-3 shrink-0 transition-opacity duration-200"
-                                style={{ width: 34, opacity: editing ? 1 : 0, pointerEvents: editing ? 'auto' : 'none' }}>
-                                <button
-                                  onClick={() => updateSet(gi, si, { ...s, reps: s.reps + 1 })}
-                                  className="w-6 h-6 rounded-md flex items-center justify-center text-[13px] font-bold leading-none active:scale-90 transition-transform"
-                                  style={{ background: 'var(--bg-elevated)', color: '#C8FF00' }}>
-                                  +
-                                </button>
-                                <span className="text-[8px] font-semibold mt-0.5" style={{ color: '#C8FF00' }}>1</span>
-                              </div>
                             </div>
-
-                          </div>
-                        ))}
-                        {editing && (
-                          <button onClick={() => addSet(gi)}
-                            className="w-full mt-1 py-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
-                            style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px dashed var(--border)' }}>
-                            <Plus className="w-3 h-3" /> Add set
-                          </button>
-                        )}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
