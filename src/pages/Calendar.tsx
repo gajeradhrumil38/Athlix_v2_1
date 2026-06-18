@@ -1052,7 +1052,7 @@ export const Calendar: React.FC = () => {
             pointerEvents: isScrolled ? 'none' : 'auto',
           }}
         >
-          <div className="px-4 pt-3">
+          <div className="px-3 pt-3">
             {/* Month row */}
             <div className="flex items-center justify-between mb-3">
               <div className="relative">
@@ -1185,7 +1185,7 @@ export const Calendar: React.FC = () => {
       )}
 
       {/* ── Body ── */}
-      <div className="px-4 pt-4 space-y-4">
+      <div className="px-3 pt-4 space-y-4">
 
         {/* Muscle filter strip */}
         <div className="flex flex-wrap gap-1.5">
