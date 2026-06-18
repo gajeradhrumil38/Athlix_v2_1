@@ -229,7 +229,7 @@ export const Layout: React.FC = () => {
           className={`flex-1 w-full ${
             isImmersiveRoute || isSelfPaddedRoute
               ? ''
-              : 'px-3 pt-4 pb-6 sm:px-5 md:px-8 md:pt-8 md:pb-8'
+              : 'pt-4 pb-6 md:px-8 md:pt-8 md:pb-8'
           }`}
         >
           <Outlet />
