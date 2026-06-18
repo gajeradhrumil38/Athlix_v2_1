@@ -35,17 +35,17 @@ export const GoalEditSheet: React.FC<GoalEditSheetProps> = ({ current, onClose, 
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div
-          className="rounded-t-[16px] border-t border-l border-r border-[var(--border)]"
-          style={{ background: 'var(--bg-surface)' }}
+          className="flex flex-col rounded-t-[16px] border-t border-l border-r border-[var(--border)]"
+          style={{ background: 'var(--bg-surface)', maxHeight: 'calc(88dvh - env(safe-area-inset-top))' }}
         >
           {/* Drag pill */}
-          <div className="flex justify-center pt-3 pb-1">
+          <div className="flex justify-center pt-3 pb-1 shrink-0">
             <div className="h-1 w-8 rounded-full bg-white/20" />
           </div>
 
           {/* Header */}
           <div
-            className="flex items-center justify-between px-5 pb-4 pt-2"
+            className="flex items-center justify-between px-5 pb-3 pt-1 shrink-0"
             style={{ borderBottom: '1px solid var(--border)' }}
           >
             <span className="text-[15px] font-bold text-[var(--text-primary)]">Weekly Goal</span>
@@ -58,24 +58,24 @@ export const GoalEditSheet: React.FC<GoalEditSheetProps> = ({ current, onClose, 
             </button>
           </div>
 
-          {/* Content */}
-          <div className="px-5 py-6">
+          {/* Scrollable content */}
+          <div className="overflow-y-auto flex-1 px-5 py-4">
             <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--text-secondary)]">
               Days per week
             </p>
-            <p className="mb-5 text-[12px] text-[var(--text-muted)]">
+            <p className="mb-4 text-[12px] text-[var(--text-muted)]">
               How many training days do you want to hit each week?
             </p>
 
             {/* Day selector grid */}
-            <div className="grid grid-cols-7 gap-2">
+            <div className="grid grid-cols-7 gap-1.5">
               {[1, 2, 3, 4, 5, 6, 7].map((day) => {
                 const isActive = selected === day;
                 return (
                   <button
                     key={day}
                     onClick={() => setSelected(day)}
-                    className="flex flex-col items-center gap-1.5 rounded-xl py-3 transition-all active:scale-95"
+                    className="flex flex-col items-center gap-1 rounded-xl py-3 transition-all active:scale-95"
                     style={
                       isActive
                         ? {
@@ -96,7 +96,7 @@ export const GoalEditSheet: React.FC<GoalEditSheetProps> = ({ current, onClose, 
                       {day}
                     </span>
                     <span
-                      className="text-[9px] font-bold uppercase tracking-[0.1em]"
+                      className="text-[8px] font-bold uppercase tracking-[0.06em]"
                       style={{ color: isActive ? '#000' : 'var(--text-muted)' }}
                     >
                       {day === 1 ? 'day' : 'days'}
@@ -108,18 +108,18 @@ export const GoalEditSheet: React.FC<GoalEditSheetProps> = ({ current, onClose, 
 
             {/* Context hint */}
             <div className="mt-4 flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
-              <div className="h-1.5 w-1.5 rounded-full" style={{ background: 'var(--accent)' }} />
+              <div className="h-1.5 w-1.5 rounded-full shrink-0" style={{ background: 'var(--accent)' }} />
               <span className="text-[11px] text-[var(--text-secondary)]">
                 {selected <= 3 ? 'Great for recovery-focused training' : selected <= 5 ? 'Balanced training frequency' : 'High-intensity schedule — prioritise recovery'}
               </span>
             </div>
           </div>
 
-          {/* Confirm */}
-          <div className="px-5 pb-5">
+          {/* Confirm — pinned outside scroll so always visible */}
+          <div className="px-5 py-4 shrink-0" style={{ borderTop: '1px solid var(--border)' }}>
             <button
               onClick={() => onConfirm(selected)}
-              className="h-13 w-full rounded-xl text-[14px] font-bold uppercase tracking-[0.08em] text-black transition-all active:scale-[0.98]"
+              className="w-full rounded-xl text-[14px] font-bold uppercase tracking-[0.08em] text-black transition-all active:scale-[0.98]"
               style={{ background: 'var(--accent)', height: 52 }}
             >
               Set Goal
