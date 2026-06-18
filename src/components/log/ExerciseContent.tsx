@@ -104,10 +104,10 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = (props) => {
 
   // When user opts into weight tracking for a normally reps-only exercise, treat it as weight_reps
   const exerciseType = useMemo(() => {
-    const base = resolveExerciseInputType(exercise.name);
+    const base = exercise.inputTypeOverride ?? resolveExerciseInputType(exercise.name);
     if (optionalWeight && base === 'reps_only') return 'weight_reps' as const;
     return base;
-  }, [exercise.name, optionalWeight]);
+  }, [exercise.name, exercise.inputTypeOverride, optionalWeight]);
   const inputLabels = useMemo(
     () => getInputLabels(exerciseType, { weightUnit, distanceUnit }),
     [distanceUnit, exerciseType, weightUnit],

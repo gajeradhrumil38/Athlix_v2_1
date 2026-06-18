@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Activity, ArrowLeft, Bookmark, BookmarkCheck, CalendarDays, Check, ChevronLeft, ChevronRight, Pause, Play, Plus, Timer, Trash2, Weight, X } from 'lucide-react';
+import { Activity, ArrowLeft, Bookmark, BookmarkCheck, CalendarDays, Check, ChevronLeft, ChevronRight, Pause, Pencil, Play, Plus, Tag, Timer, Trash2, Weight, X } from 'lucide-react';
 import { muscleColor } from '../../lib/muscleColors';
 import toast from 'react-hot-toast';
 import type { WorkoutState, ExerciseEntry, Set as WorkoutSet } from '../../pages/Log';
@@ -124,6 +124,9 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
   const autoOpenedPickerForStartRef = useRef<number | null>(null);
   const addExerciseInFlightRef = useRef(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [editingExerciseName, setEditingExerciseName] = useState(false);
+  const [editingExerciseGroup, setEditingExerciseGroup] = useState(false);
+  const [exerciseNameInput, setExerciseNameInput] = useState('');
   const [savingTemplate, setSavingTemplate] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
@@ -341,7 +344,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
       const set = exercise.sets.find((entry) => entry.id === setId);
       if (!set) return;
 
-      const inputType = resolveExerciseInputType(exercise.name);
+      const inputType = exercise.inputTypeOverride ?? resolveExerciseInputType(exercise.name);
       const binding = getFieldBinding(inputType);
       const kinds = getFieldKinds(inputType);
       const labels = getInputLabels(inputType, { weightUnit, distanceUnit });
@@ -372,7 +375,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
       if (!set) return;
 
       const nextDone = !set.done;
-      const inputType = resolveExerciseInputType(exercise.name);
+      const inputType = exercise.inputTypeOverride ?? resolveExerciseInputType(exercise.name);
 
       if (nextDone && !isSetReadyForCompletion(inputType, { weight: set.weight, reps: set.reps })) {
         haptics.error();
@@ -509,7 +512,8 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
           }
         }
 
-        const inputType = resolveExerciseInputType(exerciseOption.name);
+        const inputType = (exerciseOption.inputTypeOverride as ExerciseInputType | undefined)
+          ?? resolveExerciseInputType(exerciseOption.name);
         const defaults = getDefaultSetValues(inputType);
         const perSetData = summary?.perSetData;
         const totalSets = Math.max(1, Math.min(20, Number(summary?.sets || 3)));
@@ -538,6 +542,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
           name: exerciseOption.name,
           muscleGroup: exerciseOption.muscleGroup,
           exercise_db_id: exerciseOption.exercise_db_id,
+          inputTypeOverride: exerciseOption.inputTypeOverride as ExerciseInputType | undefined,
           sets: buildSets,
           lastSession: summary
             ? {
@@ -588,7 +593,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
     const exercise = workout.exercises[activeIndex];
     if (!exercise) return;
 
-    const defaults = getDefaultSetValues(resolveExerciseInputType(exercise.name));
+    const defaults = getDefaultSetValues(exercise.inputTypeOverride ?? resolveExerciseInputType(exercise.name));
     setWorkout((prev) => {
       if (!prev) return null;
       return {
@@ -637,6 +642,28 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
     setViewMode('list');
     haptics.tick();
   }, [setWorkout, workout.exercises.length]);
+
+  const handleRenameExercise = useCallback((index: number, newName: string) => {
+    setWorkout((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        exercises: prev.exercises.map((ex, i) => i === index ? { ...ex, name: newName } : ex),
+      };
+    });
+    haptics.tick();
+  }, [setWorkout]);
+
+  const handleChangeExerciseGroup = useCallback((index: number, newGroup: string) => {
+    setWorkout((prev) => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        exercises: prev.exercises.map((ex, i) => i === index ? { ...ex, muscleGroup: newGroup } : ex),
+      };
+    });
+    haptics.tick();
+  }, [setWorkout]);
 
   const handleDialConfirm = (value: number) => {
     if (!dialPicker) return;
@@ -981,50 +1008,96 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
                 transition={{ duration: 0.16, ease: 'easeOut' }}
               >
                 {/* Exercise name header */}
-                <div className="shrink-0 px-4 py-3 border-b border-white/5 flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p
-                      className="text-[10px] font-bold uppercase mb-1.5"
-                      style={{ letterSpacing: '0.2em', color: muscleColor(currentExercise.muscleGroup) }}
-                    >
-                      {currentExercise.muscleGroup || 'Exercise'}
-                    </p>
-                    <p className="text-[32px] font-black text-[var(--text-primary)] leading-[1.05] tracking-tight" style={{ wordBreak: 'break-word' }}>
-                      {currentExercise.name}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0 mt-1">
-                    {/* Weight toggle: only shown for reps-only exercises */}
-                    {resolveExerciseInputType(currentExercise.name) === 'reps_only' && (
+                <div className="shrink-0 border-b border-white/5">
+                  <div className="px-4 pt-3 pb-2 flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      {/* Muscle group — tap to change */}
+                      {editingExerciseGroup ? (
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {['Chest','Back','Shoulders','Biceps','Triceps','Legs','Core','Cardio','Yoga'].map((g) => (
+                            <button key={g} type="button"
+                              onClick={() => { handleChangeExerciseGroup(activeIndex, g); setEditingExerciseGroup(false); }}
+                              className="px-2.5 py-1 rounded-full text-[10px] font-bold transition-all active:scale-95 cursor-pointer"
+                              style={{
+                                background: currentExercise.muscleGroup === g ? 'rgba(200,255,0,0.15)' : 'var(--bg-elevated)',
+                                border: currentExercise.muscleGroup === g ? '1.5px solid rgba(200,255,0,0.4)' : '1px solid var(--border)',
+                                color: currentExercise.muscleGroup === g ? 'var(--accent)' : 'var(--text-secondary)',
+                              }}
+                            >{g}</button>
+                          ))}
+                        </div>
+                      ) : (
+                        <button type="button"
+                          onClick={() => { setEditingExerciseGroup(true); setEditingExerciseName(false); }}
+                          className="flex items-center gap-1.5 mb-1.5 active:opacity-60 cursor-pointer"
+                        >
+                          <Tag className="w-3 h-3" style={{ color: muscleColor(currentExercise.muscleGroup) }} />
+                          <span className="text-[10px] font-bold uppercase" style={{ letterSpacing: '0.2em', color: muscleColor(currentExercise.muscleGroup) }}>
+                            {currentExercise.muscleGroup || 'Exercise'}
+                          </span>
+                        </button>
+                      )}
+                      {/* Exercise name — tap to rename */}
+                      {editingExerciseName ? (
+                        <div className="flex items-center gap-2 mt-1">
+                          <input
+                            autoFocus
+                            value={exerciseNameInput}
+                            onChange={e => setExerciseNameInput(e.target.value)}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter') { const v = exerciseNameInput.trim(); if (v) handleRenameExercise(activeIndex, v); setEditingExerciseName(false); }
+                              if (e.key === 'Escape') setEditingExerciseName(false);
+                            }}
+                            className="flex-1 h-10 rounded-xl px-3 text-[18px] font-black focus:outline-none"
+                            style={{ background: 'var(--bg-elevated)', border: '1.5px solid var(--accent)', color: 'var(--text-primary)' }}
+                          />
+                          <button type="button"
+                            onClick={() => { const v = exerciseNameInput.trim(); if (v) handleRenameExercise(activeIndex, v); setEditingExerciseName(false); }}
+                            className="h-10 w-10 flex items-center justify-center rounded-xl cursor-pointer shrink-0"
+                            style={{ background: 'var(--accent)', color: '#000' }}
+                          ><Check className="w-4 h-4" /></button>
+                        </div>
+                      ) : (
+                        <button type="button"
+                          onClick={() => { setExerciseNameInput(currentExercise.name); setEditingExerciseName(true); setEditingExerciseGroup(false); }}
+                          className="flex items-start gap-2 w-full text-left active:opacity-60 cursor-pointer"
+                        >
+                          <p className="text-[32px] font-black text-[var(--text-primary)] leading-[1.05] tracking-tight" style={{ wordBreak: 'break-word' }}>
+                            {currentExercise.name}
+                          </p>
+                          <Pencil className="w-3.5 h-3.5 mt-2 shrink-0" style={{ color: 'var(--text-muted)' }} />
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0 mt-1">
+                      {/* Weight toggle: only shown for reps-only exercises */}
+                      {(currentExercise.inputTypeOverride ?? resolveExerciseInputType(currentExercise.name)) === 'reps_only' && (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleOptionalWeight(activeIndex)}
+                          className="flex h-8 items-center gap-1.5 px-2.5 rounded-lg shrink-0 transition-colors text-[10px] font-bold uppercase tracking-wide"
+                          style={{
+                            background: currentExercise.optionalWeight ? 'rgba(200,255,0,0.12)' : 'var(--bg-elevated)',
+                            color: currentExercise.optionalWeight ? 'var(--accent)' : 'var(--text-muted)',
+                            border: `1px solid ${currentExercise.optionalWeight ? 'rgba(200,255,0,0.3)' : 'var(--border)'}`,
+                          }}
+                          aria-label="Toggle weight tracking"
+                        >
+                          <Weight className="w-3 h-3" />
+                          {currentExercise.optionalWeight ? 'Weighted' : '+ Weight'}
+                        </button>
+                      )}
+                      {/* Delete button */}
                       <button
                         type="button"
-                        onClick={() => handleToggleOptionalWeight(activeIndex)}
-                        className="flex h-8 items-center gap-1.5 px-2.5 rounded-lg shrink-0 transition-colors text-[10px] font-bold uppercase tracking-wide"
-                        style={{
-                          background: currentExercise.optionalWeight ? 'rgba(200,255,0,0.12)' : 'var(--bg-elevated)',
-                          color: currentExercise.optionalWeight ? 'var(--accent)' : 'var(--text-muted)',
-                          border: `1px solid ${currentExercise.optionalWeight ? 'rgba(200,255,0,0.3)' : 'var(--border)'}`,
-                        }}
-                        aria-label="Toggle weight tracking"
+                        onClick={() => handleRemoveExercise(activeIndex)}
+                        className="flex h-[34px] w-[34px] items-center justify-center rounded-lg shrink-0 transition-colors"
+                        style={{ background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.25)', color: '#f87171' }}
+                        aria-label="Remove exercise"
                       >
-                        <Weight className="w-3 h-3" />
-                        {currentExercise.optionalWeight ? 'Weighted' : '+ Weight'}
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
-                    )}
-                    {/* Delete button — red-tinted box matching design */}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveExercise(activeIndex)}
-                      className="flex h-[34px] w-[34px] items-center justify-center rounded-lg shrink-0 transition-colors"
-                      style={{
-                        background: 'rgba(248,113,113,0.12)',
-                        border: '1px solid rgba(248,113,113,0.25)',
-                        color: '#f87171',
-                      }}
-                      aria-label="Remove exercise"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    </div>
                   </div>
                 </div>
                 <ExerciseContent

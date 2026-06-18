@@ -11,6 +11,7 @@ import {
   getTemplates,
   deleteTemplate,
   searchExerciseLibrary,
+  extractInputTypeFromSlugs,
 } from '../../lib/supabaseData';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -20,6 +21,7 @@ interface Exercise {
   name: string;
   muscleGroup: string;
   exercise_db_id?: string;
+  inputTypeOverride?: string;
   lastSession?: {
     weight: number;
     reps: number;
@@ -249,6 +251,7 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({
           name: ex.name,
           muscleGroup: ex.muscle_group,
           exercise_db_id: ex.exercise_db_id || undefined,
+          inputTypeOverride: extractInputTypeFromSlugs(ex.muscle_slugs) || undefined,
         })));
       });
       return;
@@ -260,6 +263,7 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({
           name: ex.name,
           muscleGroup: ex.muscle_group,
           exercise_db_id: ex.exercise_db_id || undefined,
+          inputTypeOverride: extractInputTypeFromSlugs(ex.muscle_slugs) || undefined,
         })));
       });
       return;
@@ -715,6 +719,7 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({
                 id: exercise.id,
                 name: exercise.name,
                 muscleGroup: exercise.muscleGroup,
+                inputTypeOverride: exercise.inputTypeOverride || undefined,
               });
               onClose();
             }}

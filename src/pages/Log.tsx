@@ -4,7 +4,7 @@ import { AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { saveWorkout, getWorkouts, type LocalExercise } from '../lib/supabaseData';
-import { resolveExerciseInputType } from '../lib/exerciseTypes';
+import { resolveExerciseInputType, type ExerciseInputType } from '../lib/exerciseTypes';
 import { QuickStartSheet } from '../components/log/QuickStartSheet';
 import { PlanTodaySheet } from '../components/log/PlanTodaySheet';
 import { ActiveWorkout } from '../components/log/ActiveWorkout';
@@ -29,6 +29,8 @@ export interface ExerciseEntry {
   sets: Set[];
   /** true when user opts into tracking weight for a normally reps-only exercise */
   optionalWeight?: boolean;
+  /** overrides name-based input type inference (e.g. reps_only for bodyweight custom exercises) */
+  inputTypeOverride?: ExerciseInputType;
   lastSession?: {
     date: string;
     sets: number;

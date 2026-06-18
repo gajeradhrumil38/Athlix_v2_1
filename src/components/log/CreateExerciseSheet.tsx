@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import Body, { ExtendedBodyPart } from 'react-muscle-highlighter';
-import { X, ChevronLeft, ChevronDown, Check, Dumbbell, Loader2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronDown, Check, Dumbbell, Loader2, Weight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { addCustomExercise, searchExerciseLibrary } from '../../lib/supabaseData';
@@ -49,6 +49,7 @@ export interface CreatedExercise {
   id: string;
   name: string;
   muscleGroup: string;
+  inputTypeOverride?: string;
 }
 
 interface CreateExerciseSheetProps {
@@ -69,6 +70,7 @@ export const CreateExerciseSheet: React.FC<CreateExerciseSheetProps> = ({ onClos
   const [showDropdown, setShowDropdown] = useState(false);
   const [slugMap, setSlugMap] = useState<Map<string, SlugType>>(new Map());
   const [view, setView] = useState<'front' | 'back'>('front');
+  const [trackWeight, setTrackWeight] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const dupTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -198,11 +200,13 @@ export const CreateExerciseSheet: React.FC<CreateExerciseSheetProps> = ({ onClos
       ...secondarySlugs.map((s) => ({ slug: s, type: 'secondary' as const })),
     ];
 
+    const inputType = trackWeight ? undefined : 'reps_only';
+
     setSaving(true);
     try {
-      const result = await addCustomExercise(user.id, trimmedName, group, slugsPayload);
+      const result = await addCustomExercise(user.id, trimmedName, group, slugsPayload, inputType);
       toast.success('Exercise created!');
-      onCreated({ id: result.id, name: trimmedName, muscleGroup: group });
+      onCreated({ id: result.id, name: trimmedName, muscleGroup: group, inputTypeOverride: inputType });
     } catch {
       toast.error('Failed to save exercise');
       setSaving(false);
@@ -299,6 +303,37 @@ export const CreateExerciseSheet: React.FC<CreateExerciseSheetProps> = ({ onClos
                 </motion.p>
               )}
             </AnimatePresence>
+          </div>
+
+          {/* Weight toggle */}
+          <div
+            className="flex items-center justify-between rounded-xl px-4 py-3.5"
+            style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
+          >
+            <div className="flex items-center gap-3">
+              <Weight className="w-4 h-4" style={{ color: trackWeight ? 'var(--accent)' : 'var(--text-muted)' }} />
+              <div>
+                <p className="text-[13px] font-semibold" style={{ color: 'var(--text-primary)' }}>Track Weight</p>
+                <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                  {trackWeight ? 'Weight + reps per set' : 'Reps only — no weight dial'}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setTrackWeight((v) => !v)}
+              className="relative h-7 w-12 rounded-full transition-colors cursor-pointer shrink-0"
+              style={{ background: trackWeight ? 'var(--accent)' : 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+              aria-label="Toggle weight tracking"
+            >
+              <span
+                className="absolute top-0.5 h-6 w-6 rounded-full transition-transform"
+                style={{
+                  background: trackWeight ? '#000' : 'var(--text-muted)',
+                  transform: trackWeight ? 'translateX(22px)' : 'translateX(2px)',
+                }}
+              />
+            </button>
           </div>
 
           {/* Primary muscle group dropdown */}

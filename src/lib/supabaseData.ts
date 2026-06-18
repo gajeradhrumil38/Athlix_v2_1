@@ -2208,11 +2208,24 @@ export const getExerciseLibraryByGroup = async (userId: string, muscleGroup: str
     .sort((a, b) => a.name.localeCompare(b.name));
 };
 
+// ── Muscle slug metadata helpers ──────────────────────────────────────────────
+
+type SlugEntry = { slug: string; type: 'primary' | 'secondary' };
+type MetaEntry = { __input_type__: string };
+type SlugOrMeta = SlugEntry | MetaEntry;
+
+export const extractInputTypeFromSlugs = (slugs: unknown): string | undefined => {
+  if (!Array.isArray(slugs)) return undefined;
+  const meta = (slugs as SlugOrMeta[]).find((s): s is MetaEntry => '__input_type__' in s);
+  return meta?.__input_type__;
+};
+
 export const addCustomExercise = async (
   userId: string,
   name: string,
   muscleGroup: string,
-  muscleSlugs: { slug: string; type: 'primary' | 'secondary' }[] = [],
+  muscleSlugs: SlugEntry[] = [],
+  inputType?: string,
 ) => {
   if (!hasSupabaseConfig) return localData.addCustomExercise(userId, name, muscleGroup, muscleSlugs);
 
@@ -2232,6 +2245,11 @@ export const addCustomExercise = async (
   const matchedAssetId =
     openTrainingAsset && openTrainingAsset.muscleGroup === muscleGroup ? openTrainingId : null;
 
+  const slugsWithMeta: SlugOrMeta[] = [
+    ...muscleSlugs,
+    ...(inputType ? [{ __input_type__: inputType } as MetaEntry] : []),
+  ];
+
   const item: LocalExerciseLibraryItem = {
     id: createId(),
     name: normalizedName,
@@ -2239,23 +2257,32 @@ export const addCustomExercise = async (
     is_custom: true,
     user_id: userId,
     exercise_db_id: matchedAssetId,
-    muscle_slugs: muscleSlugs,
+    muscle_slugs: slugsWithMeta,
   };
 
-  await upsertRows(
-    'exercise_library',
-    [
-      {
-        ...item,
-        is_custom: true,
-        muscle_slugs: muscleSlugs,
-      },
-    ],
-    'id',
-  );
+  await upsertRows('exercise_library', [{ ...item, is_custom: true, muscle_slugs: slugsWithMeta }], 'id');
 
   _libCache = null;
   return item;
+};
+
+export const updateCustomExercise = async (
+  userId: string,
+  exerciseId: string,
+  updates: { name?: string; muscleGroup?: string },
+): Promise<void> => {
+  if (!hasSupabaseConfig) return;
+  const payload: Record<string, string> = {};
+  if (updates.name) payload.name = updates.name.trim();
+  if (updates.muscleGroup) payload.muscle_group = updates.muscleGroup;
+  if (!Object.keys(payload).length) return;
+  await supabase
+    .from('exercise_library')
+    .update(payload)
+    .eq('id', exerciseId)
+    .eq('user_id', userId)
+    .eq('is_custom', true);
+  _libCache = null;
 };
 
 // ── Exercise library in-memory cache (shared across search calls) ─────────────
