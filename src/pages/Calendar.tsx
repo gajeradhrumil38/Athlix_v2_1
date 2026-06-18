@@ -23,7 +23,6 @@ import {
   Clock3,
   Dumbbell,
   Plus,
-  Minus,
   Trash2,
   Zap,
   CalendarDays,
@@ -31,7 +30,6 @@ import {
   Sun,
   Pencil,
   Check,
-  X,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -190,59 +188,6 @@ const groupExerciseSets = (w: any, unit: WeightUnit): EditGroup[] => {
   return Array.from(map.values());
 };
 
-// Module-level so it keeps a stable identity — never remounts mid-typing (preserves input focus)
-const StepperField: React.FC<{
-  label: string; value: number; delta: number; onChange: (v: number) => void;
-}> = ({ label, value, delta, onChange }) => {
-  const bump = (d: number) => onChange(Math.max(0, Math.round((value + d) * 10) / 10));
-  return (
-    <div className="flex-1">
-      <p className="text-[9px] font-bold uppercase tracking-wider mb-1" style={{ color: 'var(--text-muted)' }}>{label}</p>
-      <div className="flex items-center gap-1">
-        <button onClick={() => bump(-delta)}
-          className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0 active:scale-90 transition-all"
-          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
-          <Minus className="w-3 h-3" />
-        </button>
-        <input
-          type="number" inputMode="decimal" value={value}
-          onFocus={(e) => e.target.select()}
-          onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
-          className="w-full h-7 text-center text-[13px] font-bold rounded-lg focus:outline-none"
-          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
-        />
-        <button onClick={() => bump(delta)}
-          className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0 active:scale-90 transition-all"
-          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
-          <Plus className="w-3 h-3" />
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const SetEditorRow: React.FC<{
-  index: number;
-  set: EditSet;
-  unit: WeightUnit;
-  accent: string;
-  onChange: (s: EditSet) => void;
-  onRemove: () => void;
-}> = ({ index, set, unit, accent, onChange, onRemove }) => (
-  <div className="flex items-end gap-2">
-    <div className="h-6 w-6 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0 mb-0.5"
-      style={{ background: `color-mix(in srgb, ${accent} 18%, var(--bg-surface))`, color: accent }}>
-      {index + 1}
-    </div>
-    <StepperField label={unit} value={set.weight} delta={2.5} onChange={(v) => onChange({ ...set, weight: v })} />
-    <StepperField label="reps"  value={set.reps}   delta={1}   onChange={(v) => onChange({ ...set, reps: v })} />
-    <button onClick={onRemove}
-      className="h-7 w-7 rounded-lg flex items-center justify-center shrink-0 mb-0.5 active:scale-90 transition-all"
-      style={{ background: 'rgba(255,59,48,0.08)', color: 'rgba(255,80,65,0.85)' }}>
-      <X className="w-3.5 h-3.5" />
-    </button>
-  </div>
-);
 
 const WorkoutCard: React.FC<{
   workout: any;
@@ -442,37 +387,42 @@ const WorkoutCard: React.FC<{
                         </div>
                       )}
 
-                      {editing ? (
-                        /* Edit mode — existing stepper UI, unchanged */
-                        <div className="p-3 space-y-2">
-                          {g.sets.map((s, si) => (
-                            <SetEditorRow key={si} index={si} set={s} unit={unit} accent={accent}
-                              onChange={(ns) => updateSet(gi, si, ns)} onRemove={() => removeSet(gi, si)} />
-                          ))}
-                          <button onClick={() => addSet(gi)}
-                            className="w-full mt-1 py-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
-                            style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px dashed var(--border)' }}>
-                            <Plus className="w-3 h-3" /> Add set
-                          </button>
-                        </div>
-                      ) : (
-                        /* View mode — new 3-col grid design */
-                        <div className="flex flex-col gap-2.5 p-3">
-                          {g.sets.map((s, si) => (
-                            <div key={si}
-                              className="grid overflow-hidden rounded-[12px]"
-                              style={{
-                                gridTemplateColumns: '44px 1fr 1fr',
-                                border: '1px solid var(--border)',
-                                background: 'rgba(255,255,255,0.012)',
-                              }}>
-                              {/* Set number */}
-                              <div className="flex items-center justify-center font-victory text-[26px]"
-                                style={{ background: 'rgba(200,255,0,0.05)', color: '#C8FF00', borderRight: '1px solid var(--border)' }}>
-                                {si + 1}
+                      {/* Unified set rows — same visual in view and edit; +/- fade in on edit */}
+                      <div className="flex flex-col gap-2.5 p-3">
+                        {g.sets.map((s, si) => (
+                          <div key={si}
+                            className="grid overflow-hidden rounded-[12px]"
+                            style={{
+                              gridTemplateColumns: '44px 1fr 1fr',
+                              border: '1px solid var(--border)',
+                              background: 'rgba(255,255,255,0.012)',
+                            }}>
+
+                            {/* Set number + remove overlay */}
+                            <div className="relative flex items-center justify-center font-victory text-[26px]"
+                              style={{ background: 'rgba(200,255,0,0.05)', color: '#C8FF00', borderRight: '1px solid var(--border)' }}>
+                              {si + 1}
+                              <button
+                                onClick={() => removeSet(gi, si)}
+                                className="absolute top-1 right-0.5 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold transition-opacity duration-200"
+                                style={{ background: 'rgba(255,59,48,0.85)', color: '#fff', opacity: editing ? 1 : 0, pointerEvents: editing ? 'auto' : 'none' }}>
+                                ×
+                              </button>
+                            </div>
+
+                            {/* Weight cell */}
+                            <div className="flex items-center">
+                              <div className="flex flex-col items-center justify-center py-3 shrink-0 transition-opacity duration-200"
+                                style={{ width: 34, opacity: editing && !g.isCardio ? 1 : 0, pointerEvents: editing && !g.isCardio ? 'auto' : 'none' }}>
+                                <button
+                                  onClick={() => updateSet(gi, si, { ...s, weight: Math.max(0, Math.round((s.weight - 2.5) * 10) / 10) })}
+                                  className="w-6 h-6 rounded-md flex items-center justify-center text-[12px] font-bold leading-none active:scale-90 transition-transform"
+                                  style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
+                                  −
+                                </button>
+                                <span className="text-[8px] font-semibold mt-0.5" style={{ color: 'var(--text-muted)' }}>2.5</span>
                               </div>
-                              {/* Weight */}
-                              <div className="flex flex-col items-center justify-center gap-0.5 py-3 px-2">
+                              <div className="flex-1 flex flex-col items-center justify-center py-3 min-w-0">
                                 <span className="font-victory text-[32px] leading-none text-white tabular-nums">
                                   {g.isCardio ? '—' : formatWeight(s.weight, unit)}
                                 </span>
@@ -480,20 +430,56 @@ const WorkoutCard: React.FC<{
                                   {g.isCardio ? '' : unit}
                                 </span>
                               </div>
-                              {/* Reps */}
-                              <div className="flex flex-col items-center justify-center gap-0.5 py-3 px-2"
-                                style={{ borderLeft: '1px solid var(--border)' }}>
-                                <span className="font-victory text-[32px] leading-none text-white tabular-nums">
-                                  {s.reps}
-                                </span>
-                                <span className="text-[9px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--text-muted)' }}>
-                                  reps
-                                </span>
+                              <div className="flex flex-col items-center justify-center py-3 shrink-0 transition-opacity duration-200"
+                                style={{ width: 34, opacity: editing && !g.isCardio ? 1 : 0, pointerEvents: editing && !g.isCardio ? 'auto' : 'none' }}>
+                                <button
+                                  onClick={() => updateSet(gi, si, { ...s, weight: Math.round((s.weight + 2.5) * 10) / 10 })}
+                                  className="w-6 h-6 rounded-md flex items-center justify-center text-[13px] font-bold leading-none active:scale-90 transition-transform"
+                                  style={{ background: 'var(--bg-elevated)', color: '#C8FF00' }}>
+                                  +
+                                </button>
+                                <span className="text-[8px] font-semibold mt-0.5" style={{ color: '#C8FF00' }}>2.5</span>
                               </div>
                             </div>
-                          ))}
-                        </div>
-                      )}
+
+                            {/* Reps cell */}
+                            <div className="flex items-center" style={{ borderLeft: '1px solid var(--border)' }}>
+                              <div className="flex flex-col items-center justify-center py-3 shrink-0 transition-opacity duration-200"
+                                style={{ width: 34, opacity: editing ? 1 : 0, pointerEvents: editing ? 'auto' : 'none' }}>
+                                <button
+                                  onClick={() => updateSet(gi, si, { ...s, reps: Math.max(0, s.reps - 1) })}
+                                  className="w-6 h-6 rounded-md flex items-center justify-center text-[12px] font-bold leading-none active:scale-90 transition-transform"
+                                  style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)' }}>
+                                  −
+                                </button>
+                                <span className="text-[8px] font-semibold mt-0.5" style={{ color: 'var(--text-muted)' }}>1</span>
+                              </div>
+                              <div className="flex-1 flex flex-col items-center justify-center py-3 min-w-0">
+                                <span className="font-victory text-[32px] leading-none text-white tabular-nums">{s.reps}</span>
+                                <span className="text-[9px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--text-muted)' }}>reps</span>
+                              </div>
+                              <div className="flex flex-col items-center justify-center py-3 shrink-0 transition-opacity duration-200"
+                                style={{ width: 34, opacity: editing ? 1 : 0, pointerEvents: editing ? 'auto' : 'none' }}>
+                                <button
+                                  onClick={() => updateSet(gi, si, { ...s, reps: s.reps + 1 })}
+                                  className="w-6 h-6 rounded-md flex items-center justify-center text-[13px] font-bold leading-none active:scale-90 transition-transform"
+                                  style={{ background: 'var(--bg-elevated)', color: '#C8FF00' }}>
+                                  +
+                                </button>
+                                <span className="text-[8px] font-semibold mt-0.5" style={{ color: '#C8FF00' }}>1</span>
+                              </div>
+                            </div>
+
+                          </div>
+                        ))}
+                        {editing && (
+                          <button onClick={() => addSet(gi)}
+                            className="w-full mt-1 py-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
+                            style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px dashed var(--border)' }}>
+                            <Plus className="w-3 h-3" /> Add set
+                          </button>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
