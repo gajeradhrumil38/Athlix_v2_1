@@ -58,6 +58,7 @@ interface ExercisePickerProps {
   onLoadPlan?: (template: Template) => void;
   multiSelect?: boolean;
   defaultTab?: 'recent' | 'muscle' | 'plans';
+  weightUnit?: string;
 }
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -111,7 +112,8 @@ const ExerciseRow: React.FC<{
   exercise: Exercise;
   isSelected: boolean;
   onToggle: (exercise: Exercise) => void;
-}> = ({ exercise, isSelected, onToggle }) => {
+  weightUnit?: string;
+}> = ({ exercise, isSelected, onToggle, weightUnit = 'lbs' }) => {
   const cssVar = MUSCLE_CSS_VAR[exercise.muscleGroup];
   const [baseName, variant] = splitVariant(exercise.name);
   const machineLabel = getMachineLabel(exercise.name);
@@ -158,7 +160,7 @@ const ExerciseRow: React.FC<{
       {exercise.lastSession && !isSelected && (
         <div className="flex flex-col items-end shrink-0 pr-1 gap-0.5">
           <span className="text-[11px] font-semibold tabular-nums" style={{ color: 'var(--text-secondary)' }}>
-            {exercise.lastSession.sets ?? 1}×{exercise.lastSession.weight}lb
+            {exercise.lastSession.sets ?? 1}×{exercise.lastSession.weight}{weightUnit}
           </span>
           <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
             {exercise.lastSession.reps} reps
@@ -191,6 +193,7 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({
   onLoadPlan,
   multiSelect = false,
   defaultTab = 'recent',
+  weightUnit = 'lbs',
 }) => {
   const { user } = useAuth();
 
@@ -494,7 +497,7 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({
                             <div className="flex-1 h-px" style={{ background: `color-mix(in srgb, var(${cssVar}) 20%, transparent)` }} />
                           </div>
                           {exercises.map(exercise => (
-                            <ExerciseRow key={exercise.id} exercise={exercise} isSelected={selectedMap.has(exercise.name)} onToggle={handleToggle} />
+                            <ExerciseRow key={exercise.id} exercise={exercise} isSelected={selectedMap.has(exercise.name)} onToggle={handleToggle} weightUnit={weightUnit} />
                           ))}
                         </div>
                       );
@@ -502,10 +505,20 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({
                   })()
               }
               {!recentLoading && recentExercises.length === 0 && recentLibraryExercises.length === 0 && (
-                <div className="flex flex-col items-center justify-center gap-2 py-16 text-center" style={{ color: 'var(--text-muted)' }}>
-                  <History className="w-8 h-8 opacity-40" />
-                  <p className="text-[13px] font-medium">No recent exercises</p>
-                  <p className="text-[11px] opacity-60">Exercises you log will appear here</p>
+                <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
+                  <History className="w-8 h-8 opacity-30" style={{ color: 'var(--text-muted)' }} />
+                  <div>
+                    <p className="text-[13px] font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>No recent exercises</p>
+                    <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Exercises you log will appear here</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('muscle')}
+                    className="flex items-center gap-1.5 h-9 px-4 rounded-xl text-[12px] font-semibold transition-all active:scale-95"
+                    style={{ background: 'var(--accent)', color: '#000' }}
+                  >
+                    Browse exercises
+                  </button>
                 </div>
               )}
             </div>
@@ -552,7 +565,7 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({
                 {selectedMuscle}
               </div>
               {filteredExercises.map((exercise) => (
-                <ExerciseRow key={exercise.id} exercise={exercise} isSelected={selectedMap.has(exercise.name)} onToggle={handleToggle} />
+                <ExerciseRow key={exercise.id} exercise={exercise} isSelected={selectedMap.has(exercise.name)} onToggle={handleToggle} weightUnit={weightUnit} />
               ))}
               {filteredExercises.length === 0 && (
                 <div className="py-12 text-center text-[13px]" style={{ color: 'var(--text-muted)' }}>
@@ -566,7 +579,7 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({
           {search && (
             <div className="flex flex-col gap-2">
               {filteredExercises.map((exercise) => (
-                <ExerciseRow key={exercise.id} exercise={exercise} isSelected={selectedMap.has(exercise.name)} onToggle={handleToggle} />
+                <ExerciseRow key={exercise.id} exercise={exercise} isSelected={selectedMap.has(exercise.name)} onToggle={handleToggle} weightUnit={weightUnit} />
               ))}
               {filteredExercises.length === 0 && (
                 <div className="py-12 text-center text-[13px]" style={{ color: 'var(--text-muted)' }}>

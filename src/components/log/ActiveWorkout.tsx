@@ -489,38 +489,32 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
       if (addExerciseInFlightRef.current) return;
       addExerciseInFlightRef.current = true;
 
-      try {
-        const normalizedName = String(exerciseOption.name || '').trim().toLowerCase();
-        const existingIndex = workout.exercises.findIndex(
-          (entry) => entry.name.trim().toLowerCase() === normalizedName,
-        );
+      const normalizedName = String(exerciseOption.name || '').trim().toLowerCase();
+      const existingIndex = workout.exercises.findIndex(
+        (entry) => entry.name.trim().toLowerCase() === normalizedName,
+      );
 
-        if (existingIndex !== -1) {
-          setActiveIndex(existingIndex);
-          setViewMode('detail');
-          haptics.tick();
-          return;
-        }
+      if (existingIndex !== -1) {
+        setActiveIndex(existingIndex);
+        setViewMode('detail');
+        haptics.tick();
+        setShowExercisePicker(false);
+        addExerciseInFlightRef.current = false;
+        return;
+      }
 
-        let summary = exerciseOption.lastSession;
-        if (!summary && user) {
-          try {
-            const response = await getLastExerciseSession(user.id, exerciseOption.name);
-            summary = response?.lastSession;
-          } catch {
-            // ignore lookup failure and continue with defaults
-          }
-        }
+      // Build exercise optimistically — use known lastSession data if available, otherwise defaults
+      const knownSummary = exerciseOption.lastSession ?? null;
+      const inputType = (exerciseOption.inputTypeOverride as ExerciseInputType | undefined)
+        ?? resolveExerciseInputType(exerciseOption.name);
+      const defaults = getDefaultSetValues(inputType);
 
-        const inputType = (exerciseOption.inputTypeOverride as ExerciseInputType | undefined)
-          ?? resolveExerciseInputType(exerciseOption.name);
-        const defaults = getDefaultSetValues(inputType);
+      const makeSets = (summary: typeof knownSummary) => {
         const perSetData = summary?.perSetData;
         const totalSets = summary ? Math.max(1, Math.min(20, Number(summary.sets))) : 1;
         const seedWeight = Number(summary?.weight ?? defaults.weight);
         const seedReps = Number(summary?.reps ?? defaults.reps);
-
-        const buildSets = perSetData && perSetData.length > 0
+        return perSetData && perSetData.length > 0
           ? perSetData.map((s: { weight: number; reps: number }) => ({
               id: createSetId(),
               weight: s.weight,
@@ -536,49 +530,75 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
               done: false,
               ...(summary ? { planned_weight: seedWeight, planned_reps: seedReps } : {}),
             }));
+      };
 
-        const nextExercise: ExerciseEntry = {
-          id: createSetId(),
-          name: exerciseOption.name,
-          muscleGroup: exerciseOption.muscleGroup,
-          exercise_db_id: exerciseOption.exercise_db_id,
-          inputTypeOverride: exerciseOption.inputTypeOverride as ExerciseInputType | undefined,
-          sets: buildSets,
-          lastSession: summary
-            ? {
-                date: summary.date,
-                sets: summary.sets,
-                reps: summary.reps,
-                weight: summary.weight,
-                totalVolume: summary.totalVolume,
-              }
-            : undefined,
-        };
+      const exerciseId = createSetId();
+      const nextExercise: ExerciseEntry = {
+        id: exerciseId,
+        name: exerciseOption.name,
+        muscleGroup: exerciseOption.muscleGroup,
+        exercise_db_id: exerciseOption.exercise_db_id,
+        inputTypeOverride: exerciseOption.inputTypeOverride as ExerciseInputType | undefined,
+        sets: makeSets(knownSummary),
+        lastSession: knownSummary
+          ? {
+              date: knownSummary.date,
+              sets: knownSummary.sets,
+              reps: knownSummary.reps,
+              weight: knownSummary.weight,
+              totalVolume: knownSummary.totalVolume,
+            }
+          : undefined,
+      };
 
-        const nextIndex = workout.exercises.length;
-        setWorkout((prev) => {
-          if (!prev) return null;
-          return {
-            ...prev,
-            exercises: [...prev.exercises, nextExercise],
-          };
-        });
+      const nextIndex = workout.exercises.length;
+      setWorkout((prev) => prev ? { ...prev, exercises: [...prev.exercises, nextExercise] } : null);
 
-        if (summary) {
-          setHiddenPrefillExerciseIds((prev) => prev.filter((entry) => entry !== nextExercise.id));
+      if (loadedPlanRef.current) {
+        setPendingPlanExercises((prev) => [...prev, nextExercise]);
+      }
+
+      setActiveIndex(nextIndex);
+      setViewMode('detail');
+      haptics.tick();
+
+      // Close picker immediately — don't wait for DB fetch
+      setShowExercisePicker(false);
+      addExerciseInFlightRef.current = false;
+
+      // Background: fetch last session when picker didn't supply it (catalog exercises)
+      if (!knownSummary && user) {
+        try {
+          const response = await getLastExerciseSession(user.id, exerciseOption.name);
+          const fetched = response?.lastSession;
+          if (fetched) {
+            const fetchedSets = makeSets(fetched);
+            setWorkout((prev) => {
+              if (!prev) return null;
+              return {
+                ...prev,
+                exercises: prev.exercises.map((ex) => {
+                  if (ex.id !== exerciseId) return ex;
+                  // Only replace sets if user hasn't touched any values yet
+                  const untouched = ex.sets.every((s) => !s.done && !s.weight && !s.reps);
+                  return {
+                    ...ex,
+                    sets: untouched ? fetchedSets : ex.sets,
+                    lastSession: {
+                      date: fetched.date,
+                      sets: fetched.sets,
+                      reps: fetched.reps,
+                      weight: fetched.weight,
+                      totalVolume: fetched.totalVolume,
+                    },
+                  };
+                }),
+              };
+            });
+          }
+        } catch {
+          // ignore — exercise stays with defaults
         }
-
-        // When a plan is loaded, track manually-added exercises for the "Update Plan?" popup
-        if (loadedPlanRef.current) {
-          setPendingPlanExercises((prev) => [...prev, nextExercise]);
-        }
-
-        setActiveIndex(nextIndex);
-        setViewMode('detail');
-        haptics.tick();
-      } finally {
-        setShowExercisePicker(false);
-        addExerciseInFlightRef.current = false;
       }
     },
     [setWorkout, user, workout.exercises],
@@ -618,14 +638,17 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
     haptics.tick();
   };
 
-  const handleToggleOptionalWeight = useCallback((index: number) => {
+  const handleToggleWeighted = useCallback((index: number) => {
     setWorkout((prev) => {
       if (!prev) return null;
       return {
         ...prev,
-        exercises: prev.exercises.map((ex, i) =>
-          i === index ? { ...ex, optionalWeight: !ex.optionalWeight } : ex
-        ),
+        exercises: prev.exercises.map((ex, i) => {
+          if (i !== index) return ex;
+          const currentType = ex.inputTypeOverride ?? resolveExerciseInputType(ex.name);
+          const nextType: ExerciseInputType = currentType === 'reps_only' ? 'weight_reps' : 'reps_only';
+          return { ...ex, inputTypeOverride: nextType, optionalWeight: false };
+        }),
       };
     });
     haptics.tick();
@@ -1070,23 +1093,26 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
                       )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0 mt-1">
-                      {/* Weight toggle: only shown for reps-only exercises */}
-                      {(currentExercise.inputTypeOverride ?? resolveExerciseInputType(currentExercise.name)) === 'reps_only' && (
-                        <button
-                          type="button"
-                          onClick={() => handleToggleOptionalWeight(activeIndex)}
-                          className="flex h-8 items-center gap-1.5 px-2.5 rounded-lg shrink-0 transition-colors text-[10px] font-bold uppercase tracking-wide"
-                          style={{
-                            background: currentExercise.optionalWeight ? 'rgba(200,255,0,0.12)' : 'var(--bg-elevated)',
-                            color: currentExercise.optionalWeight ? 'var(--accent)' : 'var(--text-muted)',
-                            border: `1px solid ${currentExercise.optionalWeight ? 'rgba(200,255,0,0.3)' : 'var(--border)'}`,
-                          }}
-                          aria-label="Toggle weight tracking"
-                        >
-                          <Weight className="w-3 h-3" />
-                          {currentExercise.optionalWeight ? 'Weighted' : '+ Weight'}
-                        </button>
-                      )}
+                      {/* Weight toggle: always visible, toggles between weighted and reps-only */}
+                      {(() => {
+                        const isWeighted = (currentExercise.inputTypeOverride ?? resolveExerciseInputType(currentExercise.name)) !== 'reps_only';
+                        return (
+                          <button
+                            type="button"
+                            onClick={() => handleToggleWeighted(activeIndex)}
+                            className="flex h-8 items-center gap-1.5 px-2.5 rounded-lg shrink-0 transition-all text-[10px] font-bold uppercase tracking-wide"
+                            style={{
+                              background: isWeighted ? 'rgba(200,255,0,0.12)' : 'var(--bg-elevated)',
+                              color: isWeighted ? 'var(--accent)' : 'var(--text-muted)',
+                              border: `1px solid ${isWeighted ? 'rgba(200,255,0,0.3)' : 'var(--border)'}`,
+                            }}
+                            aria-label="Toggle weight tracking"
+                          >
+                            <Weight className="w-3 h-3" />
+                            {isWeighted ? 'Weighted' : 'Reps Only'}
+                          </button>
+                        );
+                      })()}
                       {/* Delete button */}
                       <button
                         type="button"
@@ -1187,13 +1213,14 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
             onEditTemplate={onEditTemplate}
             onLoadPlan={handleLoadPlan}
             defaultTab={pickerDefaultTab}
+            weightUnit={weightUnit}
             onLoadTemplate={(exercises, planTitle) => {
               const newEntries: ExerciseEntry[] = exercises.map((ex) => ({
                 id: createSetId(),
                 name: ex.name,
                 muscleGroup: ex.muscleGroup,
                 exercise_db_id: ex.exercise_db_id,
-                sets: Array.from({ length: ex.defaultSets ?? 3 }, () => ({
+                sets: Array.from({ length: ex.defaultSets ?? 1 }, () => ({
                   id: createSetId(),
                   weight: ex.defaultWeight ?? null,
                   reps: ex.defaultReps ?? null,

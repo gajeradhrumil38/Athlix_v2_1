@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import Body, { ExtendedBodyPart } from 'react-muscle-highlighter';
-import { X, ChevronLeft, ChevronDown, Check, Dumbbell, Loader2, Weight } from 'lucide-react';
+import { X, ChevronLeft, ChevronDown, Check, Dumbbell, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { addCustomExercise, searchExerciseLibrary } from '../../lib/supabaseData';
@@ -306,34 +306,31 @@ export const CreateExerciseSheet: React.FC<CreateExerciseSheetProps> = ({ onClos
           </div>
 
           {/* Weight toggle */}
-          <div
-            className="flex items-center justify-between rounded-xl px-4 py-3.5"
-            style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}
-          >
-            <div className="flex items-center gap-3">
-              <Weight className="w-4 h-4" style={{ color: trackWeight ? 'var(--accent)' : 'var(--text-muted)' }} />
-              <div>
-                <p className="text-[13px] font-semibold" style={{ color: 'var(--text-primary)' }}>Track Weight</p>
-                <p className="text-[10px] mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  {trackWeight ? 'Weight + reps per set' : 'Reps only — no weight dial'}
-                </p>
-              </div>
+          <div className="space-y-1.5">
+            <label className="block text-[11px] font-bold uppercase tracking-[0.1em]" style={{ color: 'var(--text-muted)' }}>
+              Tracking Type
+            </label>
+            <div className="flex gap-1 rounded-xl p-1" style={{ background: 'var(--bg-elevated)' }}>
+              {[
+                { value: true,  label: 'Weighted',  sub: 'Weight + reps' },
+                { value: false, label: 'Reps Only',  sub: 'No weight dial' },
+              ].map((opt) => (
+                <button
+                  key={String(opt.value)}
+                  type="button"
+                  onClick={() => setTrackWeight(opt.value)}
+                  className="flex-1 flex flex-col items-center gap-0.5 py-2.5 rounded-lg text-[12px] font-bold transition-all cursor-pointer"
+                  style={
+                    trackWeight === opt.value
+                      ? { background: 'var(--accent)', color: '#000' }
+                      : { background: 'transparent', color: 'var(--text-secondary)' }
+                  }
+                >
+                  {opt.label}
+                  <span className="text-[9px] font-medium opacity-70">{opt.sub}</span>
+                </button>
+              ))}
             </div>
-            <button
-              type="button"
-              onClick={() => setTrackWeight((v) => !v)}
-              className="relative h-7 w-12 rounded-full transition-colors cursor-pointer shrink-0"
-              style={{ background: trackWeight ? 'var(--accent)' : 'var(--bg-elevated)', border: '1px solid var(--border)' }}
-              aria-label="Toggle weight tracking"
-            >
-              <span
-                className="absolute top-0.5 h-6 w-6 rounded-full transition-transform"
-                style={{
-                  background: trackWeight ? '#000' : 'var(--text-muted)',
-                  transform: trackWeight ? 'translateX(22px)' : 'translateX(2px)',
-                }}
-              />
-            </button>
           </div>
 
           {/* Primary muscle group dropdown */}
