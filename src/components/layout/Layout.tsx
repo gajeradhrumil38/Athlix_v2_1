@@ -21,7 +21,7 @@ const mobileNavItems: { path: string; icon: IconName; label: string }[] = [
   { path: '/progress',  icon: 'Activity', label: 'Progress' },
   { path: '/calendar',  icon: 'Calendar', label: 'Calendar' },
   { path: '/run',       icon: 'Run',      label: 'Run'      },
-  { path: '/skincare',  icon: 'Skincare', label: 'Skin'     },
+  { path: '/settings',  icon: 'Settings', label: 'Settings' },
 ];
 
 export const Layout: React.FC = () => {
@@ -33,6 +33,9 @@ export const Layout: React.FC = () => {
   const [tappedTab, setTappedTab] = useState<string | null>(null);
   const isImmersiveRoute = location.pathname === '/log' || location.pathname.startsWith('/run');
   const isHomeRoute = location.pathname === '/';
+  const isHeaderlessRoute =
+    location.pathname.startsWith('/calendar') ||
+    location.pathname.startsWith('/settings');
   // Pages that manage their own internal padding — no wrapper padding needed
   const isSelfPaddedRoute =
     isHomeRoute ||
@@ -167,7 +170,7 @@ export const Layout: React.FC = () => {
       </aside>
 
       {/* ── Mobile top header ─────────────────────────── */}
-      {!isImmersiveRoute && !isHomeRoute && (
+      {!isImmersiveRoute && !isHomeRoute && !isHeaderlessRoute && (
         <header
           className="md:hidden fixed top-0 left-0 right-0 z-[90]"
           style={{
@@ -215,7 +218,9 @@ export const Layout: React.FC = () => {
             ? ''
             : isHomeRoute
               ? 'pb-[calc(72px+env(safe-area-inset-bottom))] md:pb-0'
-              : 'pt-[calc(54px+env(safe-area-inset-top))] pb-[calc(72px+env(safe-area-inset-bottom))] md:pt-0 md:pb-0'
+              : isHeaderlessRoute
+                ? 'pt-[env(safe-area-inset-top)] pb-[calc(72px+env(safe-area-inset-bottom))] md:pt-0 md:pb-0'
+                : 'pt-[calc(54px+env(safe-area-inset-top))] pb-[calc(72px+env(safe-area-inset-bottom))] md:pt-0 md:pb-0'
         }`}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
