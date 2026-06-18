@@ -421,62 +421,82 @@ const WorkoutCard: React.FC<{
               </div>
 
               {/* Exercise groups */}
-              <div className="space-y-2.5">
-                {viewGroups.map((g, gi) => (
-                  <div key={`${g.name}-${gi}`} className="rounded-xl p-3"
-                    style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="h-5 w-5 rounded text-[10px] font-bold flex items-center justify-center shrink-0"
-                        style={{ background: muscleColor(g.muscle_group ?? ''), color: '#000' }}>
-                        {g.name.charAt(0)}
-                      </div>
-                      <p className="text-[13px] font-bold truncate" style={{ color: 'var(--text-primary)' }}>{g.name}</p>
-                      <span className="ml-auto text-[10px] font-semibold" style={{ color: 'var(--text-muted)' }}>
-                        {g.sets.length} set{g.sets.length !== 1 ? 's' : ''}
-                      </span>
-                    </div>
+              <div className="space-y-3">
+                {viewGroups.map((g, gi) => {
+                  const exColor = muscleColor(g.muscle_group ?? '');
+                  return (
+                    <div key={`${g.name}-${gi}`} className="rounded-[14px] overflow-hidden"
+                      style={{ background: 'var(--bg-base)', border: '1px solid var(--border)' }}>
 
-                    {editing ? (
-                      <div className="space-y-2">
-                        {g.sets.map((s, si) => (
-                          <SetEditorRow key={si} index={si} set={s} unit={unit} accent={accent}
-                            onChange={(ns) => updateSet(gi, si, ns)} onRemove={() => removeSet(gi, si)} />
-                        ))}
-                        <button onClick={() => addSet(gi)}
-                          className="w-full mt-1 py-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
-                          style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px dashed var(--border)' }}>
-                          <Plus className="w-3 h-3" /> Add set
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="space-y-1">
-                        {g.sets.map((s, si) => (
-                          <div key={si} className="flex items-center gap-2 text-[12px]">
-                            <span className="h-5 w-5 rounded-md flex items-center justify-center text-[10px] font-bold shrink-0"
-                              style={{ background: `color-mix(in srgb, ${accent} 16%, var(--bg-elevated))`, color: accent }}>
-                              {si + 1}
-                            </span>
-                            {g.isCardio ? (
-                              <>
-                                <span className="font-bold" style={{ color: 'var(--text-primary)' }}>{s.reps}</span>
-                                <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>reps</span>
-                              </>
-                            ) : (
-                              <>
-                                <span className="font-bold" style={{ color: 'var(--text-primary)' }}>
-                                  {formatWeight(s.weight, unit)}
-                                </span>
-                                <span style={{ color: 'var(--text-muted)' }}>×</span>
-                                <span className="font-bold" style={{ color: 'var(--text-primary)' }}>{s.reps}</span>
-                                <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>reps</span>
-                              </>
-                            )}
+                      {/* Exercise header — only shown when multiple exercises */}
+                      {viewGroups.length > 1 && (
+                        <div className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: '1px solid var(--border)' }}>
+                          <div className="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center text-[14px] font-black shrink-0"
+                            style={{ background: `color-mix(in srgb, ${exColor} 14%, var(--bg-elevated))`, color: exColor }}>
+                            {g.name.charAt(0)}
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
+                          <p className="flex-1 text-[15px] font-bold truncate" style={{ color: 'var(--text-primary)' }}>{g.name}</p>
+                          <span className="text-[12px] font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>
+                            {g.sets.length} set{g.sets.length !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      )}
+
+                      {editing ? (
+                        /* Edit mode — existing stepper UI, unchanged */
+                        <div className="p-3 space-y-2">
+                          {g.sets.map((s, si) => (
+                            <SetEditorRow key={si} index={si} set={s} unit={unit} accent={accent}
+                              onChange={(ns) => updateSet(gi, si, ns)} onRemove={() => removeSet(gi, si)} />
+                          ))}
+                          <button onClick={() => addSet(gi)}
+                            className="w-full mt-1 py-2 rounded-lg text-[11px] font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
+                            style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px dashed var(--border)' }}>
+                            <Plus className="w-3 h-3" /> Add set
+                          </button>
+                        </div>
+                      ) : (
+                        /* View mode — new 3-col grid design */
+                        <div className="flex flex-col gap-2.5 p-3">
+                          {g.sets.map((s, si) => (
+                            <div key={si}
+                              className="grid overflow-hidden rounded-[12px]"
+                              style={{
+                                gridTemplateColumns: '44px 1fr 1fr',
+                                border: '1px solid var(--border)',
+                                background: 'rgba(255,255,255,0.012)',
+                              }}>
+                              {/* Set number */}
+                              <div className="flex items-center justify-center font-victory text-[26px]"
+                                style={{ background: 'rgba(200,255,0,0.05)', color: '#C8FF00', borderRight: '1px solid var(--border)' }}>
+                                {si + 1}
+                              </div>
+                              {/* Weight */}
+                              <div className="flex flex-col items-center justify-center gap-0.5 py-3 px-2">
+                                <span className="font-victory text-[32px] leading-none text-white tabular-nums">
+                                  {g.isCardio ? '—' : formatWeight(s.weight, unit)}
+                                </span>
+                                <span className="text-[9px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--text-muted)' }}>
+                                  {g.isCardio ? '' : unit}
+                                </span>
+                              </div>
+                              {/* Reps */}
+                              <div className="flex flex-col items-center justify-center gap-0.5 py-3 px-2"
+                                style={{ borderLeft: '1px solid var(--border)' }}>
+                                <span className="font-victory text-[32px] leading-none text-white tabular-nums">
+                                  {s.reps}
+                                </span>
+                                <span className="text-[9px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--text-muted)' }}>
+                                  reps
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </motion.div>
