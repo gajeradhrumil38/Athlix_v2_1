@@ -197,28 +197,28 @@ const CalValueBox: React.FC<{
 }> = ({ value, label, step, onMinus, onPlus }) => {
   const stepLabel = `${step}`;
   return (
-    <div className="relative flex h-[82px] w-full overflow-hidden rounded-xl border"
+    <div className="relative flex h-[68px] w-full overflow-hidden rounded-xl border"
       style={{ background: 'var(--bg-base)', borderColor: 'var(--border)' }}>
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/8 to-transparent" />
       <button type="button" onClick={onMinus}
-        className="flex h-full w-[48px] shrink-0 flex-col items-center justify-center gap-0.5 active:bg-white/[0.04] transition-colors"
+        className="flex h-full w-[38px] shrink-0 flex-col items-center justify-center gap-0.5 active:bg-white/[0.04] transition-colors"
         style={{ color: 'var(--text-muted)', borderRight: '1px solid rgba(255,255,255,0.05)' }}>
-        <span className="text-[22px] font-light leading-none select-none">−</span>
-        <span className="text-[9px] font-semibold leading-none opacity-50 select-none">{stepLabel}</span>
+        <span className="text-[20px] font-light leading-none select-none">−</span>
+        <span className="text-[8px] font-semibold leading-none opacity-50 select-none">{stepLabel}</span>
       </button>
-      <div className="flex flex-1 flex-col items-center justify-center gap-[3px]">
-        <div className="font-victory tabular-nums text-[34px] leading-none font-black" style={{ color: 'var(--text-primary)' }}>
+      <div className="flex flex-1 flex-col items-center justify-center gap-[2px]">
+        <div className="font-victory tabular-nums text-[28px] leading-none font-black" style={{ color: 'var(--text-primary)' }}>
           {value}
         </div>
-        <div className="text-[10px] font-bold tracking-[0.16em] uppercase" style={{ color: 'var(--text-secondary)' }}>
+        <div className="text-[9px] font-bold tracking-[0.14em] uppercase" style={{ color: 'var(--text-secondary)' }}>
           {label}
         </div>
       </div>
       <button type="button" onClick={onPlus}
-        className="flex h-full w-[48px] shrink-0 flex-col items-center justify-center gap-0.5 active:bg-white/[0.04] transition-colors"
+        className="flex h-full w-[38px] shrink-0 flex-col items-center justify-center gap-0.5 active:bg-white/[0.04] transition-colors"
         style={{ color: 'var(--accent)', borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
-        <span className="text-[22px] font-light leading-none select-none">+</span>
-        <span className="text-[9px] font-semibold leading-none opacity-50 select-none">{stepLabel}</span>
+        <span className="text-[20px] font-light leading-none select-none">+</span>
+        <span className="text-[8px] font-semibold leading-none opacity-50 select-none">{stepLabel}</span>
       </button>
     </div>
   );
@@ -444,9 +444,10 @@ const WorkoutCard: React.FC<{
 
                       {editing ? (
                         /* Edit mode — ValueBox cards matching the workout logger's SetRow style */
-                        <div className="p-3 space-y-4">
+                        <div className="px-2 py-3 space-y-4">
                           {g.sets.map((s, si) => {
                             const weightStep = unit === 'kg' ? 1.25 : 2.5;
+                            const weightDisplay = s.weight.toLocaleString(undefined, { maximumFractionDigits: 1 });
                             return (
                               <div key={si} className="space-y-2">
                                 {/* Set badge */}
@@ -458,7 +459,7 @@ const WorkoutCard: React.FC<{
                                 <div className="grid grid-cols-2 gap-2">
                                   {!g.isCardio && (
                                     <CalValueBox
-                                      value={formatWeight(s.weight, unit)} label={unit} step={weightStep}
+                                      value={weightDisplay} label={unit} step={weightStep}
                                       onMinus={() => updateSet(gi, si, { ...s, weight: Math.max(0, Math.round((s.weight - weightStep) * 10) / 10) })}
                                       onPlus={() => updateSet(gi, si, { ...s, weight: Math.round((s.weight + weightStep) * 10) / 10 })}
                                     />
