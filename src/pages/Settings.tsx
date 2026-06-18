@@ -350,8 +350,10 @@ export const Settings: React.FC = () => {
     setMetricsChanged(false);
   };
 
-  const handleUnitChange = (unit: string) =>
+  const handleUnitChange = (unit: string) => {
+    setDraftProfile((prev: any) => ({ ...prev, unit_preference: unit }));
     save({ unit_preference: unit }, `Weight unit → ${unit}`);
+  };
 
   const handleThemeChange = (theme: string) =>
     save({ theme_preference: theme }, `Theme → ${theme}`);

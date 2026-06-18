@@ -122,7 +122,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!user) return;
 
+    // Optimistic update — UI reflects change immediately
+    setProfile((prev) => (prev ? { ...prev, ...updates } : prev));
     const data = await persistProfile(user.id, updates);
+    // Sync with authoritative server response
     setProfile(data);
   };
 
