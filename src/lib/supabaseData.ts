@@ -2285,6 +2285,51 @@ export const updateCustomExercise = async (
   _libCache = null;
 };
 
+// Renames an exercise everywhere: library entry (if custom), all historical sets, personal records.
+export const renameExerciseEverywhere = async (
+  userId: string,
+  oldName: string,
+  newName: string,
+  exerciseDbId?: string | null,
+): Promise<void> => {
+  if (!hasSupabaseConfig) return;
+  const trimmed = newName.trim();
+  if (!trimmed || trimmed === oldName) return;
+
+  // 1. Update the custom library entry (only for exercises the user owns)
+  if (exerciseDbId) {
+    await supabase
+      .from('exercise_library')
+      .update({ name: trimmed })
+      .eq('id', exerciseDbId)
+      .eq('user_id', userId)
+      .eq('is_custom', true);
+    _libCache = null;
+  }
+
+  // 2. Fetch this user's workout IDs to scope the historical updates
+  const { data: wRows } = await supabase
+    .from('workouts')
+    .select('id')
+    .eq('user_id', userId);
+  const wIds = ((wRows ?? []) as { id: string }[]).map((r) => r.id);
+  if (wIds.length === 0) return;
+
+  // 3. Rename all historical exercise sets
+  await supabase
+    .from('exercises')
+    .update({ exercise_name: trimmed })
+    .eq('exercise_name', oldName)
+    .in('workout_id', wIds);
+
+  // 4. Rename personal records
+  await supabase
+    .from('personal_records')
+    .update({ exercise_name: trimmed })
+    .eq('user_id', userId)
+    .eq('exercise_name', oldName);
+};
+
 // ── Exercise library in-memory cache (shared across search calls) ─────────────
 let _libCache: { userId: string; rows: ReturnType<typeof mergeWithDefaultLibrary>; ts: number } | null = null;
 const LIB_TTL_MS = 5 * 60_000;

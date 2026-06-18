@@ -8,7 +8,7 @@ import { ExerciseContent } from './ExerciseContent';
 import { ExercisePicker } from './ExercisePicker';
 import { DialPicker } from './DialPicker';
 import { useAuth } from '../../contexts/AuthContext';
-import { getLastExerciseSession, saveTemplate, checkTemplateNameExists } from '../../lib/supabaseData';
+import { getLastExerciseSession, saveTemplate, checkTemplateNameExists, renameExerciseEverywhere } from '../../lib/supabaseData';
 import {
   DistanceUnit,
   DialFieldKind,
@@ -667,6 +667,9 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
   }, [setWorkout, workout.exercises.length]);
 
   const handleRenameExercise = useCallback((index: number, newName: string) => {
+    const oldExercise = workout?.exercises[index];
+    const oldName = oldExercise?.name;
+    const exerciseDbId = oldExercise?.exercise_db_id;
     setWorkout((prev) => {
       if (!prev) return null;
       return {
@@ -674,8 +677,11 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
         exercises: prev.exercises.map((ex, i) => i === index ? { ...ex, name: newName } : ex),
       };
     });
+    if (user && oldName && newName.trim() && newName.trim() !== oldName) {
+      renameExerciseEverywhere(user.id, oldName, newName.trim(), exerciseDbId).catch(console.warn);
+    }
     haptics.tick();
-  }, [setWorkout]);
+  }, [setWorkout, workout, user]);
 
   const handleChangeExerciseGroup = useCallback((index: number, newGroup: string) => {
     setWorkout((prev) => {

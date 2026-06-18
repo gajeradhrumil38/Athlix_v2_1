@@ -39,7 +39,7 @@ import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useProgress } from '../contexts/ProgressContext';
 import { deleteWorkout, getWorkouts, updateWorkoutSets } from '../lib/supabaseData';
-import { convertWeight, formatWeight, isWeightUnit, type WeightUnit } from '../lib/units';
+import { convertWeight, isWeightUnit, type WeightUnit } from '../lib/units';
 import { muscleColor } from '../lib/muscleColors';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -504,7 +504,7 @@ const WorkoutCard: React.FC<{
                               </div>
                               <div className="flex flex-col items-center justify-center gap-0.5 py-3 px-2">
                                 <span className="font-victory text-[32px] leading-none text-white tabular-nums">
-                                  {g.isCardio ? '—' : formatWeight(s.weight, unit)}
+                                  {g.isCardio ? '—' : s.weight.toLocaleString(undefined, { maximumFractionDigits: 1 })}
                                 </span>
                                 <span className="text-[9px] font-semibold uppercase tracking-[0.18em]" style={{ color: 'var(--text-muted)' }}>
                                   {g.isCardio ? '' : unit}
