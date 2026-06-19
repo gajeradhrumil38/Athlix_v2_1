@@ -387,6 +387,11 @@ export async function recognizeFoodWithGemini(imageFile: File): Promise<GeminiSc
         const food: DetectedFood = { ...matches[0] };
         food.servings = Math.max(0.5, Math.round((item.servings ?? 1) * 2) / 2);
         if (item.portionNote) food.servingSize = item.portionNote;
+        if (item.type === 'packaged' || item.type === 'restaurant' || item.type === 'drink') {
+          food.type = item.type as 'packaged' | 'restaurant' | 'drink';
+        } else {
+          food.type = 'whole_food';
+        }
         return food;
       } catch {
         return null;
@@ -466,6 +471,72 @@ export async function getFoodDetails(foodId: string): Promise<DetectedFood | nul
   const serving = firstServing(food);
   if (!serving) return null;
   return parseServing(food.food_id, food.food_name, food.brand_name, null, serving);
+}
+
+// ─── Packaged ingredient analysis (dish scan) ─────────────────────────────────
+
+export interface PackagedIngredientWarning {
+  foodName: string;
+  suspectedIngredients: string;
+  concerns: import('../types').Additive[];
+}
+
+/**
+ * For packaged food items found in a dish scan, ask Gemini to name likely
+ * harmful ingredients, then run them through the existing additive DB.
+ * Best-effort — silently returns [] on any error.
+ */
+export async function analyzePackagedIngredients(
+  packagedFoods: import('../types').DetectedFood[],
+): Promise<PackagedIngredientWarning[]> {
+  if (packagedFoods.length === 0) return [];
+  const apiKey = localStorage.getItem('athlix:gemini_api_key');
+  if (!apiKey) return [];
+
+  const model = localStorage.getItem('athlix:gemini_model') || 'gemini-1.5-flash';
+  const foodList = packagedFoods
+    .map((f, i) => `${i + 1}. ${f.name}${f.brand ? ` (${f.brand})` : ''}`)
+    .join('\n');
+
+  const prompt =
+    'You are a food ingredient analyst. For each packaged food below, list only the potentially harmful ingredients typically found in this type of product. Focus on: artificial colors (Red 40, Yellow 5, Yellow 6, Red 3), preservatives (BHA, BHT, TBHQ, sodium benzoate, sodium nitrite, potassium bromate), artificial sweeteners (aspartame, acesulfame K, saccharin, sucralose, HFCS), and others (carrageenan, partially hydrogenated oils, titanium dioxide, BVO).\n\n' +
+    'Foods:\n' + foodList + '\n\n' +
+    'Return ONLY a JSON array — no markdown, no explanation:\n' +
+    '[{"name":"<food name>","ingredients":"<comma-separated harmful ingredients only>"}]\n' +
+    'If a food typically has none of these, use ingredients:"none".\n' +
+    'Keep each ingredients value short — only the concerning ones, not the full list.';
+
+  try {
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+      {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 1024 },
+        }),
+      },
+    );
+    if (!resp.ok) return [];
+
+    const json    = await resp.json() as { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+    const rawText = json.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
+    const parsed  = extractJsonFromText(rawText) as Array<{ name: string; ingredients: string }>;
+    if (!Array.isArray(parsed)) return [];
+
+    const { checkAdditives } = await import('./healthScore.service');
+    const results: PackagedIngredientWarning[] = [];
+    for (const item of parsed) {
+      if (!item.ingredients || item.ingredients === 'none') continue;
+      const concerns = checkAdditives(item.ingredients);
+      if (concerns.length === 0) continue;
+      results.push({ foodName: item.name, suspectedIngredients: item.ingredients, concerns });
+    }
+    return results;
+  } catch {
+    return [];
+  }
 }
 
 // ─── Nutrition aggregation ─────────────────────────────────────────────────────

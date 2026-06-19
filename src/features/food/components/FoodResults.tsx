@@ -9,14 +9,15 @@
  *  5. Save / Scan Again
  */
 
-import React, { useMemo, useState } from 'react';
-import { CheckCircle2, Edit3, Plus, RotateCcw, Trash2, X, Search, SlidersHorizontal } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, CheckCircle2, Edit3, Plus, RotateCcw, Trash2, X, Search, SlidersHorizontal } from 'lucide-react';
 import type { DetectedFood, ScanState } from '../types';
-import { calcTotals, searchFood } from '../services/foodRecognition.service';
+import { calcTotals, searchFood, analyzePackagedIngredients, type PackagedIngredientWarning } from '../services/foodRecognition.service';
 import { scoreDish } from '../services/healthScore.service';
 import { DishScoreRing } from './HealthRings';
 import { useNutritionPriority, type MacroKey } from '../hooks/useNutritionPriority';
 import { NutritionPrioritySheet } from './NutritionPrioritySheet';
+import { RealLifeAdviceCard } from './RealLifeAdviceCard';
 
 // ─── Daily value reference ─────────────────────────────────────────────────────
 
@@ -89,6 +90,28 @@ const HealthSnapshot: React.FC<{ foods: DetectedFood[]; totals: ReturnType<typeo
   );
 };
 
+// ─── Product type badge ───────────────────────────────────────────────────────
+
+function TypeBadge({ type }: { type?: DetectedFood['type'] }) {
+  if (!type) return null;
+  const cfg: Record<NonNullable<DetectedFood['type']>, { label: string; color: string; bg: string }> = {
+    whole_food:  { label: 'Fresh',      color: '#4ade80', bg: 'rgba(74,222,128,0.10)' },
+    packaged:    { label: 'Packaged',   color: '#fbbf24', bg: 'rgba(251,191,36,0.10)' },
+    restaurant:  { label: 'Restaurant', color: '#60a5fa', bg: 'rgba(96,165,250,0.10)' },
+    drink:       { label: 'Drink',      color: '#a78bfa', bg: 'rgba(167,139,250,0.10)' },
+  };
+  const { label, color, bg } = cfg[type];
+  return (
+    <span style={{
+      fontSize: 9, fontWeight: 800, letterSpacing: '0.10em',
+      textTransform: 'uppercase', color, background: bg,
+      padding: '2px 6px', borderRadius: 4, border: `1px solid ${color}30`,
+    }}>
+      {label}
+    </span>
+  );
+}
+
 // ─── Serving editor card ──────────────────────────────────────────────────────
 
 const ServingEditor: React.FC<{
@@ -126,6 +149,7 @@ const ServingEditor: React.FC<{
                 {sourceLabel[food.source] ?? food.source}
               </span>
             )}
+            <TypeBadge type={food.type} />
           </div>
           {food.brand && (
             <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>{food.brand}</p>
@@ -315,13 +339,21 @@ interface Props {
 }
 
 export const FoodResults: React.FC<Props> = ({ state, onSave, onScanAgain, saving }) => {
-  const [foods, setFoods]             = useState<DetectedFood[]>(state.foods);
-  const [showAddModal, setShowAdd]    = useState(false);
-  const [showPriority, setShowPriority] = useState(false);
+  const [foods, setFoods]                           = useState<DetectedFood[]>(state.foods);
+  const [showAddModal, setShowAdd]                  = useState(false);
+  const [showPriority, setShowPriority]             = useState(false);
+  const [ingredientWarnings, setIngredientWarnings] = useState<PackagedIngredientWarning[]>([]);
 
   const { isPriority } = useNutritionPriority();
-  const totals  = useMemo(() => calcTotals(foods), [foods]);
-  const noFood  = state.foods.length === 0 && foods.length === 0;
+  const totals    = useMemo(() => calcTotals(foods), [foods]);
+  const dishScore = useMemo(() => scoreDish(foods),  [foods]);
+  const noFood    = state.foods.length === 0 && foods.length === 0;
+
+  useEffect(() => {
+    const packaged = foods.filter((f) => f.type === 'packaged');
+    if (packaged.length === 0) { setIngredientWarnings([]); return; }
+    analyzePackagedIngredients(packaged).then(setIngredientWarnings).catch(() => {});
+  }, [foods]);
 
   const updateFood = (idx: number, updated: DetectedFood) =>
     setFoods((prev) => prev.map((f, i) => (i === idx ? updated : f)));
@@ -390,6 +422,55 @@ export const FoodResults: React.FC<Props> = ({ state, onSave, onScanAgain, savin
       {/* Health snapshot (only when foods exist) */}
       {foods.length > 0 && (
         <HealthSnapshot foods={foods} totals={totals} />
+      )}
+
+      {/* Packaged ingredient concerns (async — appears after Gemini analysis) */}
+      {ingredientWarnings.length > 0 && (
+        <div className="rounded-2xl overflow-hidden" style={{ background: '#16191F', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div className="px-4 py-3 flex items-center gap-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            <AlertTriangle className="w-4 h-4 shrink-0" style={{ color: '#fbbf24' }} />
+            <p style={{ color: '#fff', fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              Packaged Item Concerns
+            </p>
+          </div>
+          <div className="px-4 py-3 space-y-3">
+            {ingredientWarnings.map((w, wi) => (
+              <div key={wi}>
+                <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, fontWeight: 700, marginBottom: 6 }}>
+                  {w.foodName}
+                </p>
+                <div className="space-y-2">
+                  {w.concerns.map((c, ci) => {
+                    const col = c.concern === 'high' ? '#f87171' : c.concern === 'medium' ? '#fbbf24' : 'rgba(255,255,255,0.5)';
+                    return (
+                      <div key={ci} className="rounded-xl px-3 py-2.5"
+                        style={{ background: `${col}10`, border: `1px solid ${col}22` }}>
+                        <div className="flex items-center justify-between gap-2 mb-0.5">
+                          <p style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>{c.name}</p>
+                          <span style={{
+                            fontSize: 9, fontWeight: 800, letterSpacing: '0.12em',
+                            color: col, background: `${col}22`, padding: '1px 6px', borderRadius: 4,
+                          }}>
+                            {c.concern.toUpperCase()}
+                          </span>
+                        </div>
+                        <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 11, lineHeight: 1.4 }}>{c.effect}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: 10, lineHeight: 1.5 }}>
+              Ingredients estimated by AI — scan the product label for exact analysis.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Real-life advice */}
+      {foods.length > 0 && (
+        <RealLifeAdviceCard foods={foods} score={dishScore} totalCalories={totals.total_calories} />
       )}
 
       {/* Add food button */}

@@ -18,6 +18,7 @@ export interface DetectedFood {
   fiber?: number;
   sugar?: number;
   confidence?: number;  // 0–1 from image recognition
+  type?: 'whole_food' | 'packaged' | 'restaurant' | 'drink';
   source?: 'usda' | 'openfoodfacts' | 'fatsecret' | 'label'; // which provider supplied this record
   labelData?: LabelData; // full nutrition panel, persisted for label scans (viewable in history)
 }
