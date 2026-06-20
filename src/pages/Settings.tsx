@@ -4,7 +4,9 @@ import toast from 'react-hot-toast';
 import {
   Moon, Scale, Activity, LogOut, LayoutDashboard,
   ChevronRight, Trash2, Dumbbell, User, Save, Loader2, CheckCircle, XCircle, Sparkles, Eye, EyeOff,
+  Timer, Pencil, Check, X,
 } from 'lucide-react';
+import { HapticPicker } from '../components/shared/HapticPicker';
 import { Link, useNavigate } from 'react-router-dom';
 import { convertWeight, type WeightUnit } from '../lib/units';
 import { whoopService } from '../features/whoop/services/whoopService';
@@ -299,6 +301,40 @@ export const Settings: React.FC = () => {
     return raw ? JSON.parse(raw) : null;
   });
 
+  const REST_STORAGE_KEY = 'athlix_default_rest_secs';
+  const [defaultRestSecs, setDefaultRestSecs] = useState<number>(() => {
+    const v = localStorage.getItem(REST_STORAGE_KEY);
+    return v ? parseInt(v, 10) : 90;
+  });
+  const [showRestPicker, setShowRestPicker] = useState(false);
+  const [draftRestMin, setDraftRestMin] = useState(0);
+  const [draftRestSec, setDraftRestSec] = useState(0);
+
+  const SEC_OPTIONS = [0, 15, 30, 45];
+  const MIN_OPTIONS = Array.from({ length: 11 }, (_, i) => i); // 0–10
+
+  const formatRest = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const openRestPicker = () => {
+    const m = Math.floor(defaultRestSecs / 60);
+    const s = defaultRestSecs % 60;
+    setDraftRestMin(m);
+    setDraftRestSec(SEC_OPTIONS.includes(s) ? s : 0);
+    setShowRestPicker(true);
+  };
+
+  const saveRestDuration = () => {
+    const total = Math.max(5, draftRestMin * 60 + draftRestSec);
+    localStorage.setItem(REST_STORAGE_KEY, String(total));
+    setDefaultRestSecs(total);
+    setShowRestPicker(false);
+    toast.success('Rest timer updated');
+  };
+
   useEffect(() => {
     setDraftProfile(profile);
     setNameChanged(false);
@@ -554,6 +590,88 @@ export const Settings: React.FC = () => {
             label="Toggle start sheet"
           />
         </Row>
+
+        {/* Default rest timer */}
+        <Row>
+          <RowLabel
+            icon={<Timer className="w-4 h-4" />}
+            title="Default Rest Timer"
+            subtitle="Auto-starts after each set"
+          />
+          <button
+            onClick={openRestPicker}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-xl transition-colors active:opacity-70"
+            style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+          >
+            <span className="text-[16px] font-bold tabular-nums" style={{ color: 'var(--text-primary)', fontVariantNumeric: 'tabular-nums' }}>
+              {formatRest(defaultRestSecs)}
+            </span>
+            <Pencil className="w-3.5 h-3.5" style={{ color: 'var(--text-muted)' }} />
+          </button>
+        </Row>
+
+        {/* Inline rest timer dial picker */}
+        {showRestPicker && (
+          <div className="px-5 pb-5 pt-1">
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
+              <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
+                <p className="text-[12px] font-semibold" style={{ color: 'var(--text-secondary)' }}>Set rest duration</p>
+                <button onClick={() => setShowRestPicker(false)}>
+                  <X className="w-4 h-4" style={{ color: 'var(--text-muted)' }} />
+                </button>
+              </div>
+              <div className="px-4 py-4">
+                <div className="flex items-center justify-center gap-3">
+                  {/* Minutes dial */}
+                  <div className="flex-1">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-center mb-2" style={{ color: 'var(--text-muted)' }}>MIN</p>
+                    <HapticPicker
+                      items={MIN_OPTIONS}
+                      value={draftRestMin}
+                      onChange={(v) => setDraftRestMin(Number(v))}
+                      itemHeight={44}
+                      visibleItems={3}
+                    />
+                  </div>
+                  <span className="text-[28px] font-black mb-1 shrink-0" style={{ color: 'var(--text-primary)' }}>:</span>
+                  {/* Seconds dial */}
+                  <div className="flex-1">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-center mb-2" style={{ color: 'var(--text-muted)' }}>SEC</p>
+                    <HapticPicker
+                      items={SEC_OPTIONS}
+                      value={draftRestSec}
+                      onChange={(v) => setDraftRestSec(Number(v))}
+                      itemHeight={44}
+                      visibleItems={3}
+                    />
+                  </div>
+                </div>
+                {/* Live preview */}
+                <p className="text-center text-[13px] mt-3" style={{ color: 'var(--text-muted)' }}>
+                  {draftRestMin * 60 + draftRestSec > 0
+                    ? `${draftRestMin * 60 + draftRestSec} seconds between sets`
+                    : 'Timer disabled (0 seconds)'}
+                </p>
+              </div>
+              <div className="px-4 pb-4 flex gap-2">
+                <button
+                  onClick={() => setShowRestPicker(false)}
+                  className="flex-1 h-10 rounded-xl text-[13px] font-semibold"
+                  style={{ background: 'var(--bg-base)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={saveRestDuration}
+                  className="flex-1 h-10 rounded-xl text-[13px] font-bold flex items-center justify-center gap-1.5"
+                  style={{ background: 'var(--accent)', color: '#000' }}
+                >
+                  <Check className="w-4 h-4" /> Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </SectionCard>
 
       {/* ── Body metrics ──────────────────────── */}

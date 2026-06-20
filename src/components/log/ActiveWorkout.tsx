@@ -140,7 +140,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
   useEffect(() => { loadedPlanRef.current = loadedPlan; }, [loadedPlan]);
 
   // ── Rest timer ────────────────────────────────────────────────────────────
-  const REST_DURATION = 90; // seconds
+  const REST_DURATION = Number(localStorage.getItem('athlix_default_rest_secs') || 90);
   const [restSecondsLeft, setRestSecondsLeft] = useState(0);
   const restIntervalRef = useRef<number | null>(null);
 
