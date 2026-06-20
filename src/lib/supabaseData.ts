@@ -2469,7 +2469,6 @@ export const getRecentExerciseOptions = async (
         : undefined,
     });
 
-    if (options.length >= 12) break;
   }
 
   return options;

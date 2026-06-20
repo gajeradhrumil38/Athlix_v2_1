@@ -438,7 +438,7 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({
           {!search && (
             <div className="flex gap-1.5 rounded-xl p-1" style={{ background: 'var(--bg-elevated)' }}>
               {[
-                { id: 'recent', label: 'Recent',   Icon: History       },
+                { id: 'recent', label: 'History',  Icon: History       },
                 { id: 'muscle', label: 'Muscle',   Icon: LayoutGrid    },
                 { id: 'plans',  label: 'My Plans', Icon: ClipboardList },
               ].map(({ id, label, Icon }) => {
@@ -508,8 +508,8 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({
                 <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
                   <History className="w-8 h-8 opacity-30" style={{ color: 'var(--text-muted)' }} />
                   <div>
-                    <p className="text-[13px] font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>No recent exercises</p>
-                    <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Exercises you log will appear here</p>
+                    <p className="text-[13px] font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>No exercise history yet</p>
+                    <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Every exercise you log will appear here</p>
                   </div>
                   <button
                     type="button"

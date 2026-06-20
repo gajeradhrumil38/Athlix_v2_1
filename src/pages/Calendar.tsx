@@ -32,13 +32,17 @@ import {
   Sun,
   Pencil,
   Check,
+  Scissors,
+  Search,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useProgress } from '../contexts/ProgressContext';
-import { deleteWorkout, getWorkouts, renameWorkout, updateWorkoutSets } from '../lib/supabaseData';
+import { deleteWorkout, getWorkouts, renameWorkout, saveWorkout, updateWorkoutSets } from '../lib/supabaseData';
+import { fuzzyFilter } from '../lib/fuzzySearch';
+import { OPENTRAINING_EXERCISES } from '../data/opentrainingCatalog';
 import { convertWeight, isWeightUnit, type WeightUnit } from '../lib/units';
 import { muscleColor } from '../lib/muscleColors';
 
@@ -230,7 +234,8 @@ const WorkoutCard: React.FC<{
   onDelete: (id: string, title: string) => void;
   onSaved: (id: string, exercises: any[], muscleGroups: string[]) => void;
   onRenamed: (id: string, newTitle: string) => void;
-}> = ({ workout, unit, onDelete, onSaved, onRenamed }) => {
+  onExtracted: (newWorkout: any) => void;
+}> = ({ workout, unit, onDelete, onSaved, onRenamed, onExtracted }) => {
   const { user } = useAuth();
   const [expanded, setExpanded]         = useState(false);
   const [editing, setEditing]           = useState(false);
@@ -238,6 +243,9 @@ const WorkoutCard: React.FC<{
   const [groups, setGroups]             = useState<EditGroup[]>(() => groupExerciseSets(workout, unit));
   const [editingTitle, setEditingTitle] = useState(false);
   const [draftTitle, setDraftTitle]     = useState('');
+  const [showAddEx, setShowAddEx]       = useState(false);
+  const [addExQuery, setAddExQuery]     = useState('');
+  const [extracting, setExtracting]     = useState<number | null>(null);
 
   const accent    = getAccent(workout);
   const names     = getExerciseNames(workout);
@@ -291,6 +299,43 @@ const WorkoutCard: React.FC<{
       next.splice(si + 1, 0, copy);
       return { ...g, sets: next };
     }));
+
+  // Extract one exercise group into its own new workout on the same date
+  const extractGroup = async (gi: number) => {
+    if (!user) return;
+    const g = groups[gi];
+    const validSets = g.sets.filter((s) => s.reps > 0 || s.weight > 0);
+    if (validSets.length === 0) { removeGroup(gi); return; }
+    setExtracting(gi);
+    try {
+      const result = await saveWorkout(user.id, {
+        title: g.name,
+        date: workout.date,
+        duration_minutes: 0,
+        exercises: [{ name: g.name, muscle_group: g.muscle_group, exercise_db_id: g.exercise_db_id, completed_sets: validSets.map((s) => ({ reps: Math.round(s.reps), weight: s.weight, unit })) }],
+      });
+      onExtracted(result);
+      setGroups((p) => p.filter((_, i) => i !== gi));
+      toast.success(`"${g.name}" moved to its own workout`);
+    } catch (err: any) {
+      toast.error(err?.message || 'Failed to separate exercise');
+    } finally {
+      setExtracting(null);
+    }
+  };
+
+  // Add an exercise from the catalog as a new group
+  const addExerciseToGroups = (name: string, muscleGroup?: string) => {
+    setGroups((p) => [...p, { name, muscle_group: muscleGroup, exercise_db_id: null, sets: [{ weight: 0, reps: 10 }], isCardio: false }]);
+    setShowAddEx(false);
+    setAddExQuery('');
+  };
+
+  // Fuzzy-search results from catalog (limit 6)
+  const addExResults = useMemo(() => {
+    if (!addExQuery.trim()) return [];
+    return fuzzyFilter(OPENTRAINING_EXERCISES, addExQuery, (e) => e.name).slice(0, 6);
+  }, [addExQuery]);
 
   const save = async () => {
     if (!user) return;
@@ -349,7 +394,7 @@ const WorkoutCard: React.FC<{
                 placeholder={title}
                 onChange={(e) => setDraftTitle(e.target.value)}
                 onBlur={commitTitle}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.currentTarget.blur(); } else if (e.key === 'Escape') { setEditingTitle(false); } }}
+                onKeyDown={(e) => { e.stopPropagation(); if (e.key === 'Enter') { e.currentTarget.blur(); } else if (e.key === 'Escape') { setEditingTitle(false); } }}
                 onClick={(e) => e.stopPropagation()}
                 className="w-full text-[15px] font-bold leading-snug rounded-lg px-2 py-0.5 focus:outline-none"
                 style={{ background: 'var(--bg-surface)', border: '1px solid var(--accent)', color: 'var(--text-primary)', caretColor: 'var(--accent)' }}
@@ -470,13 +515,24 @@ const WorkoutCard: React.FC<{
                           </div>
                           <p className="flex-1 text-[15px] font-bold truncate" style={{ color: 'var(--text-primary)' }}>{g.name}</p>
                           {editing ? (
-                            <button
-                              onClick={() => removeGroup(gi)}
-                              className="h-7 w-7 flex items-center justify-center rounded-lg active:scale-90 transition-transform shrink-0"
-                              style={{ background: 'rgba(255,59,48,0.08)', color: 'rgba(255,80,65,0.85)' }}
-                              aria-label="Remove exercise">
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                onClick={() => extractGroup(gi)}
+                                disabled={extracting === gi}
+                                className="h-7 px-2 flex items-center gap-1 rounded-lg active:scale-90 transition-transform text-[10px] font-bold"
+                                style={{ background: 'rgba(96,165,250,0.10)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.25)' }}
+                                title="Move to its own workout">
+                                <Scissors className="w-3 h-3" />
+                                <span>{extracting === gi ? '…' : 'Separate'}</span>
+                              </button>
+                              <button
+                                onClick={() => removeGroup(gi)}
+                                className="h-7 w-7 flex items-center justify-center rounded-lg active:scale-90 transition-transform"
+                                style={{ background: 'rgba(255,59,48,0.08)', color: 'rgba(255,80,65,0.85)' }}
+                                aria-label="Remove exercise">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           ) : (
                             <span className="text-[12px] font-semibold shrink-0" style={{ color: 'var(--text-secondary)' }}>
                               {g.sets.length} set{g.sets.length !== 1 ? 's' : ''}
@@ -566,6 +622,56 @@ const WorkoutCard: React.FC<{
                   );
                 })}
               </div>
+
+              {/* Add exercise (edit mode only) */}
+              {editing && (
+                <div className="mt-3">
+                  {!showAddEx ? (
+                    <button
+                      onClick={() => setShowAddEx(true)}
+                      className="w-full py-2.5 rounded-xl text-[12px] font-semibold flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
+                      style={{ background: 'var(--bg-elevated)', color: 'var(--text-secondary)', border: '1px dashed var(--border)' }}>
+                      <Plus className="w-3.5 h-3.5" /> Add exercise
+                    </button>
+                  ) : (
+                    <div className="rounded-xl overflow-hidden" style={{ background: 'var(--bg-base)', border: '1px solid var(--border)' }}>
+                      <div className="flex items-center gap-2 px-3 py-2.5" style={{ borderBottom: '1px solid var(--border)' }}>
+                        <Search className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--text-muted)' }} />
+                        <input
+                          autoFocus
+                          value={addExQuery}
+                          onChange={(e) => setAddExQuery(e.target.value)}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          placeholder="Search exercises…"
+                          className="flex-1 text-[13px] bg-transparent focus:outline-none"
+                          style={{ color: 'var(--text-primary)', caretColor: 'var(--accent)' }}
+                        />
+                        <button onClick={() => { setShowAddEx(false); setAddExQuery(''); }}
+                          className="w-6 h-6 flex items-center justify-center rounded-md"
+                          style={{ background: 'var(--bg-elevated)' }}>
+                          <X className="w-3 h-3" style={{ color: 'var(--text-muted)' }} />
+                        </button>
+                      </div>
+                      {addExResults.length > 0 && (
+                        <div className="py-1">
+                          {addExResults.map((ex) => (
+                            <button key={ex.id}
+                              onClick={() => addExerciseToGroups(ex.name, ex.muscleGroup)}
+                              className="w-full text-left px-4 py-2.5 flex items-center justify-between active:bg-white/[0.04] transition-colors"
+                            >
+                              <span className="text-[13px] font-semibold" style={{ color: 'var(--text-primary)' }}>{ex.name}</span>
+                              <span className="text-[10px] font-medium" style={{ color: muscleColor(ex.muscleGroup) }}>{ex.muscleGroup}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {addExQuery.trim() !== '' && addExResults.length === 0 && (
+                        <p className="px-4 py-3 text-[12px]" style={{ color: 'var(--text-muted)' }}>No results for "{addExQuery}"</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -752,6 +858,12 @@ export const Calendar: React.FC = () => {
     setWorkouts((prev) => prev.map((w) => (w.id === id ? { ...w, title: newTitle } : w)));
   };
 
+  const handleExtracted = (newWorkout: any) => {
+    setWorkouts((prev) => [...prev, newWorkout].sort((a, b) =>
+      new Date(b.date ?? b.workout_date ?? 0).getTime() - new Date(a.date ?? a.workout_date ?? 0).getTime()
+    ));
+  };
+
   const renderWorkoutCard = (workout: any) => (
     <WorkoutCard
       key={workout.id}
@@ -760,6 +872,7 @@ export const Calendar: React.FC = () => {
       onDelete={handleDelete}
       onSaved={handleSetsUpdated}
       onRenamed={handleRenamed}
+      onExtracted={handleExtracted}
     />
   );
 
