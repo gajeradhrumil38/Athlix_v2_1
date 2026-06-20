@@ -38,7 +38,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 import { useProgress } from '../contexts/ProgressContext';
-import { deleteWorkout, getWorkouts, updateWorkoutSets } from '../lib/supabaseData';
+import { deleteWorkout, getWorkouts, renameWorkout, updateWorkoutSets } from '../lib/supabaseData';
 import { convertWeight, isWeightUnit, type WeightUnit } from '../lib/units';
 import { muscleColor } from '../lib/muscleColors';
 
@@ -229,12 +229,15 @@ const WorkoutCard: React.FC<{
   unit: WeightUnit;
   onDelete: (id: string, title: string) => void;
   onSaved: (id: string, exercises: any[], muscleGroups: string[]) => void;
-}> = ({ workout, unit, onDelete, onSaved }) => {
+  onRenamed: (id: string, newTitle: string) => void;
+}> = ({ workout, unit, onDelete, onSaved, onRenamed }) => {
   const { user } = useAuth();
-  const [expanded, setExpanded] = useState(false);
-  const [editing, setEditing]   = useState(false);
-  const [saving, setSaving]     = useState(false);
-  const [groups, setGroups]     = useState<EditGroup[]>(() => groupExerciseSets(workout, unit));
+  const [expanded, setExpanded]         = useState(false);
+  const [editing, setEditing]           = useState(false);
+  const [saving, setSaving]             = useState(false);
+  const [groups, setGroups]             = useState<EditGroup[]>(() => groupExerciseSets(workout, unit));
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [draftTitle, setDraftTitle]     = useState('');
 
   const accent    = getAccent(workout);
   const names     = getExerciseNames(workout);
@@ -249,6 +252,21 @@ const WorkoutCard: React.FC<{
 
   const beginEdit = () => { setGroups(groupExerciseSets(workout, unit)); setEditing(true); setExpanded(true); };
   const cancelEdit = () => { setGroups(groupExerciseSets(workout, unit)); setEditing(false); };
+
+  const openTitleEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDraftTitle(title);
+    setEditingTitle(true);
+  };
+  const commitTitle = async () => {
+    setEditingTitle(false);
+    const trimmed = draftTitle.trim();
+    if (!trimmed || trimmed === title || !user) return;
+    try {
+      await renameWorkout(user.id, workout.id, trimmed);
+      onRenamed(workout.id, trimmed);
+    } catch { /* silent — UI already shows old title */ }
+  };
 
   const updateSet = (gi: number, si: number, s: EditSet) =>
     setGroups((p) => p.map((g, i) => (i === gi ? { ...g, sets: g.sets.map((x, j) => (j === si ? s : x)) } : g)));
@@ -321,7 +339,28 @@ const WorkoutCard: React.FC<{
       >
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="min-w-0 flex-1">
-            <p className="text-[15px] font-bold leading-snug truncate" style={{ color: 'var(--text-primary)' }}>{title}</p>
+            {editingTitle ? (
+              <input
+                autoFocus
+                value={draftTitle}
+                onChange={(e) => setDraftTitle(e.target.value)}
+                onBlur={commitTitle}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.currentTarget.blur(); } else if (e.key === 'Escape') { setEditingTitle(false); } }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full text-[15px] font-bold leading-snug rounded-lg px-2 py-0.5 focus:outline-none"
+                style={{ background: 'var(--bg-surface)', border: '1px solid var(--accent)', color: 'var(--text-primary)', caretColor: 'var(--accent)' }}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={openTitleEdit}
+                className="flex items-center gap-1.5 group min-w-0 max-w-full"
+                title="Tap to rename"
+              >
+                <p className="text-[15px] font-bold leading-snug truncate" style={{ color: 'var(--text-primary)' }}>{title}</p>
+                <Pencil className="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-60 transition-opacity" style={{ color: 'var(--text-secondary)' }} />
+              </button>
+            )}
             {muscle && <p className="text-[11px] font-medium mt-0.5" style={{ color: accent }}>{muscle}</p>}
           </div>
           <div className="flex items-center gap-1 shrink-0 mt-0.5">
@@ -705,6 +744,10 @@ export const Calendar: React.FC = () => {
     );
   };
 
+  const handleRenamed = (id: string, newTitle: string) => {
+    setWorkouts((prev) => prev.map((w) => (w.id === id ? { ...w, title: newTitle } : w)));
+  };
+
   const renderWorkoutCard = (workout: any) => (
     <WorkoutCard
       key={workout.id}
@@ -712,6 +755,7 @@ export const Calendar: React.FC = () => {
       unit={unit}
       onDelete={handleDelete}
       onSaved={handleSetsUpdated}
+      onRenamed={handleRenamed}
     />
   );
 

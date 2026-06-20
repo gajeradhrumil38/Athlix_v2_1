@@ -1814,6 +1814,17 @@ export const updateWorkoutSets = async (
   return { exercises: rows as unknown as LocalExercise[], muscle_groups };
 };
 
+/** Rename a workout session. Trims the new title; no-ops if blank or unchanged. */
+export const renameWorkout = async (
+  userId: string,
+  workoutId: string,
+  newTitle: string,
+): Promise<void> => {
+  const trimmed = newTitle.trim();
+  if (!trimmed) return;
+  await updateRows('workouts', { id: workoutId, user_id: userId }, { title: trimmed });
+};
+
 export const getTemplates = async (userId: string) => {
   if (!hasSupabaseConfig) return localData.getTemplates(userId);
 
