@@ -34,6 +34,9 @@ import {
   Check,
   Scissors,
   Search,
+  LogIn,
+  MoreHorizontal,
+  ExternalLink,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -235,7 +238,9 @@ const WorkoutCard: React.FC<{
   onSaved: (id: string, exercises: any[], muscleGroups: string[]) => void;
   onRenamed: (id: string, newTitle: string) => void;
   onExtracted: (newWorkout: any) => void;
-}> = ({ workout, unit, onDelete, onSaved, onRenamed, onExtracted }) => {
+  sameDayWorkouts: any[];
+  onMerged: (sourceId: string, targetId: string, targetExercises: any[], targetMuscleGroups: string[]) => void;
+}> = ({ workout, unit, onDelete, onSaved, onRenamed, onExtracted, sameDayWorkouts, onMerged }) => {
   const { user } = useAuth();
   const [expanded, setExpanded]         = useState(false);
   const [editing, setEditing]           = useState(false);
@@ -246,6 +251,8 @@ const WorkoutCard: React.FC<{
   const [showAddEx, setShowAddEx]       = useState(false);
   const [addExQuery, setAddExQuery]     = useState('');
   const [extracting, setExtracting]     = useState<number | null>(null);
+  const [merging, setMerging]           = useState(false);
+  const [showMenu, setShowMenu]         = useState(false);
 
   const accent    = getAccent(workout);
   const names     = getExerciseNames(workout);
@@ -261,10 +268,7 @@ const WorkoutCard: React.FC<{
   const beginEdit = () => { setGroups(groupExerciseSets(workout, unit)); setEditing(true); setExpanded(true); };
   const cancelEdit = () => { setGroups(groupExerciseSets(workout, unit)); setEditing(false); };
 
-  const openTitleEdit = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    // If the stored title is generic/null, start blank so the user types a real name
-    // rather than accidentally saving the exercise name as the workout title
+  const openTitleEdit = () => {
     setDraftTitle(isGenericTitle(workout.title) ? '' : (workout.title ?? ''));
     setEditingTitle(true);
   };
@@ -321,6 +325,32 @@ const WorkoutCard: React.FC<{
       toast.error(err?.message || 'Failed to separate exercise');
     } finally {
       setExtracting(null);
+    }
+  };
+
+  // Merge this workout's exercises into another same-day workout
+  const mergeInto = async (target: any) => {
+    if (!user) return;
+    setMerging(true);
+    try {
+      const sourceGroups = groupExerciseSets(workout, unit);
+      const targetGroups = groupExerciseSets(target, unit);
+      const combined = [...targetGroups, ...sourceGroups];
+      const api = combined.map((g) => ({
+        name: g.name,
+        muscle_group: g.muscle_group,
+        exercise_db_id: g.exercise_db_id,
+        completed_sets: g.sets.map((s) => ({ reps: Math.round(s.reps) || 0, weight: s.weight || 0, unit })),
+      }));
+      const res = await updateWorkoutSets(user.id, target.id, api);
+      await deleteWorkout(user.id, workout.id);
+      onMerged(workout.id, target.id, res.exercises, res.muscle_groups);
+      toast.success(`Merged into "${getDisplayTitle(target)}"`);
+    } catch (err: any) {
+      toast.error(err?.message || 'Merge failed');
+    } finally {
+      setMerging(false);
+      setShowMenu(false);
     }
   };
 
@@ -400,42 +430,35 @@ const WorkoutCard: React.FC<{
                 style={{ background: 'var(--bg-surface)', border: '1px solid var(--accent)', color: 'var(--text-primary)', caretColor: 'var(--accent)' }}
               />
             ) : (
-              <button
-                type="button"
-                onClick={openTitleEdit}
-                className="flex items-center gap-1.5 group min-w-0 max-w-full"
-                title="Tap to rename"
-              >
-                <p className="text-[15px] font-bold leading-snug truncate" style={{ color: 'var(--text-primary)' }}>{title}</p>
-                <Pencil className="w-3 h-3 shrink-0 opacity-0 group-hover:opacity-60 transition-opacity" style={{ color: 'var(--text-secondary)' }} />
-              </button>
+              <p className="text-[15px] font-bold leading-snug truncate" style={{ color: 'var(--text-primary)' }}>{title}</p>
             )}
             {muscle && <p className="text-[11px] font-medium mt-0.5" style={{ color: accent }}>{muscle}</p>}
           </div>
-          <div className="flex items-center gap-1 shrink-0 mt-0.5">
-            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-              <button
-                onClick={() => onDelete(workout.id, workout.title)}
-                className="h-7 w-7 flex items-center justify-center rounded-lg active:scale-95 transition-all"
-                style={{ background: 'rgba(255,59,48,0.08)', color: 'rgba(255,80,65,0.85)' }}
-                aria-label="Delete"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-              <Link
-                to="/timeline"
-                className="h-7 inline-flex items-center px-2.5 rounded-lg text-[11px] font-semibold"
-                style={{ background: 'var(--bg-surface)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
-              >
-                Details
-              </Link>
-            </div>
-            {/* Chevron is outside stopPropagation → tapping it also toggles expand */}
+          <div className="flex items-center gap-1.5 shrink-0 mt-0.5" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setShowMenu((v) => !v)}
+              className="h-7 w-7 flex items-center justify-center rounded-lg active:scale-95 transition-all"
+              style={{
+                background: showMenu ? 'var(--bg-surface)' : 'transparent',
+                color: showMenu ? 'var(--text-primary)' : 'var(--text-muted)',
+                border: showMenu ? '1px solid var(--border)' : '1px solid transparent',
+              }}
+              aria-label="More options"
+            >
+              <MoreHorizontal className="h-4 w-4" />
+            </button>
             {hasDetail && (
-              <ChevronDown
-                className="h-4 w-4 transition-transform"
-                style={{ color: 'var(--text-muted)', transform: expanded ? 'rotate(180deg)' : 'none' }}
-              />
+              <button
+                onClick={() => { if (!editing) setExpanded((e) => !e); }}
+                className="h-7 w-7 flex items-center justify-center rounded-lg active:scale-95 transition-all"
+                style={{ background: 'transparent', color: 'var(--text-muted)' }}
+                aria-label={expanded ? 'Collapse' : 'Expand'}
+              >
+                <ChevronDown
+                  className="h-4 w-4 transition-transform"
+                  style={{ transform: expanded ? 'rotate(180deg)' : 'none' }}
+                />
+              </button>
             )}
           </div>
         </div>
@@ -459,6 +482,108 @@ const WorkoutCard: React.FC<{
           </div>
         </div>
       </div>
+
+      {/* ⋯ actions menu */}
+      <AnimatePresence>
+        {showMenu && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            style={{ overflow: 'hidden', borderTop: '1px solid var(--border)' }}
+          >
+            <div className="px-3 py-2 space-y-0.5">
+
+              {/* Rename */}
+              <button
+                onClick={() => { setShowMenu(false); openTitleEdit(); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl active:bg-white/[0.04] transition-colors text-left"
+              >
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                  <Pencil className="w-3.5 h-3.5" style={{ color: 'var(--text-secondary)' }} />
+                </div>
+                <div>
+                  <p className="text-[13px] font-semibold" style={{ color: 'var(--text-primary)' }}>Rename workout</p>
+                  <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Change the title of this session</p>
+                </div>
+              </button>
+
+              {/* Edit exercises */}
+              {hasDetail && (
+                <button
+                  onClick={() => { setShowMenu(false); beginEdit(); }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl active:bg-white/[0.04] transition-colors text-left"
+                >
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                    <Dumbbell className="w-3.5 h-3.5" style={{ color: 'var(--text-secondary)' }} />
+                  </div>
+                  <div>
+                    <p className="text-[13px] font-semibold" style={{ color: 'var(--text-primary)' }}>Edit exercises</p>
+                    <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Adjust sets, reps, weight · separate or remove</p>
+                  </div>
+                </button>
+              )}
+
+              {/* Merge into same-day workouts */}
+              {sameDayWorkouts.map((target) => (
+                <button
+                  key={target.id}
+                  onClick={() => mergeInto(target)}
+                  disabled={merging}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl active:bg-white/[0.04] transition-colors text-left disabled:opacity-50"
+                >
+                  <div
+                    className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-[12px] font-black"
+                    style={{ background: `color-mix(in srgb, ${getAccent(target)} 14%, var(--bg-elevated))`, color: getAccent(target) }}
+                  >
+                    {getDisplayTitle(target).charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[13px] font-semibold truncate" style={{ color: 'var(--text-primary)' }}>
+                      {merging ? 'Merging…' : `Merge into "${getDisplayTitle(target)}"`}
+                    </p>
+                    <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+                      Move all exercises · {getExerciseCount(target)} exercise{getExerciseCount(target) !== 1 ? 's' : ''} already there
+                    </p>
+                  </div>
+                  <LogIn className="w-3.5 h-3.5 shrink-0" style={{ color: '#60a5fa' }} />
+                </button>
+              ))}
+
+              {/* View details */}
+              <Link
+                to="/timeline"
+                onClick={() => setShowMenu(false)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl active:bg-white/[0.04] transition-colors"
+              >
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                  <ExternalLink className="w-3.5 h-3.5" style={{ color: 'var(--text-secondary)' }} />
+                </div>
+                <div>
+                  <p className="text-[13px] font-semibold" style={{ color: 'var(--text-primary)' }}>View details</p>
+                  <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Full workout history timeline</p>
+                </div>
+              </Link>
+
+              {/* Delete */}
+              <button
+                onClick={() => { setShowMenu(false); onDelete(workout.id, workout.title); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl active:bg-white/[0.04] transition-colors text-left"
+              >
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0" style={{ background: 'rgba(255,59,48,0.08)' }}>
+                  <Trash2 className="w-3.5 h-3.5" style={{ color: 'rgba(255,80,65,0.85)' }} />
+                </div>
+                <div>
+                  <p className="text-[13px] font-semibold" style={{ color: 'rgba(255,80,65,0.9)' }}>Delete workout</p>
+                  <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Permanently remove this session</p>
+                </div>
+              </button>
+
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Expanded — exercises with sets */}
       <AnimatePresence initial={false}>
@@ -864,7 +989,15 @@ export const Calendar: React.FC = () => {
     ));
   };
 
-  const renderWorkoutCard = (workout: any) => (
+  const handleMerged = (sourceId: string, targetId: string, targetExercises: any[], targetMuscleGroups: string[]) => {
+    setWorkouts((prev) =>
+      prev
+        .filter((w) => w.id !== sourceId)
+        .map((w) => w.id === targetId ? { ...w, exercises: targetExercises, muscle_groups: targetMuscleGroups } : w),
+    );
+  };
+
+  const renderWorkoutCard = (workout: any, allDayWorkouts: any[]) => (
     <WorkoutCard
       key={workout.id}
       workout={workout}
@@ -873,6 +1006,8 @@ export const Calendar: React.FC = () => {
       onSaved={handleSetsUpdated}
       onRenamed={handleRenamed}
       onExtracted={handleExtracted}
+      sameDayWorkouts={allDayWorkouts.filter((w) => w.id !== workout.id)}
+      onMerged={handleMerged}
     />
   );
 
@@ -1112,7 +1247,7 @@ export const Calendar: React.FC = () => {
             ) : dayWorkouts.length > 0 ? (
               <AnimatePresence initial={false}>
                 <div className="space-y-2">
-                  {dayWorkouts.map((w) => renderWorkoutCard(w))}
+                  {dayWorkouts.map((w) => renderWorkoutCard(w, dayWorkouts))}
                 </div>
               </AnimatePresence>
             ) : (
@@ -1448,7 +1583,7 @@ export const Calendar: React.FC = () => {
                   </>
                 ) : selectedWorkouts.length > 0 ? (
                   <AnimatePresence initial={false}>
-                    {selectedWorkouts.map((w) => renderWorkoutCard(w))}
+                    {selectedWorkouts.map((w) => renderWorkoutCard(w, selectedWorkouts))}
                   </AnimatePresence>
                 ) : (
                   <div className="flex flex-col items-center gap-3 py-10 text-center">
