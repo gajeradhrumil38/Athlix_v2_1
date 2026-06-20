@@ -255,13 +255,16 @@ const WorkoutCard: React.FC<{
 
   const openTitleEdit = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setDraftTitle(title);
+    // If the stored title is generic/null, start blank so the user types a real name
+    // rather than accidentally saving the exercise name as the workout title
+    setDraftTitle(isGenericTitle(workout.title) ? '' : (workout.title ?? ''));
     setEditingTitle(true);
   };
   const commitTitle = async () => {
     setEditingTitle(false);
     const trimmed = draftTitle.trim();
-    if (!trimmed || trimmed === title || !user) return;
+    // Blank = user cancelled; same as stored title = no change
+    if (!trimmed || trimmed === workout.title || !user) return;
     try {
       await renameWorkout(user.id, workout.id, trimmed);
       onRenamed(workout.id, trimmed);
@@ -343,6 +346,7 @@ const WorkoutCard: React.FC<{
               <input
                 autoFocus
                 value={draftTitle}
+                placeholder={title}
                 onChange={(e) => setDraftTitle(e.target.value)}
                 onBlur={commitTitle}
                 onKeyDown={(e) => { if (e.key === 'Enter') { e.currentTarget.blur(); } else if (e.key === 'Escape') { setEditingTitle(false); } }}
