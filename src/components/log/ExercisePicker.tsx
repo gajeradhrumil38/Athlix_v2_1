@@ -410,8 +410,8 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({
             )}
           </div>
 
-          {/* Muscle filter chips — shown only when searching */}
-          {search && (
+          {/* Muscle filter chips — shown on History tab and when searching */}
+          {(search || activeTab === 'recent') && !selectedMuscle && (
             <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-2 -mx-1 px-1">
               {['All', ...MUSCLE_GROUPS.map(m => m.name)].map((m) => {
                 const isAll = m === 'All';
@@ -446,7 +446,7 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({
                 return (
                   <button
                     key={id}
-                    onClick={() => { setActiveTab(id as any); setSearch(''); setSelectedMuscle(null); }}
+                    onClick={() => { setActiveTab(id as any); setSearch(''); setSelectedMuscle(null); setFilterMuscle(null); }}
                     className="flex-1 h-8 rounded-lg text-[12px] font-semibold flex items-center justify-center gap-1.5 transition-all"
                     style={isActive ? { background: 'var(--accent)', color: '#000' } : { background: 'transparent', color: 'var(--text-secondary)' }}
                   >
@@ -480,8 +480,22 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({
                     </div>
                   ))
                 : (() => {
-                    const list = recentExercises.length > 0 ? recentExercises : recentLibraryExercises;
-                    // Group by muscle
+                    const raw = recentExercises.length > 0 ? recentExercises : recentLibraryExercises;
+                    const list = filterMuscle ? raw.filter(ex => ex.muscleGroup === filterMuscle) : raw;
+                    if (list.length === 0 && filterMuscle) {
+                      return (
+                        <div className="flex flex-col items-center gap-2 py-12 text-center">
+                          <p className="text-[13px] font-semibold" style={{ color: 'var(--text-primary)' }}>No {filterMuscle} exercises logged yet</p>
+                          <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Log a {filterMuscle} workout and it will show up here</p>
+                        </div>
+                      );
+                    }
+                    // Group by muscle (skip grouping header when a single muscle is filtered)
+                    if (filterMuscle) {
+                      return list.map(exercise => (
+                        <ExerciseRow key={exercise.id} exercise={exercise} isSelected={selectedMap.has(exercise.name)} onToggle={handleToggle} weightUnit={weightUnit} />
+                      ));
+                    }
                     const groups = new Map<string, Exercise[]>();
                     list.forEach(ex => {
                       const g = ex.muscleGroup || 'Other';

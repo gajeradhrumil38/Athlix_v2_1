@@ -250,6 +250,7 @@ const WorkoutCard: React.FC<{
   const [draftTitle, setDraftTitle]     = useState('');
   const [showAddEx, setShowAddEx]       = useState(false);
   const [addExQuery, setAddExQuery]     = useState('');
+  const [addExCategory, setAddExCategory] = useState<string | null>(null);
   const [extracting, setExtracting]     = useState<number | null>(null);
   const [merging, setMerging]           = useState(false);
   const [showMenu, setShowMenu]         = useState(false);
@@ -359,13 +360,19 @@ const WorkoutCard: React.FC<{
     setGroups((p) => [...p, { name, muscle_group: muscleGroup, exercise_db_id: null, sets: [{ weight: 0, reps: 10 }], isCardio: false }]);
     setShowAddEx(false);
     setAddExQuery('');
+    setAddExCategory(null);
   };
 
-  // Fuzzy-search results from catalog (limit 6)
+  // Fuzzy-search results from catalog, filtered by category if set
   const addExResults = useMemo(() => {
-    if (!addExQuery.trim()) return [];
-    return fuzzyFilter(OPENTRAINING_EXERCISES, addExQuery, (e) => e.name).slice(0, 6);
-  }, [addExQuery]);
+    const hasQuery = addExQuery.trim().length > 0;
+    let pool = hasQuery
+      ? fuzzyFilter(OPENTRAINING_EXERCISES, addExQuery, (e) => e.name)
+      : OPENTRAINING_EXERCISES;
+    if (addExCategory) pool = pool.filter((e) => e.muscleGroup === addExCategory);
+    if (!hasQuery && !addExCategory) return [];
+    return pool.slice(0, 8);
+  }, [addExQuery, addExCategory]);
 
   const save = async () => {
     if (!user) return;
@@ -760,6 +767,7 @@ const WorkoutCard: React.FC<{
                     </button>
                   ) : (
                     <div className="rounded-xl overflow-hidden" style={{ background: 'var(--bg-base)', border: '1px solid var(--border)' }}>
+                      {/* Search row */}
                       <div className="flex items-center gap-2 px-3 py-2.5" style={{ borderBottom: '1px solid var(--border)' }}>
                         <Search className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--text-muted)' }} />
                         <input
@@ -771,14 +779,37 @@ const WorkoutCard: React.FC<{
                           className="flex-1 text-[13px] bg-transparent focus:outline-none"
                           style={{ color: 'var(--text-primary)', caretColor: 'var(--accent)' }}
                         />
-                        <button onClick={() => { setShowAddEx(false); setAddExQuery(''); }}
+                        <button onClick={() => { setShowAddEx(false); setAddExQuery(''); setAddExCategory(null); }}
                           className="w-6 h-6 flex items-center justify-center rounded-md"
                           style={{ background: 'var(--bg-elevated)' }}>
                           <X className="w-3 h-3" style={{ color: 'var(--text-muted)' }} />
                         </button>
                       </div>
+                      {/* Category filter chips */}
+                      <div className="flex gap-1.5 overflow-x-auto no-scrollbar px-3 py-2" style={{ borderBottom: '1px solid var(--border)' }}>
+                        {(['All', 'Chest', 'Back', 'Shoulders', 'Biceps', 'Triceps', 'Legs', 'Core'] as const).map((cat) => {
+                          const isAll = cat === 'All';
+                          const active = isAll ? addExCategory === null : addExCategory === cat;
+                          const color = muscleColor(cat);
+                          return (
+                            <button
+                              key={cat}
+                              onClick={() => setAddExCategory(isAll ? null : cat === addExCategory ? null : cat)}
+                              onKeyDown={(e) => e.stopPropagation()}
+                              className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-semibold transition-all"
+                              style={active
+                                ? { background: isAll ? 'rgba(200,255,0,0.12)' : `${color}22`, color: isAll ? 'var(--accent)' : color, border: `1px solid ${isAll ? 'rgba(200,255,0,0.3)' : `${color}55`}` }
+                                : { background: 'var(--bg-elevated)', color: 'var(--text-muted)', border: '1px solid transparent' }
+                              }
+                            >
+                              {cat}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      {/* Results */}
                       {addExResults.length > 0 && (
-                        <div className="py-1">
+                        <div className="py-1 max-h-[240px] overflow-y-auto">
                           {addExResults.map((ex) => (
                             <button key={ex.id}
                               onClick={() => addExerciseToGroups(ex.name, ex.muscleGroup)}
@@ -790,8 +821,13 @@ const WorkoutCard: React.FC<{
                           ))}
                         </div>
                       )}
-                      {addExQuery.trim() !== '' && addExResults.length === 0 && (
-                        <p className="px-4 py-3 text-[12px]" style={{ color: 'var(--text-muted)' }}>No results for "{addExQuery}"</p>
+                      {!addExQuery.trim() && !addExCategory && (
+                        <p className="px-4 py-3 text-[12px]" style={{ color: 'var(--text-muted)' }}>Search or pick a category above</p>
+                      )}
+                      {(addExQuery.trim() || addExCategory) && addExResults.length === 0 && (
+                        <p className="px-4 py-3 text-[12px]" style={{ color: 'var(--text-muted)' }}>
+                          {addExQuery.trim() ? `No results for "${addExQuery}"` : `No exercises found`}
+                        </p>
                       )}
                     </div>
                   )}
