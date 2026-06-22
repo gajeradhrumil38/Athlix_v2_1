@@ -49,12 +49,12 @@
      */
 
     /* ── Backgrounds ──────────────────────────────── */
-    --bg-base:       #0a0c10;
-    --bg-surface:    #121720;
-    --bg-elevated:   #1a2030;
-    --bg-hover:      #1e2638;
-    --border:        #1e2638;
-    --border-subtle: #121720;
+    --bg-base:       #030508;
+    --bg-surface:    rgba(255, 255, 255, 0.05);
+    --bg-elevated:   rgba(0, 0, 0, 0.35);
+    --bg-hover:      rgba(255, 255, 255, 0.09);
+    --border:        rgba(255, 255, 255, 0.10);
+    --border-subtle: rgba(255, 255, 255, 0.05);
 
     /* ── Text ─────────────────────────────────────── */
     --text-primary:   #e8edf3;
@@ -110,12 +110,23 @@
 
   body {
     background-color: var(--bg-base);
+    /* Ambient blue glow — right-side depth field matching the glass design */
+    background-image:
+      radial-gradient(ellipse 480px 520px at 105% 50%, rgba(26, 53, 88, 0.50) 0%, transparent 70%),
+      radial-gradient(ellipse 300px 300px at 0% 80%, rgba(14, 30, 58, 0.30) 0%, transparent 60%);
     color: var(--text-primary);
     font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  }
+
+  /* ── Global glass surface backdrop ───────────────────── */
+  /* Any bordered+rounded element carrying the surface token gets frosted blur */
+  .glass-surface {
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
   }
 
   /* Smooth scrolling everywhere */
@@ -172,7 +183,17 @@
     background: var(--bg-surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-xl);
-    box-shadow: var(--ios-surface-shadow);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255,255,255,0.06) inset;
+    backdrop-filter: blur(20px) saturate(1.4);
+    -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  }
+
+  /* Accent left-border strip — used on workout session cards */
+  .card-accent-border {
+    border-left: 3px solid var(--accent);
+  }
+  .card-accent-border-dim {
+    border-left: 3px solid rgba(200, 255, 0, 0.35);
   }
 
   /* Consistent card radius helper — use this instead of hardcoded values */

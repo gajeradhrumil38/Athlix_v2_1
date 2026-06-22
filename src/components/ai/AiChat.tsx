@@ -67,13 +67,13 @@ const AURORA_CSS = `
     50%      { opacity:0.7; box-shadow:0 0 10px rgba(124,58,237,0.6); }
   }
   .ai-aurora-spin {
-    background-image: linear-gradient(var(--bg-elevated,#1a2030),var(--bg-elevated,#1a2030)),
+    background-image: linear-gradient(var(--bg-elevated,rgba(0,0,0,0.35)),var(--bg-elevated,rgba(0,0,0,0.35))),
       conic-gradient(from var(--ai-angle),#7c3aed,#2563eb,#C8FF00,#7c3aed);
     background-origin: border-box; background-clip: padding-box,border-box;
     animation: ai-spin 3s linear infinite;
   }
   .ai-aurora-static {
-    background-image: linear-gradient(var(--bg-elevated,#1a2030),var(--bg-elevated,#1a2030)),
+    background-image: linear-gradient(var(--bg-elevated,rgba(0,0,0,0.35)),var(--bg-elevated,rgba(0,0,0,0.35))),
       linear-gradient(135deg,#7c3aed,#2563eb,#C8FF00);
     background-origin: border-box; background-clip: padding-box,border-box;
   }

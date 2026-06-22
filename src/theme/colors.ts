@@ -31,14 +31,14 @@ export const palette = {
 
   // ── Backgrounds ────────────────────────────────────────────────────
   // Layered from darkest (page root) to lightest (raised surfaces).
-  bgBase:      '#0a0c10',   // app root / page background
-  bgSurface:   '#121720',   // cards, bottom sheets, panels
-  bgElevated:  '#1a2030',   // inputs, inner cards, raised rows
-  bgHover:     '#1e2638',   // hover / tapped state
+  bgBase:      '#030508',                    // app root / page background
+  bgSurface:   'rgba(255, 255, 255, 0.05)', // glass cards, bottom sheets, panels
+  bgElevated:  'rgba(0, 0, 0, 0.35)',       // inputs, inner cards, raised rows
+  bgHover:     'rgba(255, 255, 255, 0.09)', // hover / tapped state
 
   // ── Borders ────────────────────────────────────────────────────────
-  border:        '#1e2638',   // default 1px border
-  borderSubtle:  '#121720',   // hairline dividers inside surfaces
+  border:        'rgba(255, 255, 255, 0.10)', // glass card border
+  borderSubtle:  'rgba(255, 255, 255, 0.05)', // hairline dividers inside surfaces
 
   // ── Text ───────────────────────────────────────────────────────────
   textPrimary:   '#e8edf3',   // headings, numbers, primary labels

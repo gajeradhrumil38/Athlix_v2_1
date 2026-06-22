@@ -117,7 +117,14 @@ export const Layout: React.FC = () => {
     >
       <ProgressBar />
       {/* ── Desktop sidebar ───────────────────────────── */}
-      <aside className="hidden md:flex flex-col w-60 shrink-0 border-r border-[var(--border)] bg-[var(--bg-surface)]">
+      <aside
+        className="hidden md:flex flex-col w-60 shrink-0 border-r border-[var(--border)]"
+        style={{
+          background: 'rgba(3, 5, 8, 0.60)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+        }}
+      >
         {/* Logo */}
         <div className="px-6 py-5 border-b border-[var(--border)]">
           <span
@@ -175,10 +182,10 @@ export const Layout: React.FC = () => {
           className="md:hidden fixed top-0 left-0 right-0 z-[90]"
           style={{
             paddingTop: 'env(safe-area-inset-top)',
-            background: 'color-mix(in srgb, var(--bg-base) 82%, transparent)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            borderBottom: '1px solid var(--border)',
+            background: 'rgba(3, 5, 8, 0.72)',
+            backdropFilter: 'blur(24px) saturate(1.4)',
+            WebkitBackdropFilter: 'blur(24px) saturate(1.4)',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           }}
         >
           <div className="flex h-[54px] items-center justify-between px-4">
@@ -217,10 +224,10 @@ export const Layout: React.FC = () => {
           isImmersiveRoute
             ? ''
             : isHomeRoute
-              ? 'pb-[calc(72px+env(safe-area-inset-bottom))] md:pb-0'
+              ? 'pb-[calc(88px+env(safe-area-inset-bottom))] md:pb-0'
               : isHeaderlessRoute
-                ? 'pt-[env(safe-area-inset-top)] pb-[calc(72px+env(safe-area-inset-bottom))] md:pt-0 md:pb-0'
-                : 'pt-[calc(54px+env(safe-area-inset-top))] pb-[calc(72px+env(safe-area-inset-bottom))] md:pt-0 md:pb-0'
+                ? 'pt-[env(safe-area-inset-top)] pb-[calc(88px+env(safe-area-inset-bottom))] md:pt-0 md:pb-0'
+                : 'pt-[calc(54px+env(safe-area-inset-top))] pb-[calc(88px+env(safe-area-inset-bottom))] md:pt-0 md:pb-0'
         }`}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
@@ -247,7 +254,7 @@ export const Layout: React.FC = () => {
           aria-label="Start workout"
           className="md:hidden fixed right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform z-[95]"
           style={{
-            bottom: 'calc(80px + max(env(safe-area-inset-bottom), 12px))',
+            bottom: 'calc(86px + max(env(safe-area-inset-bottom), 12px))',
             background: 'var(--accent)',
             color: '#000',
             boxShadow: '0 4px 20px var(--accent-glow)',
@@ -264,23 +271,29 @@ export const Layout: React.FC = () => {
           <div
             className="md:hidden fixed left-0 right-0 z-[97] pointer-events-none"
             style={{
-              bottom: 'calc(64px + env(safe-area-inset-bottom))',
-              height: 28,
-              background: 'linear-gradient(to bottom, transparent, color-mix(in srgb, var(--bg-base) 88%, transparent))',
+              bottom: 'calc(80px + env(safe-area-inset-bottom))',
+              height: 32,
+              background: 'linear-gradient(to bottom, transparent, rgba(3,5,8,0.80))',
             }}
           />
 
+          {/* Floating glass pill nav */}
           <nav
-            className="md:hidden fixed left-0 right-0 bottom-0 z-[98]"
+            className="md:hidden fixed left-3 right-3 z-[98]"
             style={{
-              background: 'color-mix(in srgb, var(--bg-base) 92%, transparent)',
-              backdropFilter: 'blur(24px)',
-              WebkitBackdropFilter: 'blur(24px)',
-              borderTop: '1px solid var(--border)',
-              paddingBottom: 'env(safe-area-inset-bottom)',
+              bottom: 'calc(10px + env(safe-area-inset-bottom))',
             }}
           >
-            <div className="flex h-16 w-full items-center justify-around px-2">
+            <div
+              className="flex h-[58px] w-full items-center justify-around px-1 rounded-[29px]"
+              style={{
+                background: 'rgba(255, 255, 255, 0.07)',
+                backdropFilter: 'blur(28px) saturate(1.5)',
+                WebkitBackdropFilter: 'blur(28px) saturate(1.5)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255,255,255,0.06) inset',
+              }}
+            >
               {mobileNavItems.map((item) => (
                 <NavLink
                   key={item.path}
@@ -288,20 +301,31 @@ export const Layout: React.FC = () => {
                   end={item.path === '/'}
                   onClick={() => handleTabTap(item.path)}
                   className={({ isActive }) =>
-                    `relative flex flex-1 flex-col items-center justify-center gap-1 h-full transition-all duration-150 ${
-                      isActive ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'
-                    } ${tappedTab === item.path ? 'scale-110' : 'scale-100'}`
+                    `relative flex flex-1 flex-col items-center justify-center gap-0.5 h-full rounded-[24px] transition-all duration-200 ${
+                      tappedTab === item.path ? 'scale-95' : 'scale-100'
+                    }`
                   }
                 >
                   {({ isActive }) => (
                     <>
+                      {/* Active pill highlight */}
                       {isActive && (
-                        <span className="pointer-events-none absolute left-1/2 bottom-2 h-2.5 w-11 -translate-x-1/2 rounded-full bg-[var(--accent)]/28 blur-[10px]" />
+                        <span
+                          className="pointer-events-none absolute inset-[5px] rounded-[20px]"
+                          style={{
+                            background: 'rgba(200, 255, 0, 0.13)',
+                            border: '1px solid rgba(200, 255, 0, 0.22)',
+                          }}
+                        />
                       )}
-                      <span className="relative z-10">
+                      {/* Accent glow below icon */}
+                      {isActive && (
+                        <span className="pointer-events-none absolute bottom-1.5 left-1/2 -translate-x-1/2 h-1 w-8 rounded-full bg-[var(--accent)] opacity-50 blur-[6px]" />
+                      )}
+                      <span className={`relative z-10 transition-colors duration-200 ${isActive ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`}>
                         <AppIcon name={item.icon} size="md" />
                       </span>
-                      <span className={`text-[10px] font-medium leading-none relative z-10 ${isActive ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`}>
+                      <span className={`text-[9px] font-semibold leading-none relative z-10 tracking-wide transition-colors duration-200 ${isActive ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`}>
                         {item.label}
                       </span>
                     </>

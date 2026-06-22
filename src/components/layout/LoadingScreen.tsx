@@ -5,7 +5,7 @@ export const LoadingScreen: React.FC<{ fading?: boolean }> = ({ fading = false }
     style={{
       position: 'fixed',
       inset: 0,
-      background: '#0a0c10',
+      background: '#030508',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',

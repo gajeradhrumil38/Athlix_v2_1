@@ -504,7 +504,7 @@ const ProductItem: React.FC<ProductItemProps> = ({ product, entry, colors, onDon
             transition:  'all 0.18s ease',
           }}
         >
-          {isDone     && <Check size={13} color="#0a0c10" strokeWidth={3} />}
+          {isDone     && <Check size={13} color="#030508" strokeWidth={3} />}
           {isSkipped  && <X    size={11} color="rgba(255,255,255,0.3)" strokeWidth={2.5} />}
           {inProgress && <div className="rounded-full" style={{ width: 6, height: 6, background: colors.accent }} />}
         </div>
