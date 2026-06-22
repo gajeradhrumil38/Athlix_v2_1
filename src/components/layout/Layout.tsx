@@ -118,12 +118,8 @@ export const Layout: React.FC = () => {
       <ProgressBar />
       {/* ── Desktop sidebar ───────────────────────────── */}
       <aside
-        className="hidden md:flex flex-col w-60 shrink-0 border-r border-[var(--border)]"
-        style={{
-          background: 'rgba(3, 5, 8, 0.60)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-        }}
+        className="hidden md:flex flex-col w-60 shrink-0 lg-nav"
+        style={{ borderRight: '1px solid rgba(255,255,255,0.10)' }}
       >
         {/* Logo */}
         <div className="px-6 py-5 border-b border-[var(--border)]">
@@ -179,13 +175,10 @@ export const Layout: React.FC = () => {
       {/* ── Mobile top header ─────────────────────────── */}
       {!isImmersiveRoute && !isHomeRoute && !isHeaderlessRoute && (
         <header
-          className="md:hidden fixed top-0 left-0 right-0 z-[90]"
+          className="md:hidden fixed top-0 left-0 right-0 z-[90] lg-nav"
           style={{
             paddingTop: 'env(safe-area-inset-top)',
-            background: 'rgba(3, 5, 8, 0.72)',
-            backdropFilter: 'blur(24px) saturate(1.4)',
-            WebkitBackdropFilter: 'blur(24px) saturate(1.4)',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            borderBottom: '1px solid rgba(255,255,255,0.10)',
           }}
         >
           <div className="flex h-[54px] items-center justify-between px-4">
@@ -285,14 +278,10 @@ export const Layout: React.FC = () => {
             }}
           >
             <div
-              className="flex h-[62px] w-full items-center justify-around px-2 rounded-[31px]"
+              className="flex h-[62px] w-full items-center justify-around px-2 rounded-[31px] lg-nav"
               style={{
-                /* iOS liquid glass: layered backgrounds for depth */
-                background: 'rgba(28, 28, 32, 0.78)',
-                backdropFilter: 'blur(40px) saturate(1.8) brightness(1.1)',
-                WebkitBackdropFilter: 'blur(40px) saturate(1.8) brightness(1.1)',
-                border: '1px solid rgba(255, 255, 255, 0.14)',
-                boxShadow: '0 2px 24px rgba(0,0,0,0.60), 0 1px 0 rgba(255,255,255,0.08) inset, 0 -1px 0 rgba(0,0,0,0.30) inset',
+                border: '1px solid rgba(255,255,255,0.13)',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.50)',
               }}
             >
               {mobileNavItems.map((item) => (
@@ -321,7 +310,7 @@ export const Layout: React.FC = () => {
                         <span
                           className="transition-all duration-200"
                           style={{
-                            color: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.35)',
+                            color: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.30)',
                             filter: isActive ? 'drop-shadow(0 0 6px rgba(200,255,0,0.45))' : 'none',
                             transform: tappedTab === item.path ? 'scale(0.88)' : 'scale(1)',
                             display: 'block',
@@ -335,7 +324,7 @@ export const Layout: React.FC = () => {
                       {/* Label */}
                       <span
                         className="text-[9.5px] font-medium leading-none tracking-wide transition-all duration-200"
-                        style={{ color: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.28)' }}
+                        style={{ color: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.30)' }}
                       >
                         {item.label}
                       </span>
@@ -355,13 +344,16 @@ export const Layout: React.FC = () => {
         toastOptions={{
           duration: 3000,
           style: {
-            background: 'var(--bg-elevated)',
+            background: 'rgba(28, 28, 32, 0.94)',
+            backdropFilter: 'blur(40px) saturate(1.8)',
+            WebkitBackdropFilter: 'blur(40px) saturate(1.8)',
             color: 'var(--text-primary)',
-            border: '1px solid var(--border)',
-            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.13)',
+            borderRadius: '14px',
             fontSize: '14px',
             fontWeight: 500,
             padding: '10px 14px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.40), 0 1px 0 rgba(255,255,255,0.07) inset',
           },
           success: {
             iconTheme: { primary: 'var(--accent)', secondary: '#000' },
