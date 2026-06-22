@@ -356,9 +356,10 @@ export const ExercisePicker: React.FC<ExercisePickerProps> = ({
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        className="absolute inset-0 mx-auto w-full max-w-[860px] flex flex-col border-x"
-        style={{ background: 'var(--bg-base)', borderColor: 'var(--border)' }}
+        className="absolute inset-0 mx-auto w-full max-w-[860px] flex flex-col border-x lg-sheet"
+        style={{ borderColor: 'var(--border)', borderTop: '1px solid rgba(255,255,255,0.13)' }}
       >
+        <div className="lg-handle" />
         {/* ── Header ── */}
         <div
           className="flex items-center justify-between px-4 pb-3"

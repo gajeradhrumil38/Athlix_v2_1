@@ -70,7 +70,7 @@ export const WeightRepsModal: React.FC<WeightRepsModalProps> = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[200] bg-[var(--bg-base)] flex flex-col"
+      className="fixed inset-0 z-[200] flex flex-col lg-sheet"
     >
       {/* Header */}
       <header className="h-[52px] flex-shrink-0 flex items-center justify-between px-3 border-b border-[var(--border)]">

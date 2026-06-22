@@ -1163,18 +1163,16 @@ export const AiChat: React.FC = () => {
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 320 }}
-            className="md:hidden fixed bottom-0 left-0 right-0 z-[200] flex flex-col"
+            className="md:hidden fixed bottom-0 left-0 right-0 z-[200] flex flex-col lg-sheet"
             style={{
               height: '82vh',
-              borderRadius: '16px 16px 0 0',
-              background: 'var(--bg-surface)',
-              borderTop: '1px solid var(--border)',
-              borderLeft: '1px solid var(--border)',
-              borderRight: '1px solid var(--border)',
+              borderRadius: '20px 20px 0 0',
+              border: '1px solid rgba(255,255,255,0.13)',
+              borderBottom: 'none',
             }}
           >
             {/* Drag pill */}
-            <div style={{ width: 36, height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.15)', margin: '10px auto 0', flexShrink: 0 }} />
+            <div className="lg-handle" />
             {showKeySetup ? (
               <ApiKeySetupModal onDone={() => setShowKeySetup(false)} />
             ) : (
@@ -1208,15 +1206,15 @@ export const AiChat: React.FC = () => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
             transition={{ duration: 0.2 }}
-            className="hidden md:flex fixed z-[200] flex-col"
+            className="hidden md:flex fixed z-[200] flex-col lg-nav"
             style={{
               width: 420,
               height: 600,
               bottom: 32,
               right: 32,
               borderRadius: 20,
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border)',
+              border: '1px solid rgba(255,255,255,0.10)',
+              borderLeft: '1px solid rgba(255,255,255,0.10)',
               boxShadow: '0 24px 80px rgba(0,0,0,0.5)',
             }}
           >
