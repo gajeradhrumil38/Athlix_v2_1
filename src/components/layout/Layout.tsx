@@ -267,17 +267,17 @@ export const Layout: React.FC = () => {
       {/* ── Mobile bottom nav ─────────────────────────── */}
       {!isImmersiveRoute && (
         <>
-          {/* Fade gradient above nav */}
+          {/* Fade gradient above the floating nav pill */}
           <div
             className="md:hidden fixed left-0 right-0 z-[97] pointer-events-none"
             style={{
-              bottom: 'calc(80px + env(safe-area-inset-bottom))',
-              height: 32,
-              background: 'linear-gradient(to bottom, transparent, rgba(3,5,8,0.80))',
+              bottom: 'calc(82px + env(safe-area-inset-bottom))',
+              height: 40,
+              background: 'linear-gradient(to bottom, transparent, rgba(3,5,8,0.70))',
             }}
           />
 
-          {/* Floating glass pill nav */}
+          {/* Floating liquid-glass pill nav */}
           <nav
             className="md:hidden fixed left-3 right-3 z-[98]"
             style={{
@@ -285,13 +285,14 @@ export const Layout: React.FC = () => {
             }}
           >
             <div
-              className="flex h-[58px] w-full items-center justify-around px-1 rounded-[29px]"
+              className="flex h-[62px] w-full items-center justify-around px-2 rounded-[31px]"
               style={{
-                background: 'rgba(255, 255, 255, 0.07)',
-                backdropFilter: 'blur(28px) saturate(1.5)',
-                WebkitBackdropFilter: 'blur(28px) saturate(1.5)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
-                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255,255,255,0.06) inset',
+                /* iOS liquid glass: layered backgrounds for depth */
+                background: 'rgba(28, 28, 32, 0.78)',
+                backdropFilter: 'blur(40px) saturate(1.8) brightness(1.1)',
+                WebkitBackdropFilter: 'blur(40px) saturate(1.8) brightness(1.1)',
+                border: '1px solid rgba(255, 255, 255, 0.14)',
+                boxShadow: '0 2px 24px rgba(0,0,0,0.60), 0 1px 0 rgba(255,255,255,0.08) inset, 0 -1px 0 rgba(0,0,0,0.30) inset',
               }}
             >
               {mobileNavItems.map((item) => (
@@ -300,32 +301,42 @@ export const Layout: React.FC = () => {
                   to={item.path}
                   end={item.path === '/'}
                   onClick={() => handleTabTap(item.path)}
-                  className={({ isActive }) =>
-                    `relative flex flex-1 flex-col items-center justify-center gap-0.5 h-full rounded-[24px] transition-all duration-200 ${
-                      tappedTab === item.path ? 'scale-95' : 'scale-100'
-                    }`
-                  }
+                  className="relative flex flex-1 flex-col items-center justify-center gap-[3px] h-full"
+                  style={{ transition: 'opacity 0.15s ease' }}
                 >
                   {({ isActive }) => (
                     <>
-                      {/* Active pill highlight */}
-                      {isActive && (
+                      {/* Tight icon-capsule — iOS style: wraps only the icon, not the label */}
+                      <span
+                        className="relative flex items-center justify-center w-[46px] h-[30px] rounded-[15px] transition-all duration-200"
+                        style={
+                          isActive
+                            ? {
+                                background: 'rgba(200, 255, 0, 0.16)',
+                                boxShadow: '0 0 0 1px rgba(200,255,0,0.25) inset, 0 1px 8px rgba(200,255,0,0.18)',
+                              }
+                            : { background: 'transparent' }
+                        }
+                      >
                         <span
-                          className="pointer-events-none absolute inset-[5px] rounded-[20px]"
+                          className="transition-all duration-200"
                           style={{
-                            background: 'rgba(200, 255, 0, 0.13)',
-                            border: '1px solid rgba(200, 255, 0, 0.22)',
+                            color: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.35)',
+                            filter: isActive ? 'drop-shadow(0 0 6px rgba(200,255,0,0.45))' : 'none',
+                            transform: tappedTab === item.path ? 'scale(0.88)' : 'scale(1)',
+                            display: 'block',
+                            transition: 'transform 0.12s ease, filter 0.2s ease, color 0.2s ease',
                           }}
-                        />
-                      )}
-                      {/* Accent glow below icon */}
-                      {isActive && (
-                        <span className="pointer-events-none absolute bottom-1.5 left-1/2 -translate-x-1/2 h-1 w-8 rounded-full bg-[var(--accent)] opacity-50 blur-[6px]" />
-                      )}
-                      <span className={`relative z-10 transition-colors duration-200 ${isActive ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`}>
-                        <AppIcon name={item.icon} size="md" />
+                        >
+                          <AppIcon name={item.icon} size="md" />
+                        </span>
                       </span>
-                      <span className={`text-[9px] font-semibold leading-none relative z-10 tracking-wide transition-colors duration-200 ${isActive ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]'}`}>
+
+                      {/* Label */}
+                      <span
+                        className="text-[9.5px] font-medium leading-none tracking-wide transition-all duration-200"
+                        style={{ color: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.28)' }}
+                      >
                         {item.label}
                       </span>
                     </>
