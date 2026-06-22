@@ -69,9 +69,10 @@ export const FinishSheet: React.FC<FinishSheetProps> = ({
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="w-full max-w-[480px] bg-[var(--bg-base)] rounded-t-[24px] flex flex-col border-t border-[var(--border)]"
-        style={{ height: '90%' }}
+        className="w-full max-w-[480px] lg-sheet rounded-t-[24px] flex flex-col"
+        style={{ height: '90%', borderTop: '1px solid rgba(255,255,255,0.13)' }}
       >
+        <div className="lg-handle" />
         {/* Header */}
         <div className="p-4 border-b border-[var(--border)] flex items-center justify-between">
           <button onClick={onCancel} disabled={saving} className="p-2 text-[var(--text-muted)] disabled:opacity-40">
@@ -151,7 +152,7 @@ export const FinishSheet: React.FC<FinishSheetProps> = ({
         </div>
 
         {/* Action Button */}
-        <div className="p-6 border-t border-[var(--border)] bg-[var(--bg-base)]">
+        <div className="p-6 border-t border-[var(--border)]">
           {onAddMore && (
             <button
               type="button"

@@ -581,12 +581,12 @@ export const PlanTodaySheet: React.FC<PlanTodaySheetProps> = ({ onClose, onStart
           animate={{ y: 0 }}
           exit={{ y: '100%' }}
           transition={{ type: 'spring', damping: 26, stiffness: 220 }}
-          className="w-full max-w-[480px] flex flex-col rounded-t-[24px]"
-          style={{ background: 'var(--bg-base)', height: '92%' }}
+          className="w-full max-w-[480px] lg-sheet flex flex-col rounded-t-[24px]"
+          style={{ height: '92%', borderTop: '1px solid rgba(255,255,255,0.13)' }}
         >
           {/* Handle + header */}
           <div className="shrink-0 px-5 pt-3 pb-4 border-b" style={{ borderColor: 'var(--border)' }}>
-            <div className="w-10 h-1 bg-[var(--text-muted)] rounded-full mx-auto mb-4 opacity-40" />
+            <div className="lg-handle" />
             <div className="flex items-center gap-2">
               <div className="flex-1 min-w-0">
                 <input
@@ -687,7 +687,7 @@ export const PlanTodaySheet: React.FC<PlanTodaySheetProps> = ({ onClose, onStart
           {/* Bottom bar */}
           <div
             className="shrink-0 px-4 pt-3 pb-[max(20px,env(safe-area-inset-bottom))] border-t space-y-2"
-            style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}
+            style={{ borderColor: 'var(--border)' }}
           >
             <button
               type="button"

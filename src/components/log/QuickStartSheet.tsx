@@ -122,11 +122,11 @@ export const QuickStartSheet: React.FC<QuickStartSheetProps> = ({
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="w-full max-w-[480px] rounded-t-[20px] flex flex-col border-t border-[var(--border)]"
-        style={{ background: 'var(--bg-surface)', maxHeight: '88%' }}
+        className="w-full max-w-[480px] lg-sheet rounded-t-[24px] flex flex-col"
+        style={{ maxHeight: '88%', borderTop: '1px solid rgba(255,255,255,0.13)' }}
       >
         <div className="shrink-0 pt-3 pb-4 px-6 border-b border-[var(--border)]">
-          <div className="w-12 h-1 bg-[var(--text-muted)] rounded-full mx-auto mb-4 opacity-40" />
+          <div className="lg-handle" />
           <h2 className="text-[15px] font-bold text-[var(--text-primary)]">Start Workout</h2>
           <p className="text-[11px] text-[var(--text-secondary)]">What are you training today?</p>
         </div>
