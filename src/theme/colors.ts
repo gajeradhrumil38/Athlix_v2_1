@@ -82,6 +82,10 @@ export const palette = {
   aiGradientFrom: '#7c3aed',   // AI Coach icon gradient — start (purple)
   aiGradientTo:   '#2563eb',   // AI Coach icon gradient — end  (blue)
 
+  // ── Liquid Glass materials ──────────────────────────────────────────
+  lgNavBg:   'rgba(28, 28, 32, 0.78)',  // nav bar / tab bar background
+  lgSheetBg: 'rgba(18, 18, 24, 0.90)', // bottom sheets / modals
+
 } as const;
 
 export type PaletteKey = keyof typeof palette;
@@ -120,6 +124,8 @@ const CSS_TOKENS: Record<PaletteKey, string> = {
   heartRate:      '--heart-rate',
   aiGradientFrom: '--ai-gradient-from',
   aiGradientTo:   '--ai-gradient-to',
+  lgNavBg:        '--lg-nav-bg',
+  lgSheetBg:      '--lg-sheet-bg',
 };
 
 /**
