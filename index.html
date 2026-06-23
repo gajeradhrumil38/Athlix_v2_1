@@ -12,6 +12,20 @@
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   </head>
   <body class="bg-black text-white antialiased">
+    <!--
+      Liquid Glass surface filter — feTurbulence distorts the specular highlight
+      gradient on .lg-nav and .lg-sheet pseudo-elements, producing the subtle
+      "wet glass" refraction that iOS Metal shaders achieve natively.
+      scale="3" = max 3px displacement, barely perceptible but tactile.
+    -->
+    <svg style="display:none;position:absolute;width:0;height:0" aria-hidden="true" focusable="false">
+      <defs>
+        <filter id="lg-surface" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.55 0.70" numOctaves="1" seed="7" result="noise"/>
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+      </defs>
+    </svg>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

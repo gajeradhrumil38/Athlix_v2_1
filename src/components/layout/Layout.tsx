@@ -245,7 +245,7 @@ export const Layout: React.FC = () => {
           to="/log?plan=1"
           onClick={() => { if (navigator.vibrate) navigator.vibrate(15); }}
           aria-label="Start workout"
-          className="md:hidden fixed right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-transform z-[95]"
+          className="md:hidden fixed right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform z-[95] lg-interactive"
           style={{
             bottom: 'calc(86px + max(env(safe-area-inset-bottom), 12px))',
             background: 'var(--accent)',
@@ -297,7 +297,7 @@ export const Layout: React.FC = () => {
                     <>
                       {/* Tight icon-capsule — iOS style: wraps only the icon, not the label */}
                       <span
-                        className="relative flex items-center justify-center w-[46px] h-[30px] rounded-[15px] transition-all duration-200"
+                        className="relative flex items-center justify-center w-[46px] h-[30px] rounded-[15px] transition-all duration-200 lg-interactive"
                         style={
                           isActive
                             ? {

@@ -225,6 +225,43 @@
     -webkit-backdrop-filter: blur(50px) saturate(2.0) brightness(1.04);
   }
 
+  /* "Clear" glass — lighter variant for nested overlays, popovers, tooltips */
+  .lg-clear {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(24px) saturate(1.5) brightness(1.08);
+    -webkit-backdrop-filter: blur(24px) saturate(1.5) brightness(1.08);
+  }
+
+  /* Interactive glass — adds press scale + shimmer sweep on active (iOS 26 "grow on touch") */
+  .lg-interactive {
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .lg-interactive:active {
+    transform: scale(1.025);
+  }
+  .lg-interactive::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      105deg,
+      transparent 20%,
+      rgba(255, 255, 255, 0.10) 50%,
+      transparent 80%
+    );
+    background-size: 200% 100%;
+    background-position: 200% 0;
+    pointer-events: none;
+    border-radius: inherit;
+    transition: background-position 0s;
+  }
+  .lg-interactive:active::after {
+    background-position: -200% 0;
+    transition: background-position 0.35s ease-out;
+  }
+
   .lg-handle {
     width: 36px;
     height: 4px;
@@ -232,6 +269,47 @@
     background: rgba(255, 255, 255, 0.18);
     margin: 10px auto 0;
     flex-shrink: 0;
+  }
+
+  /*
+   * Wet-glass surface texture — the ::after pseudo-element is a diagonal
+   * specular highlight gradient distorted by the SVG #lg-surface filter.
+   * mix-blend-mode: overlay means it brightens light areas and darkens dark
+   * ones — just like a glass pane catching ambient light at an angle.
+   * pointer-events: none so it never blocks taps.
+   * isolation: isolate keeps the z-index local so the overlay can sit above
+   * content without escaping the element's stacking context.
+   */
+  .lg-nav,
+  .lg-sheet {
+    isolation: isolate;
+  }
+
+  .lg-nav::after,
+  .lg-sheet::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 1;
+    background: linear-gradient(
+      125deg,
+      rgba(255, 255, 255, 0.07) 0%,
+      rgba(255, 255, 255, 0.01) 42%,
+      rgba(255, 255, 255, 0.04) 68%,
+      rgba(255, 255, 255, 0.08) 100%
+    );
+    filter: url(#lg-surface);
+    mix-blend-mode: overlay;
+    opacity: 0.65;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lg-nav::after,
+    .lg-sheet::after {
+      filter: none;
+    }
   }
 
   /* Liquid glass: bordered rounded div cards get light backdrop blur automatically */
