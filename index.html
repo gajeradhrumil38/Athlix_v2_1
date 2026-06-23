@@ -13,16 +13,39 @@
   </head>
   <body class="bg-black text-white antialiased">
     <!--
-      Liquid Glass surface filter — feTurbulence distorts the specular highlight
-      gradient on .lg-nav and .lg-sheet pseudo-elements, producing the subtle
-      "wet glass" refraction that iOS Metal shaders achieve natively.
-      scale="3" = max 3px displacement, barely perceptible but tactile.
+      Liquid Glass SVG filters (nikdelvin technique):
+
+      #lg-surface — surface texture filter applied to .lg-nav/.lg-sheet ::after
+      pseudo-element specular highlight. feTurbulence + feDisplacementMap warps
+      the diagonal gradient so the specular edge looks organic, not straight-ruled.
+
+      #lg-edge — edge-weighted lens refraction (the nikdelvin innovation).
+      A radial gradient acts as the displacement MAP: dark (0) in the center
+      means zero displacement there; bright (255) at the perimeter means maximum
+      displacement at the glass edge — exactly how a physical glass lens refracts
+      light at its boundary. Applied as filter on the ::before pseudo-element of
+      .lg-nav, creating the "lens rim" refraction visible on real iOS glass.
     -->
     <svg style="display:none;position:absolute;width:0;height:0" aria-hidden="true" focusable="false">
       <defs>
+        <!-- Surface micro-texture (existing, unchanged) -->
         <filter id="lg-surface" x="0%" y="0%" width="100%" height="100%" color-interpolation-filters="sRGB">
           <feTurbulence type="fractalNoise" baseFrequency="0.55 0.70" numOctaves="1" seed="7" result="noise"/>
           <feDisplacementMap in="SourceGraphic" in2="noise" scale="3" xChannelSelector="R" yChannelSelector="G"/>
+        </filter>
+
+        <!--
+          Edge-weighted lens refraction filter (nikdelvin technique adapted for SVG).
+          Low baseFrequency (0.008) = very large, smooth noise waves = lens-like
+          distortion rather than surface grain. Applied to .lg-nav ::before pseudo-element
+          which carries a radial rim-highlight gradient (bright at edges, dark center),
+          so the combined effect is: max visual distortion at the glass perimeter,
+          near-zero at center — matching physical glass optics.
+          scale="5" = 5px max displacement at the rim.
+        -->
+        <filter id="lg-edge" x="-5%" y="-5%" width="110%" height="110%" color-interpolation-filters="sRGB">
+          <feTurbulence type="fractalNoise" baseFrequency="0.008 0.012" numOctaves="1" seed="11" result="lensWave"/>
+          <feDisplacementMap in="SourceGraphic" in2="lensWave" scale="5" xChannelSelector="R" yChannelSelector="G"/>
         </filter>
       </defs>
     </svg>

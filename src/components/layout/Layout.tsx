@@ -46,6 +46,15 @@ export const Layout: React.FC = () => {
   const swipeStartRef = useRef<{ x: number; y: number; ts: number } | null>(null);
   const tapTimerRef = useRef<number | null>(null);
 
+  // Index of the currently active mobile nav tab (-1 = no match, e.g. on /timeline)
+  const activeNavIndex = useMemo(() => {
+    return mobileNavItems.findIndex((item) =>
+      item.path === '/'
+        ? location.pathname === '/'
+        : location.pathname.startsWith(item.path),
+    );
+  }, [location.pathname]);
+
   const currentPageLabel = useMemo(() => {
     if (location.pathname.startsWith('/settings/layout')) return 'Layout';
     if (location.pathname === '/') return 'Home';
@@ -273,58 +282,79 @@ export const Layout: React.FC = () => {
           {/* Floating liquid-glass pill nav */}
           <nav
             className="md:hidden fixed left-3 right-3 z-[98]"
-            style={{
-              bottom: 'calc(10px + env(safe-area-inset-bottom))',
-            }}
+            style={{ bottom: 'calc(10px + env(safe-area-inset-bottom))' }}
           >
             <div
-              className="flex h-[62px] w-full items-center justify-around px-2 rounded-[31px] lg-nav"
+              className="relative flex h-[70px] w-full items-center rounded-[35px] lg-nav"
               style={{
-                border: '1px solid rgba(255,255,255,0.13)',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.50)',
+                border: '1px solid rgba(255,255,255,0.15)',
+                boxShadow:
+                  '0 8px 36px rgba(0,0,0,0.65), inset 0 1.5px 0 rgba(255,255,255,0.20), inset 0 -1px 0 rgba(0,0,0,0.25)',
               }}
             >
+              {/* iOS-style sliding full-height active indicator */}
+              {activeNavIndex >= 0 && (
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute',
+                    top: 7,
+                    bottom: 7,
+                    left: `calc(${activeNavIndex * 20}% + 5px)`,
+                    width: 'calc(20% - 10px)',
+                    background: 'rgba(200, 255, 0, 0.13)',
+                    borderRadius: 26,
+                    border: '1px solid rgba(200, 255, 0, 0.22)',
+                    boxShadow: '0 0 16px rgba(200,255,0,0.12), inset 0 1px 0 rgba(255,255,255,0.10)',
+                    transition: 'left 0.40s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                    pointerEvents: 'none',
+                    zIndex: 0,
+                  }}
+                />
+              )}
+
               {mobileNavItems.map((item) => (
                 <NavLink
                   key={item.path}
                   to={item.path}
                   end={item.path === '/'}
                   onClick={() => handleTabTap(item.path)}
-                  className="relative flex flex-1 flex-col items-center justify-center gap-[3px] h-full"
-                  style={{ transition: 'opacity 0.15s ease' }}
+                  className="relative flex flex-1 flex-col items-center justify-center gap-[4px] h-full"
+                  style={{ zIndex: 1 }}
                 >
                   {({ isActive }) => (
                     <>
-                      {/* Tight icon-capsule — iOS style: wraps only the icon, not the label */}
+                      {/* Icon */}
                       <span
-                        className="relative flex items-center justify-center w-[46px] h-[30px] rounded-[15px] transition-all duration-200 lg-interactive"
-                        style={
-                          isActive
-                            ? {
-                                background: 'rgba(200, 255, 0, 0.16)',
-                                boxShadow: '0 0 0 1px rgba(200,255,0,0.25) inset, 0 1px 8px rgba(200,255,0,0.18)',
-                              }
-                            : { background: 'transparent' }
-                        }
+                        style={{
+                          display: 'block',
+                          color: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.40)',
+                          filter: isActive
+                            ? 'drop-shadow(0 0 5px rgba(200,255,0,0.45))'
+                            : 'none',
+                          transform:
+                            tappedTab === item.path
+                              ? 'scale(0.84)'
+                              : isActive
+                                ? 'scale(1.06)'
+                                : 'scale(1)',
+                          transition:
+                            'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), filter 0.22s ease, color 0.22s ease',
+                        }}
                       >
-                        <span
-                          className="transition-all duration-200"
-                          style={{
-                            color: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.30)',
-                            filter: isActive ? 'drop-shadow(0 0 6px rgba(200,255,0,0.45))' : 'none',
-                            transform: tappedTab === item.path ? 'scale(0.88)' : 'scale(1)',
-                            display: 'block',
-                            transition: 'transform 0.12s ease, filter 0.2s ease, color 0.2s ease',
-                          }}
-                        >
-                          <AppIcon name={item.icon} size="md" />
-                        </span>
+                        <AppIcon name={item.icon} size="md" />
                       </span>
 
                       {/* Label */}
                       <span
-                        className="text-[9.5px] font-medium leading-none tracking-wide transition-all duration-200"
-                        style={{ color: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.30)' }}
+                        style={{
+                          fontSize: '10px',
+                          fontWeight: isActive ? 600 : 500,
+                          letterSpacing: '0.15px',
+                          lineHeight: 1,
+                          color: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.38)',
+                          transition: 'color 0.22s ease, font-weight 0.22s ease',
+                        }}
                       >
                         {item.label}
                       </span>

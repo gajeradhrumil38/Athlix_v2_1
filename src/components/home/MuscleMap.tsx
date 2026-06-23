@@ -196,7 +196,7 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({
         </div>
 
         {/* Right — muscle bar list */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto', gap: 0 }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto', gap: 0, paddingRight: 2 }}>
           {trainedGroups.length === 0 ? (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontSize: 10, color: '#4A5A6A', textAlign: 'center' }}>Log a workout to light up your muscles</span>
@@ -207,20 +207,20 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({
               const color = slugBaseHex(group)
               const loadVal = Math.round(d.load)
               return (
-                <div key={group} style={{ padding: '5px 2px', borderBottom: i < trainedGroups.length - 1 ? '0.5px solid rgba(255,255,255,0.04)' : 'none' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <div style={{ width: 6, height: 6, borderRadius: 2, background: color, flexShrink: 0 }} />
-                      <span style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,0.82)', lineHeight: 1 }}>
+                <div key={group} style={{ padding: '5px 4px 5px 2px', borderBottom: i < trainedGroups.length - 1 ? '0.5px solid rgba(255,255,255,0.04)' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                      <div style={{ width: 5, height: 5, borderRadius: 2, background: color, flexShrink: 0 }} />
+                      <span style={{ fontSize: 10, fontWeight: 600, color: 'rgba(255,255,255,0.85)', lineHeight: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {getMuscleSlugLabel(group)}
                       </span>
                     </div>
-                    <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', flexShrink: 0, marginLeft: 6 }}>
+                    <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.42)', flexShrink: 0, marginLeft: 4, whiteSpace: 'nowrap' }}>
                       {loadVal.toLocaleString()} {unit}
                     </span>
                   </div>
-                  <div style={{ height: 4, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 3, opacity: 0.9 }} />
+                  <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ width: `${pct}%`, height: '100%', background: color, borderRadius: 3, opacity: 0.88 }} />
                   </div>
                 </div>
               )

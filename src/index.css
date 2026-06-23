@@ -285,6 +285,37 @@
     isolation: isolate;
   }
 
+  /*
+   * Lens-rim layer (nikdelvin edge-weighted technique).
+   * ::before carries a radial gradient that's bright ONLY at the perimeter —
+   * so when #lg-edge displaces it, the visual displacement is concentrated
+   * at the glass boundary (max refraction) and invisible at the center
+   * (zero displacement) — exactly how a physical glass edge works.
+   */
+  .lg-nav::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    z-index: 0;
+    background: radial-gradient(
+      ellipse at 50% 50%,
+      transparent 55%,
+      rgba(255, 255, 255, 0.05) 75%,
+      rgba(255, 255, 255, 0.09) 100%
+    );
+    filter: url(#lg-edge);
+    mix-blend-mode: screen;
+    opacity: 0.8;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .lg-nav::before {
+      filter: none;
+    }
+  }
+
   .lg-nav::after,
   .lg-sheet::after {
     content: '';
