@@ -1122,21 +1122,23 @@ export const AiChat: React.FC = () => {
     }]);
   }, []);
 
-  /* ── FAB button (mobile only, sits left of the + FAB) ───────────── */
+  /* ── FAB button (mobile only — anchored at the left end of the nav pill) ── */
   const fabButton = (
     <button
       onClick={openChat}
       aria-label="Open AI assistant"
-      className="ai-aurora-spin fixed flex items-center justify-center active:scale-95 transition-transform z-[94]"
+      className="ai-aurora-spin fixed flex items-center justify-center transition-all z-[98]"
       style={{
-        width: 50,
-        height: 50,
-        borderRadius: 8,
-        border: '1.5px solid transparent',
-        right: 'calc(16px + 56px + 12px)',
-        bottom: 'calc(80px + max(env(safe-area-inset-bottom), 12px))',
-        background: 'var(--bg-elevated)',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+        left: 8,
+        bottom: 'calc(10px + env(safe-area-inset-bottom))',
+        width: 52,
+        height: 70,
+        borderRadius: 26,
+        border: '1px solid rgba(255,255,255,0.13)',
+        background: 'rgba(28, 28, 32, 0.82)',
+        backdropFilter: 'blur(40px) saturate(1.8)',
+        WebkitBackdropFilter: 'blur(40px) saturate(1.8)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.55), inset 0 1.5px 0 rgba(255,255,255,0.16)',
       }}
     >
       <Sparkles className="w-5 h-5" style={{ color: 'var(--accent)' }} />

@@ -254,9 +254,9 @@ export const Layout: React.FC = () => {
           to="/log?plan=1"
           onClick={() => { if (navigator.vibrate) navigator.vibrate(15); }}
           aria-label="Start workout"
-          className="md:hidden fixed right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform z-[95] lg-interactive"
+          className="md:hidden fixed right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform z-[99] lg-interactive"
           style={{
-            bottom: 'calc(86px + max(env(safe-area-inset-bottom), 12px))',
+            bottom: 'calc(88px + max(env(safe-area-inset-bottom), 12px))',
             background: 'var(--accent)',
             color: '#000',
             boxShadow: '0 4px 20px var(--accent-glow)',
@@ -273,16 +273,16 @@ export const Layout: React.FC = () => {
           <div
             className="md:hidden fixed left-0 right-0 z-[97] pointer-events-none"
             style={{
-              bottom: 'calc(82px + env(safe-area-inset-bottom))',
-              height: 40,
-              background: 'linear-gradient(to bottom, transparent, rgba(3,5,8,0.70))',
+              bottom: 'calc(88px + env(safe-area-inset-bottom))',
+              height: 44,
+              background: 'linear-gradient(to bottom, transparent, rgba(3,5,8,0.72))',
             }}
           />
 
-          {/* Floating liquid-glass pill nav */}
+          {/* Floating liquid-glass pill nav — starts at 68px from left to clear the AI FAB */}
           <nav
-            className="md:hidden fixed left-3 right-3 z-[98]"
-            style={{ bottom: 'calc(10px + env(safe-area-inset-bottom))' }}
+            className="md:hidden fixed right-3 z-[98]"
+            style={{ bottom: 'calc(10px + env(safe-area-inset-bottom))', left: 68 }}
           >
             <div
               className="relative flex h-[70px] w-full items-center rounded-[35px] lg-nav"
