@@ -516,7 +516,15 @@ export const Home: React.FC = () => {
   const WIDGET_COMPONENTS: Record<string, React.ReactNode> = {
     date_navigator: (
       <div key="date_navigator" className="flex flex-col gap-2">
-        <header className="sticky top-0 z-40 bg-[var(--bg-base)]/95 scroll-fade-header grid grid-cols-[1fr_auto_1fr] items-center px-1" style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', paddingTop: 'env(safe-area-inset-top)', minHeight: 'calc(44px + env(safe-area-inset-top))', '--scroll-fade-color': 'rgba(3,5,8,0.95)' } as React.CSSProperties}>
+        <header
+          className="sticky top-0 z-40 lg-nav scroll-fade-header grid grid-cols-[1fr_auto_1fr] items-center px-1"
+          style={{
+            paddingTop: 'env(safe-area-inset-top)',
+            minHeight: 'calc(44px + env(safe-area-inset-top))',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
+            '--scroll-fade-color': 'rgba(3,5,8,0.95)',
+          } as React.CSSProperties}
+        >
           {/* Left: streak + today */}
           <div className="flex items-center gap-2 justify-self-start min-w-0">
             <div className="flex items-center gap-1.5 bg-[var(--bg-elevated)] px-2.5 py-1 rounded-full border border-[var(--border)]">

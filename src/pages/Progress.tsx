@@ -883,7 +883,7 @@ export const Progress: React.FC = () => {
   return (
     <div className="min-h-screen bg-[var(--bg-base)] text-[var(--text-primary)] pb-28 md:pb-10">
       {/* ── Sticky Tab Nav ─────────────────────────────────── */}
-      <div className="sticky top-0 z-20 bg-[var(--bg-base)]/95 backdrop-blur-xl scroll-fade-header">
+      <div className="sticky top-0 z-20 scroll-fade-header lg-nav" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="max-w-4xl mx-auto px-4 py-3">
           <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-[var(--bg-elevated)] border border-white/8 relative">
             {TABS.map((tab) => {
@@ -1990,7 +1990,7 @@ export const Progress: React.FC = () => {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   className="fixed inset-0 z-[65] flex items-end justify-center"
-                  style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}
+                  style={{ background: 'rgba(18,18,24,0.88)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 8 }}
                   onClick={() => setShowEditEntries(false)}
                 >
                   <motion.div
@@ -2062,7 +2062,7 @@ export const Progress: React.FC = () => {
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   className="fixed inset-0 z-[70] flex items-center justify-center px-5"
-                  style={{ background: 'rgba(0,0,0,0.72)', backdropFilter: 'blur(6px)' }}
+                  style={{ background: 'rgba(18,18,24,0.88)', backdropFilter: 'blur(20px)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 8 }}
                   onClick={() => { setEditEntry(null); setEditWeight(''); }}
                 >
                   <motion.div
