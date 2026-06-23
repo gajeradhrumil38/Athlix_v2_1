@@ -613,7 +613,7 @@ export const Settings: React.FC = () => {
         {/* Inline rest timer dial picker */}
         {showRestPicker && (
           <div className="px-5 pb-5 pt-1">
-            <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(20px) saturate(1.3)', WebkitBackdropFilter: 'blur(20px) saturate(1.3)' }}>
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}>
               <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid var(--border)' }}>
                 <p className="text-[12px] font-semibold" style={{ color: 'var(--text-secondary)' }}>Set rest duration</p>
                 <button onClick={() => setShowRestPicker(false)}>
@@ -860,7 +860,7 @@ export const Settings: React.FC = () => {
           {/* Usage stats */}
           <div
             className="rounded-xl p-3 space-y-2"
-            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)', backdropFilter: 'blur(20px) saturate(1.3)', WebkitBackdropFilter: 'blur(20px) saturate(1.3)' }}
+            style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.09)' }}
           >
             <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
               AI Usage
