@@ -299,7 +299,7 @@ export const Auth: React.FC = () => {
           </span>
         </div>
 
-        <div className="w-full max-w-[420px]">
+        <div className="lg-sheet w-full max-w-[420px] p-8" style={{ border: '1px solid rgba(255,255,255,0.12)', borderRadius: 20 }}>
           {/* Heading */}
           <div className="mb-6">
             {isForgot && (
