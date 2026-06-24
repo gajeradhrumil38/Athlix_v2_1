@@ -514,19 +514,21 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
         const totalSets = summary ? Math.max(1, Math.min(20, Number(summary.sets))) : 1;
         const seedWeight = Number(summary?.weight ?? defaults.weight);
         const seedReps = Number(summary?.reps ?? defaults.reps);
+        const clampW = (w: number) => Math.max(0, Math.min(9999, Number(w) || 0));
+        const clampR = (r: number) => Math.max(0, Math.min(999, Number(r) || 0));
         return perSetData && perSetData.length > 0
           ? perSetData.map((s: { weight: number; reps: number }) => ({
               id: createSetId(),
-              weight: s.weight,
-              reps: s.reps,
+              weight: clampW(s.weight),
+              reps: clampR(s.reps),
               done: false,
-              planned_weight: s.weight,
-              planned_reps: s.reps,
+              planned_weight: clampW(s.weight),
+              planned_reps: clampR(s.reps),
             }))
           : Array.from({ length: totalSets }, () => ({
               id: createSetId(),
-              weight: seedWeight,
-              reps: seedReps,
+              weight: clampW(seedWeight),
+              reps: clampR(seedReps),
               done: false,
               ...(summary ? { planned_weight: seedWeight, planned_reps: seedReps } : {}),
             }));

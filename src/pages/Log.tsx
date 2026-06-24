@@ -436,7 +436,7 @@ export const Log: React.FC = () => {
             completed_sets: completedSets.map((set) => {
               const inputType = resolveExerciseInputType(exercise.name);
               const rawReps = Math.max(0, Math.round(Number(set.reps || 0)));
-              const rawWeight = Math.max(0, Number(set.weight || 0));
+              const rawWeight = Math.max(0, Math.min(9999, Number(set.weight || 0)));
               const isDistanceType =
                 inputType === 'distance_time' || inputType === 'distance_only';
 

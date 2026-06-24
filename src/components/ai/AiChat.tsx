@@ -580,7 +580,7 @@ async function executeTool(
     const rawName = (args.exercise_name as string) || '';
     const sets = Math.max(1, Number(args.sets) || 1);
     const reps = Math.max(1, Number(args.reps) || 1);
-    const weight = Number(args.weight ?? 0);
+    const weight = Math.max(0, Math.min(9999, Number(args.weight ?? 0)));
     const unit = (args.unit as 'kg' | 'lbs') || 'kg';
     const date = (args.date as string) || today;
 

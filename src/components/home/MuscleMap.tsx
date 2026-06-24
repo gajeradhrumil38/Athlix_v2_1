@@ -97,10 +97,14 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({
     setTimeout(() => setTooltip(null), 2200)
   }
 
-  const maxMetric = useMemo(
-    () => Math.max(...(Object.values(muscleData) as MuscleEntry[]).map(getMetric), 0),
-    [muscleData]
-  )
+  const displayMax = useMemo(() => {
+    const vals = (Object.values(muscleData) as MuscleEntry[]).map(getMetric).filter(v => v > 0).sort((a, b) => a - b)
+    if (vals.length === 0) return 0
+    const max = vals[vals.length - 1]
+    const second = vals.length > 1 ? vals[vals.length - 2] : max
+    // If max is 100x+ above second-highest, it's a corrupted outlier — cap bars at 10x second
+    return max > second * 100 ? second * 10 : max
+  }, [muscleData])
 
   const trainedGroups = useMemo(
     () =>
@@ -184,7 +188,7 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({
                       {d.sessions} session{d.sessions > 1 ? 's' : ''} · {Math.round(d.sets)} sets
                     </div>
                     <div style={{ height: 3, background: '#1E2F42', borderRadius: 2, marginTop: 6, overflow: 'hidden' }}>
-                      <div style={{ width: `${Math.min(100, maxMetric > 0 ? (getMetric(d) / maxMetric) * 100 : 0)}%`, height: '100%', background: color, borderRadius: 2 }} />
+                      <div style={{ width: `${Math.min(100, displayMax > 0 ? (getMetric(d) / displayMax) * 100 : 0)}%`, height: '100%', background: color, borderRadius: 2 }} />
                     </div>
                   </>
                 ) : (
@@ -203,10 +207,10 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({
             </div>
           ) : (
             trainedGroups.map(([group, d], i) => {
-              const pct = maxMetric > 0 ? Math.min((getMetric(d) / maxMetric) * 100, 100) : 0
+              const pct = displayMax > 0 ? Math.min((getMetric(d) / displayMax) * 100, 100) : 0
               const color = slugBaseHex(group)
               const raw = Math.round(d.load)
-              const loadLabel = raw >= 1_000_000 ? `${(raw / 1_000_000).toFixed(0)}M` : raw >= 10_000 ? `${(raw / 1_000).toFixed(0)}k` : raw.toLocaleString()
+              const loadLabel = raw >= 1e12 ? `${(raw / 1e12).toFixed(0)}T` : raw >= 1e9 ? `${(raw / 1e9).toFixed(0)}B` : raw >= 1e6 ? `${(raw / 1e6).toFixed(0)}M` : raw >= 10_000 ? `${(raw / 1_000).toFixed(0)}k` : raw.toLocaleString()
               return (
                 <div key={group} style={{ padding: '5px 4px 5px 2px', borderBottom: i < trainedGroups.length - 1 ? '0.5px solid rgba(255,255,255,0.04)' : 'none' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, minWidth: 0 }}>
