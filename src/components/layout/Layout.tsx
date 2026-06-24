@@ -4,6 +4,7 @@ import { Toaster } from 'react-hot-toast';
 import { AppIcon, IconName } from '../../config/icons';
 import { AiChat } from '../ai/AiChat';
 import { ProgressBar } from './ProgressBar';
+import { useAuth } from '../../contexts/AuthContext';
 
 const navItems: { path: string; icon: IconName; label: string }[] = [
   { path: '/',          icon: 'Home',      label: 'Home'      },
@@ -16,17 +17,19 @@ const navItems: { path: string; icon: IconName; label: string }[] = [
   { path: '/settings',  icon: 'Settings',  label: 'Settings'  },
 ];
 
+// 4 items — center slot is the dedicated + FAB, not listed here
 const mobileNavItems: { path: string; icon: IconName; label: string }[] = [
-  { path: '/',          icon: 'Home',     label: 'Home'     },
-  { path: '/progress',  icon: 'Activity', label: 'Progress' },
-  { path: '/calendar',  icon: 'Calendar', label: 'Calendar' },
-  { path: '/run',       icon: 'Run',      label: 'Run'      },
-  { path: '/settings',  icon: 'Settings', label: 'Settings' },
+  { path: '/',         icon: 'Home',     label: 'Home'     },
+  { path: '/progress', icon: 'Activity', label: 'Progress' },
+  { path: '/run',      icon: 'Run',      label: 'Run'      },
+  { path: '/calendar', icon: 'Calendar', label: 'Calendar' },
 ];
 
 export const Layout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { profile } = useAuth();
+  const profileInitial = profile?.full_name?.trim().charAt(0).toUpperCase() || 'A';
   const [viewportHeight, setViewportHeight] = useState(
     typeof window === 'undefined' ? 0 : window.innerHeight,
   );
@@ -46,13 +49,16 @@ export const Layout: React.FC = () => {
   const swipeStartRef = useRef<{ x: number; y: number; ts: number } | null>(null);
   const tapTimerRef = useRef<number | null>(null);
 
-  // Index of the currently active mobile nav tab (-1 = no match, e.g. on /timeline)
-  const activeNavIndex = useMemo(() => {
-    return mobileNavItems.findIndex((item) =>
+  // Slot index in the 5-column nav (0,1 = left items; 2 = center +; 3,4 = right items)
+  const activeNavSlot = useMemo(() => {
+    const idx = mobileNavItems.findIndex((item) =>
       item.path === '/'
         ? location.pathname === '/'
         : location.pathname.startsWith(item.path),
     );
+    if (idx === -1) return -1;
+    // items 0,1 → slots 0,1 | items 2,3 → slots 3,4 (skip center slot 2)
+    return idx < 2 ? idx : idx + 1;
   }, [location.pathname]);
 
   const currentPageLabel = useMemo(() => {
@@ -207,14 +213,15 @@ export const Layout: React.FC = () => {
               {currentPageLabel}
             </span>
 
-            {/* AI Coach trigger */}
+            {/* Profile avatar → Settings */}
             <button
               type="button"
-              onClick={() => window.dispatchEvent(new CustomEvent('athlix:open-ai'))}
-              aria-label="Open AI Coach"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--bg-elevated)] text-[var(--accent)] border border-[var(--border)] transition-all active:scale-95"
+              onClick={() => navigate('/settings')}
+              aria-label="Open settings"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-[13px] font-bold transition-all active:scale-95"
+              style={{ background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid rgba(200,255,0,0.25)' }}
             >
-              <AppIcon name="AICoach" size="sm" />
+              {profileInitial}
             </button>
           </div>
         </header>
@@ -248,22 +255,31 @@ export const Layout: React.FC = () => {
       {/* ── AI Chat ──────────────────────────────────── */}
       {!isImmersiveRoute && <AiChat />}
 
-      {/* ── Floating Action Button (hidden on Calendar — it has its own dated + button) ── */}
-      {!isImmersiveRoute && !location.pathname.startsWith('/calendar') && (
-        <NavLink
-          to="/log?plan=1"
-          onClick={() => { if (navigator.vibrate) navigator.vibrate(15); }}
-          aria-label="Start workout"
-          className="md:hidden fixed right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform z-[99] lg-interactive"
+      {/* ── Floating AI Coach button (purple, above nav right) ── */}
+      {!isImmersiveRoute && (
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent('athlix:open-ai'))}
+          aria-label="Open AI Coach"
+          className="md:hidden fixed z-[99]"
           style={{
-            bottom: 'calc(88px + max(env(safe-area-inset-bottom), 12px))',
-            background: 'var(--accent)',
-            color: '#000',
-            boxShadow: '0 4px 20px var(--accent-glow)',
+            right: 14,
+            bottom: 'calc(82px + env(safe-area-inset-bottom))',
+            width: 46,
+            height: 46,
+            borderRadius: 14,
+            background: 'linear-gradient(135deg, #7c3aed 0%, #2563eb 100%)',
+            boxShadow: '0 4px 18px rgba(124,58,237,0.55), 0 0 0 1px rgba(255,255,255,0.12)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'transform 0.15s cubic-bezier(0.34,1.56,0.64,1)',
           }}
         >
-          <AppIcon name="Plus" size="lg" />
-        </NavLink>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+          </svg>
+        </button>
       )}
 
       {/* ── Mobile bottom nav ─────────────────────────── */}
@@ -285,22 +301,22 @@ export const Layout: React.FC = () => {
             style={{ bottom: 'calc(10px + env(safe-area-inset-bottom))' }}
           >
             <div
-              className="relative flex h-[70px] w-full items-center rounded-[35px] lg-nav"
+              className="relative flex h-[66px] w-full items-center rounded-[33px] lg-nav"
               style={{
                 border: '1px solid rgba(255,255,255,0.15)',
-                boxShadow:
-                  '0 8px 36px rgba(0,0,0,0.65), inset 0 1.5px 0 rgba(255,255,255,0.20), inset 0 -1px 0 rgba(0,0,0,0.25)',
+                boxShadow: '0 8px 36px rgba(0,0,0,0.65), inset 0 1.5px 0 rgba(255,255,255,0.20), inset 0 -1px 0 rgba(0,0,0,0.25)',
+                overflow: 'visible',
               }}
             >
-              {/* iOS-style sliding full-height active indicator */}
-              {activeNavIndex >= 0 && (
+                  {/* Sliding active indicator — spans all 5 slots (20% each) */}
+              {activeNavSlot >= 0 && (
                 <div
                   aria-hidden="true"
                   style={{
                     position: 'absolute',
                     top: 7,
                     bottom: 7,
-                    left: `calc(${activeNavIndex * 20}% + 5px)`,
+                    left: `calc(${activeNavSlot * 20}% + 5px)`,
                     width: 'calc(20% - 10px)',
                     background: 'rgba(200, 255, 0, 0.13)',
                     borderRadius: 26,
@@ -313,7 +329,8 @@ export const Layout: React.FC = () => {
                 />
               )}
 
-              {mobileNavItems.map((item) => (
+              {/* Left 2 nav items */}
+              {mobileNavItems.slice(0, 2).map((item) => (
                 <NavLink
                   key={item.path}
                   to={item.path}
@@ -324,38 +341,71 @@ export const Layout: React.FC = () => {
                 >
                   {({ isActive }) => (
                     <>
-                      {/* Icon */}
-                      <span
-                        style={{
-                          display: 'block',
-                          color: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.40)',
-                          filter: isActive
-                            ? 'drop-shadow(0 0 5px rgba(200,255,0,0.45))'
-                            : 'none',
-                          transform:
-                            tappedTab === item.path
-                              ? 'scale(0.84)'
-                              : isActive
-                                ? 'scale(1.06)'
-                                : 'scale(1)',
-                          transition:
-                            'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), filter 0.22s ease, color 0.22s ease',
-                        }}
-                      >
+                      <span style={{
+                        display: 'block',
+                        color: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.40)',
+                        filter: isActive ? 'drop-shadow(0 0 5px rgba(200,255,0,0.45))' : 'none',
+                        transform: tappedTab === item.path ? 'scale(0.84)' : isActive ? 'scale(1.06)' : 'scale(1)',
+                        transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), filter 0.22s ease, color 0.22s ease',
+                      }}>
                         <AppIcon name={item.icon} size="md" />
                       </span>
+                      <span style={{ fontSize: '10px', fontWeight: isActive ? 600 : 500, letterSpacing: '0.15px', lineHeight: 1, color: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.38)', transition: 'color 0.22s ease' }}>
+                        {item.label}
+                      </span>
+                    </>
+                  )}
+                </NavLink>
+              ))}
 
-                      {/* Label */}
-                      <span
-                        style={{
-                          fontSize: '10px',
-                          fontWeight: isActive ? 600 : 500,
-                          letterSpacing: '0.15px',
-                          lineHeight: 1,
-                          color: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.38)',
-                          transition: 'color 0.22s ease, font-weight 0.22s ease',
-                        }}
-                      >
+              {/* Center + FAB slot — circle protrudes above the pill */}
+              <div className="relative flex flex-1 items-center justify-center" style={{ zIndex: 2 }}>
+                <NavLink
+                  to="/log?plan=1"
+                  onClick={() => { if (navigator.vibrate) navigator.vibrate(15); }}
+                  aria-label="Start workout"
+                  style={{
+                    position: 'absolute',
+                    top: '-22px',
+                    width: 56,
+                    height: 56,
+                    borderRadius: '50%',
+                    background: 'var(--accent)',
+                    color: '#000',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 20px rgba(200,255,0,0.45), 0 0 0 3px rgba(200,255,0,0.15)',
+                    transition: 'transform 0.15s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.15s ease',
+                  }}
+                  className="active:scale-90"
+                >
+                  <AppIcon name="Plus" size="lg" />
+                </NavLink>
+              </div>
+
+              {/* Right 2 nav items */}
+              {mobileNavItems.slice(2, 4).map((item) => (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  end={item.path === '/'}
+                  onClick={() => handleTabTap(item.path)}
+                  className="relative flex flex-1 flex-col items-center justify-center gap-[4px] h-full"
+                  style={{ zIndex: 1 }}
+                >
+                  {({ isActive }) => (
+                    <>
+                      <span style={{
+                        display: 'block',
+                        color: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.40)',
+                        filter: isActive ? 'drop-shadow(0 0 5px rgba(200,255,0,0.45))' : 'none',
+                        transform: tappedTab === item.path ? 'scale(0.84)' : isActive ? 'scale(1.06)' : 'scale(1)',
+                        transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), filter 0.22s ease, color 0.22s ease',
+                      }}>
+                        <AppIcon name={item.icon} size="md" />
+                      </span>
+                      <span style={{ fontSize: '10px', fontWeight: isActive ? 600 : 500, letterSpacing: '0.15px', lineHeight: 1, color: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.38)', transition: 'color 0.22s ease' }}>
                         {item.label}
                       </span>
                     </>
