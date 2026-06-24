@@ -392,14 +392,20 @@ export const Home: React.FC = () => {
 
   const dayExerciseStats = useMemo(() => {
     if (viewMode !== 'Day') return [];
-    const byName = new Map<string, { name: string; volume: number; sets: number }>();
+    const byName = new Map<string, { name: string; volume: number; sets: number; isRun: boolean; runUnit?: string; runMinutes?: number }>();
     rangeExercises.forEach((ex: any) => {
-      const volume = (toDisplayExerciseWeight(ex) * Number(ex.reps || 0) * Number(ex.sets || 0));
-      const prev = byName.get(ex.name) || { name: ex.name, volume: 0, sets: 0 };
+      const isRun = ex.unit === 'km' || ex.unit === 'mi';
+      const volume = isRun
+        ? Number(ex.weight || 0)
+        : (toDisplayExerciseWeight(ex) * Number(ex.reps || 0) * Number(ex.sets || 0));
+      const prev = byName.get(ex.name) || { name: ex.name, volume: 0, sets: 0, isRun: false };
       byName.set(ex.name, {
         name: ex.name,
         volume: prev.volume + volume,
-        sets: prev.sets + (Number(ex.sets || 0) || 0),
+        sets: isRun ? prev.sets : prev.sets + (Number(ex.sets || 0) || 0),
+        isRun: isRun || prev.isRun,
+        runUnit: isRun ? String(ex.unit) : prev.runUnit,
+        runMinutes: isRun ? (prev.runMinutes ?? 0) + Number(ex.reps || 0) : prev.runMinutes,
       });
     });
     return Array.from(byName.values()).sort((a, b) => b.volume - a.volume);
@@ -639,11 +645,14 @@ export const Home: React.FC = () => {
                   {dayExerciseStats.slice(0, 4).map((ex) => {
                     const maxVolume = Math.max(dayExerciseStats[0]?.volume || 0, 1);
                     const pct = Math.min((ex.volume / maxVolume) * 100, 100);
+                    const sideLabel = ex.isRun
+                      ? `${ex.runMinutes ?? 0} min`
+                      : `${ex.sets} sets`;
                     return (
                       <div key={ex.name} className="flex flex-col gap-1">
                         <div className="flex items-center justify-between text-[11px] text-[var(--text-secondary)]">
                           <span className="truncate">{ex.name}</span>
-                          <span className="text-[9px]">{ex.sets} sets</span>
+                          <span className="text-[9px]">{sideLabel}</span>
                         </div>
                         <div className="h-1.5 w-full bg-[var(--bg-elevated)] rounded-full overflow-hidden">
                           <motion.div className="h-full rounded-full" style={{ backgroundColor: 'var(--accent)' }}
@@ -825,7 +834,15 @@ export const Home: React.FC = () => {
                 <p className="text-[10px] text-[var(--text-secondary)] flex items-center gap-1.5">
                   <span>{todaysWorkout.duration_minutes || 0} min</span>
                   <span className="w-0.5 h-0.5 rounded-full bg-[#cdd6e1]"></span>
-                  <span>{Array.isArray(todaysWorkout.exercises) ? todaysWorkout.exercises.reduce((sum: number, ex: any) => sum + (toDisplayExerciseWeight(ex) * (ex.reps || 0) * (ex.sets || 0)), 0).toLocaleString() : 0} {displayUnit}</span>
+                  {(() => {
+                    const exList: any[] = Array.isArray(todaysWorkout.exercises) ? todaysWorkout.exercises : [];
+                    const runEx = exList.find((ex: any) => ex.unit === 'km' || ex.unit === 'mi');
+                    if (runEx) {
+                      return <span>{Number(runEx.weight || 0).toFixed(2)} {runEx.unit}</span>;
+                    }
+                    const vol = exList.reduce((sum: number, ex: any) => sum + (toDisplayExerciseWeight(ex) * (ex.reps || 0) * (ex.sets || 0)), 0);
+                    return <span>{vol.toLocaleString()} {displayUnit}</span>;
+                  })()}
                 </p>
               </div>
             </div>
