@@ -39,7 +39,7 @@ CREATE TABLE public.exercises (
   sets INTEGER NOT NULL,
   reps INTEGER NOT NULL,
   weight FLOAT NOT NULL,
-  unit TEXT DEFAULT 'kg' CHECK (unit IN ('kg', 'lbs', 'km', 'mi')),
+  unit TEXT DEFAULT 'lbs' CHECK (unit IN ('kg', 'lbs', 'km', 'mi')),
   order_index INTEGER NOT NULL,
   exercise_db_id TEXT
 );
@@ -125,7 +125,7 @@ CREATE TABLE public.body_weight_logs (
   user_id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
   date DATE NOT NULL,
   weight FLOAT NOT NULL,
-  unit TEXT DEFAULT 'kg' CHECK (unit IN ('kg', 'lbs')),
+  unit TEXT DEFAULT 'lbs' CHECK (unit IN ('kg', 'lbs')),
   notes TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -716,7 +716,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.log_body_weight(
   p_date DATE,
   p_weight DOUBLE PRECISION,
-  p_unit TEXT DEFAULT 'kg',
+  p_unit TEXT DEFAULT 'lbs',
   p_notes TEXT DEFAULT NULL
 )
 RETURNS UUID

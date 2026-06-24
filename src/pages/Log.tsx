@@ -306,19 +306,21 @@ export const Log: React.FC = () => {
                   sets: [],
                 });
               }
+              const safeWeight = Math.max(0, Math.min(9999, Number(ex.weight || 0)));
               map.get(ex.name)!.sets.push({
                 id: crypto.randomUUID(),
-                weight: ex.weight,
+                weight: safeWeight,
                 reps: ex.reps,
                 done: true,
               });
             });
 
-          // Infer optionalWeight: if a reps_only exercise was saved with weight, user had it enabled
+          // Infer optionalWeight: only enable if exercise was intentionally saved with valid weight
+          // Never trigger on corrupted values — a valid weighted set has weight in (0, 9999]
           const preloaded = Array.from(map.values()).map((entry) => {
             if (resolveExerciseInputType(entry.name) === 'reps_only') {
-              const hasWeight = entry.sets.some((s) => Number(s.weight || 0) > 0);
-              if (hasWeight) return { ...entry, optionalWeight: true };
+              const hasValidWeight = entry.sets.some((s) => Number(s.weight || 0) > 0 && Number(s.weight || 0) <= 9999);
+              if (hasValidWeight) return { ...entry, optionalWeight: true };
             }
             return entry;
           });
@@ -434,11 +436,12 @@ export const Log: React.FC = () => {
             exercise_db_id: exercise.exercise_db_id || null,
             order_index: exerciseIndex,
             completed_sets: completedSets.map((set) => {
-              const inputType = resolveExerciseInputType(exercise.name);
+              const inputType = exercise.inputTypeOverride ?? resolveExerciseInputType(exercise.name);
               const rawReps = Math.max(0, Math.round(Number(set.reps || 0)));
-              const rawWeight = Math.max(0, Math.min(9999, Number(set.weight || 0)));
-              const isDistanceType =
-                inputType === 'distance_time' || inputType === 'distance_only';
+              const isDistanceType = inputType === 'distance_time' || inputType === 'distance_only';
+              // reps_only: zero weight unless user explicitly enabled optional weighting
+              const isRepsOnly = inputType === 'reps_only' && !exercise.optionalWeight;
+              const rawWeight = isRepsOnly ? 0 : Math.max(0, Math.min(9999, Number(set.weight || 0)));
 
               return {
                 reps: rawReps,

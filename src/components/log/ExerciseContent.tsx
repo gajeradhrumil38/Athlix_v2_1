@@ -119,10 +119,12 @@ export const ExerciseContent: React.FC<ExerciseContentProps> = (props) => {
 
   const totalVolume = useMemo(
     () =>
-      exercise.sets
-        .filter((set) => set.done)
-        .reduce((sum, set) => sum + Number(set.weight || 0) * Number(set.reps || 0), 0),
-    [exercise.sets],
+      exerciseType === 'reps_only'
+        ? 0
+        : exercise.sets
+            .filter((set) => set.done)
+            .reduce((sum, set) => sum + Number(set.weight || 0) * Number(set.reps || 0), 0),
+    [exercise.sets, exerciseType],
   );
 
   const statUnit = getUnitDisplay(exerciseType, { weightUnit, distanceUnit }).toLowerCase();
