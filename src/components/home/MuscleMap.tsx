@@ -205,7 +205,8 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({
             trainedGroups.map(([group, d], i) => {
               const pct = maxMetric > 0 ? Math.min((getMetric(d) / maxMetric) * 100, 100) : 0
               const color = slugBaseHex(group)
-              const loadVal = Math.round(d.load)
+              const raw = Math.round(d.load)
+              const loadLabel = raw >= 1_000_000 ? `${(raw / 1_000_000).toFixed(0)}M` : raw >= 10_000 ? `${(raw / 1_000).toFixed(0)}k` : raw.toLocaleString()
               return (
                 <div key={group} style={{ padding: '5px 4px 5px 2px', borderBottom: i < trainedGroups.length - 1 ? '0.5px solid rgba(255,255,255,0.04)' : 'none' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, minWidth: 0 }}>
@@ -216,7 +217,7 @@ export const MuscleMap: React.FC<MuscleMapProps> = ({
                       </span>
                     </div>
                     <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.42)', flexShrink: 0, marginLeft: 4, whiteSpace: 'nowrap' }}>
-                      {loadVal.toLocaleString()} {unit}
+                      {loadLabel} {unit}
                     </span>
                   </div>
                   <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
