@@ -514,8 +514,13 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
         const totalSets = summary ? Math.max(1, Math.min(20, Number(summary.sets))) : 1;
         const seedWeight = Number(summary?.weight ?? defaults.weight);
         const seedReps = Number(summary?.reps ?? defaults.reps);
-        // reps_only exercises must never carry forward a weight value (corrupted or otherwise)
-        const clampW = (w: number) => inputType === 'reps_only' ? 0 : Math.max(0, Math.min(9999, Number(w) || 0));
+        // Apply type-aware weight clamping: reps_only → 0, time_only → 120 min max, else 9999 lbs max
+        const clampW = (w: number) => {
+          const v = Number(w) || 0;
+          if (inputType === 'reps_only') return 0;
+          if (inputType === 'time_only') return Math.max(0, Math.min(120, v));
+          return Math.max(0, Math.min(9999, v));
+        };
         const clampR = (r: number) => Math.max(0, Math.min(999, Number(r) || 0));
         return perSetData && perSetData.length > 0
           ? perSetData.map((s: { weight: number; reps: number }) => ({

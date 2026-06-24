@@ -306,7 +306,11 @@ export const Log: React.FC = () => {
                   sets: [],
                 });
               }
-              const safeWeight = Math.max(0, Math.min(9999, Number(ex.weight || 0)));
+              const exInputType = resolveExerciseInputType(ex.name);
+              const rawW = Number(ex.weight || 0);
+              const safeWeight = exInputType === 'reps_only' ? 0
+                : exInputType === 'time_only' ? Math.max(0, Math.min(120, rawW))
+                : Math.max(0, Math.min(9999, rawW));
               map.get(ex.name)!.sets.push({
                 id: crypto.randomUUID(),
                 weight: safeWeight,
