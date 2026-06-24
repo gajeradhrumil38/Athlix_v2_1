@@ -573,7 +573,7 @@ export const getFieldKinds = (type: ExerciseInputType): {
 export const getDefaultSetValues = (type: ExerciseInputType) => {
   switch (type) {
     case 'distance_time': return { weight: 0, reps: 5   };
-    case 'time_only':     return { weight: 5, reps: 0   };
+    case 'time_only':     return { weight: 2, reps: 0   };
     case 'calories_time': return { weight: 0, reps: 5   };
     case 'reps_only':     return { weight: 0, reps: 10  };
     case 'distance_only': return { weight: 0, reps: 0   };

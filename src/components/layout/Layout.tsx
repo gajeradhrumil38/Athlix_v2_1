@@ -304,7 +304,7 @@ export const Layout: React.FC = () => {
               className="relative flex h-[66px] w-full items-center rounded-[33px] lg-nav"
               style={{
                 border: '1px solid rgba(255,255,255,0.15)',
-                boxShadow: '0 8px 36px rgba(0,0,0,0.65), inset 0 1.5px 0 rgba(255,255,255,0.20), inset 0 -1px 0 rgba(0,0,0,0.25)',
+                boxShadow: '0 8px 40px rgba(0,0,0,0.70), inset 0 1.5px 0 rgba(255,255,255,0.32), inset 0 -1px 0 rgba(0,0,0,0.40), inset 1px 0 0 rgba(255,255,255,0.06), inset -1px 0 0 rgba(255,255,255,0.06)',
                 overflow: 'visible',
               }}
             >

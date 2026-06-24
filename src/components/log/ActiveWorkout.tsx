@@ -646,7 +646,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
     haptics.tick();
   };
 
-  const handleToggleWeighted = useCallback((index: number) => {
+  const handleCycleInputType = useCallback((index: number, forcedType?: ExerciseInputType) => {
     setWorkout((prev) => {
       if (!prev) return null;
       return {
@@ -654,8 +654,18 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
         exercises: prev.exercises.map((ex, i) => {
           if (i !== index) return ex;
           const currentType = ex.inputTypeOverride ?? resolveExerciseInputType(ex.name);
-          const nextType: ExerciseInputType = currentType === 'reps_only' ? 'weight_reps' : 'reps_only';
-          return { ...ex, inputTypeOverride: nextType, optionalWeight: false };
+          const nextType: ExerciseInputType = forcedType ?? (
+            currentType === 'weight_reps' ? 'reps_only' :
+            currentType === 'reps_only'   ? 'time_only' :
+                                            'weight_reps'
+          );
+          const defaults = getDefaultSetValues(nextType);
+          return {
+            ...ex,
+            inputTypeOverride: nextType,
+            optionalWeight: false,
+            sets: ex.sets.map((s) => ({ ...s, weight: defaults.weight, reps: defaults.reps, done: false })),
+          };
         }),
       };
     });
@@ -1107,24 +1117,41 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
                       )}
                     </div>
                     <div className="flex items-center gap-2 shrink-0 mt-1">
-                      {/* Weight toggle: always visible, toggles between weighted and reps-only */}
+                      {/* 3-way input type selector: TIME | WEIGHT | REPS */}
                       {(() => {
-                        const isWeighted = (currentExercise.inputTypeOverride ?? resolveExerciseInputType(currentExercise.name)) !== 'reps_only';
+                        const activeType = currentExercise.inputTypeOverride ?? resolveExerciseInputType(currentExercise.name);
+                        const segments: { type: ExerciseInputType; icon: React.ReactNode; label: string }[] = [
+                          { type: 'time_only',   icon: <Timer className="w-3 h-3" />,  label: 'Time'   },
+                          { type: 'weight_reps', icon: <Weight className="w-3 h-3" />, label: 'Weight' },
+                          { type: 'reps_only',   icon: <span className="text-[10px] font-black leading-none">#</span>, label: 'Reps' },
+                        ];
                         return (
-                          <button
-                            type="button"
-                            onClick={() => handleToggleWeighted(activeIndex)}
-                            className="flex h-8 items-center gap-1.5 px-2.5 rounded-lg shrink-0 transition-all text-[10px] font-bold uppercase tracking-wide"
-                            style={{
-                              background: isWeighted ? 'rgba(200,255,0,0.12)' : 'var(--bg-elevated)',
-                              color: isWeighted ? 'var(--accent)' : 'var(--text-muted)',
-                              border: `1px solid ${isWeighted ? 'rgba(200,255,0,0.3)' : 'var(--border)'}`,
-                            }}
-                            aria-label="Toggle weight tracking"
+                          <div
+                            className="flex h-8 rounded-lg overflow-hidden shrink-0"
+                            style={{ border: '1px solid var(--border)', background: 'var(--bg-elevated)' }}
                           >
-                            <Weight className="w-3 h-3" />
-                            {isWeighted ? 'Weighted' : 'Reps Only'}
-                          </button>
+                            {segments.map(({ type, icon, label }) => {
+                              const isActive = activeType === type;
+                              return (
+                                <button
+                                  key={type}
+                                  type="button"
+                                  onClick={() => handleCycleInputType(activeIndex, type)}
+                                  className="flex items-center gap-1 px-2.5 text-[10px] font-bold uppercase tracking-wide transition-all"
+                                  style={{
+                                    background: isActive ? 'rgba(200,255,0,0.14)' : 'transparent',
+                                    color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                                    borderRight: '1px solid var(--border)',
+                                  }}
+                                  aria-label={`Switch to ${label} mode`}
+                                  aria-pressed={isActive}
+                                >
+                                  {icon}
+                                  {label}
+                                </button>
+                              );
+                            })}
+                          </div>
                         );
                       })()}
                       {/* Delete button */}

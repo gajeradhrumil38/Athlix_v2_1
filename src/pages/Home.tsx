@@ -564,15 +564,8 @@ export const Home: React.FC = () => {
             </button>
           </div>
 
-          {/* Right: AI Coach + avatar → settings */}
+          {/* Right: avatar → settings */}
           <div className="justify-self-end flex items-center gap-2">
-            <button
-              onClick={() => window.dispatchEvent(new CustomEvent('athlix:open-ai'))}
-              aria-label="Open AI Coach"
-              className="w-8 h-8 rounded-full bg-[var(--bg-elevated)] flex items-center justify-center text-[var(--accent)] border border-[var(--border)] hover:bg-[var(--bg-hover)] transition-colors active:scale-95"
-            >
-              <AppIcon name="AICoach" size="sm" />
-            </button>
             <button
               onClick={() => navigate('/settings')}
               className="w-8 h-8 rounded-full bg-[var(--accent-dim)] flex items-center justify-center text-[var(--accent)] text-[12px] font-bold border border-[var(--accent)]/20 hover:bg-[var(--accent)]/20 transition-colors"

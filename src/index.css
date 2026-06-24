@@ -57,7 +57,7 @@
     --border-subtle: rgba(255, 255, 255, 0.05);
 
     /* ── Liquid Glass materials ───────────────────────────────────────── */
-    --lg-nav-bg:   rgba(28, 28, 32, 0.78);
+    --lg-nav-bg:   rgba(18, 18, 22, 0.55);
     --lg-sheet-bg: rgba(18, 18, 24, 0.90);
 
     /* ── Text ─────────────────────────────────────── */
@@ -215,8 +215,8 @@
   /* ── Liquid Glass material utilities ─────────────────── */
   .lg-nav {
     background: var(--lg-nav-bg);
-    backdrop-filter: blur(40px) saturate(1.8) brightness(1.06);
-    -webkit-backdrop-filter: blur(40px) saturate(1.8) brightness(1.06);
+    backdrop-filter: blur(60px) saturate(2.2) brightness(1.12);
+    -webkit-backdrop-filter: blur(60px) saturate(2.2) brightness(1.12);
   }
 
   .lg-sheet {
@@ -324,22 +324,29 @@
     border-radius: inherit;
     pointer-events: none;
     z-index: 1;
+    /* Wide soft band that sweeps left→right — the "riding light" */
     background: linear-gradient(
-      125deg,
-      rgba(255, 255, 255, 0.07) 0%,
-      rgba(255, 255, 255, 0.01) 42%,
-      rgba(255, 255, 255, 0.04) 68%,
-      rgba(255, 255, 255, 0.08) 100%
+      105deg,
+      transparent 0%,
+      transparent 25%,
+      rgba(255, 255, 255, 0.11) 45%,
+      rgba(255, 255, 255, 0.06) 55%,
+      transparent 75%,
+      transparent 100%
     );
+    background-size: 250% 100%;
+    background-position: 200% 0;
     filter: url(#lg-surface);
     mix-blend-mode: overlay;
-    opacity: 0.65;
+    animation: lg-ride 7s cubic-bezier(0.45, 0, 0.55, 1) infinite;
   }
 
   @media (prefers-reduced-motion: reduce) {
     .lg-nav::after,
     .lg-sheet::after {
+      animation: none;
       filter: none;
+      background-position: 50% 0;
     }
   }
 
@@ -355,6 +362,14 @@
 }
 
 /* ── Keyframe animations ─────────────────────────────── */
+
+/* Riding glass reflection — slow ambient light sweep across the nav pill */
+@keyframes lg-ride {
+  0%   { background-position: 200%  0; }
+  45%  { background-position: -50%  0; }
+  55%  { background-position: -50%  0; }
+  100% { background-position: 200%  0; }
+}
 
 @keyframes cardEnter {
   from { opacity: 0; transform: translateY(10px); }
