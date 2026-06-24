@@ -1122,28 +1122,7 @@ export const AiChat: React.FC = () => {
     }]);
   }, []);
 
-  /* ── FAB button (mobile only — anchored at the left end of the nav pill) ── */
-  const fabButton = (
-    <button
-      onClick={openChat}
-      aria-label="Open AI assistant"
-      className="ai-aurora-spin fixed flex items-center justify-center transition-all z-[98]"
-      style={{
-        left: 8,
-        bottom: 'calc(10px + env(safe-area-inset-bottom))',
-        width: 52,
-        height: 70,
-        borderRadius: 26,
-        border: '1px solid rgba(255,255,255,0.13)',
-        background: 'rgba(28, 28, 32, 0.82)',
-        backdropFilter: 'blur(40px) saturate(1.8)',
-        WebkitBackdropFilter: 'blur(40px) saturate(1.8)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.55), inset 0 1.5px 0 rgba(255,255,255,0.16)',
-      }}
-    >
-      <Sparkles className="w-5 h-5" style={{ color: 'var(--accent)' }} />
-    </button>
-  );
+  /* ── FAB button removed — AI is now triggered from the top header on every page ── */
 
   /* ── Chat panel (shared mobile + desktop) ──────────────────────────── */
   const chatPanel = (
@@ -1251,12 +1230,7 @@ export const AiChat: React.FC = () => {
     </AnimatePresence>
   );
 
-  return (
-    <>
-      {fabButton}
-      {chatPanel}
-    </>
-  );
+  return <>{chatPanel}</>;
 };
 
 /* ── Inline exercise quick-log form ───────────────────────────────── */

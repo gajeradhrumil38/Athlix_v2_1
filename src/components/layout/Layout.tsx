@@ -207,14 +207,14 @@ export const Layout: React.FC = () => {
               {currentPageLabel}
             </span>
 
-            {/* Home shortcut */}
+            {/* AI Coach trigger */}
             <button
               type="button"
-              onClick={() => navigate('/')}
-              aria-label="Go to home"
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--accent-dim)] text-[var(--accent)] border border-[var(--accent)]/20 transition-all active:scale-95"
+              onClick={() => window.dispatchEvent(new CustomEvent('athlix:open-ai'))}
+              aria-label="Open AI Coach"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--bg-elevated)] text-[var(--accent)] border border-[var(--border)] transition-all active:scale-95"
             >
-              <AppIcon name="Home" size="sm" />
+              <AppIcon name="AICoach" size="sm" />
             </button>
           </div>
         </header>
@@ -279,10 +279,10 @@ export const Layout: React.FC = () => {
             }}
           />
 
-          {/* Floating liquid-glass pill nav — starts at 68px from left to clear the AI FAB */}
+          {/* Floating liquid-glass pill nav */}
           <nav
-            className="md:hidden fixed right-3 z-[98]"
-            style={{ bottom: 'calc(10px + env(safe-area-inset-bottom))', left: 68 }}
+            className="md:hidden fixed left-3 right-3 z-[98]"
+            style={{ bottom: 'calc(10px + env(safe-area-inset-bottom))' }}
           >
             <div
               className="relative flex h-[70px] w-full items-center rounded-[35px] lg-nav"

@@ -15,6 +15,7 @@ import { getExerciseMuscleProfile, getMuscleSlugLabel, PRIMARY_LOAD_WEIGHT, SECO
 import { convertWeight, isWeightUnit, type WeightUnit } from '../lib/units';
 import { WhoopDashboard } from '../features/whoop/components/WhoopDashboard';
 import { MuscleRadar } from '../components/home/MuscleRadar';
+import { AppIcon } from '../config/icons';
 
 // --- Utility Functions ---
 const calculateStreak = (workouts: { date: string }[]) => {
@@ -557,14 +558,23 @@ export const Home: React.FC = () => {
             </button>
           </div>
 
-          {/* Right: avatar → settings */}
-          <button
-            onClick={() => navigate('/settings')}
-            className="justify-self-end w-8 h-8 rounded-full bg-[var(--accent-dim)] flex items-center justify-center text-[var(--accent)] text-[12px] font-bold border border-[var(--accent)]/20 hover:bg-[var(--accent)]/20 transition-colors"
-            aria-label="Open settings"
-          >
-            {profile?.full_name?.trim().charAt(0).toUpperCase() || 'A'}
-          </button>
+          {/* Right: AI Coach + avatar → settings */}
+          <div className="justify-self-end flex items-center gap-2">
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent('athlix:open-ai'))}
+              aria-label="Open AI Coach"
+              className="w-8 h-8 rounded-full bg-[var(--bg-elevated)] flex items-center justify-center text-[var(--accent)] border border-[var(--border)] hover:bg-[var(--bg-hover)] transition-colors active:scale-95"
+            >
+              <AppIcon name="AICoach" size="sm" />
+            </button>
+            <button
+              onClick={() => navigate('/settings')}
+              className="w-8 h-8 rounded-full bg-[var(--accent-dim)] flex items-center justify-center text-[var(--accent)] text-[12px] font-bold border border-[var(--accent)]/20 hover:bg-[var(--accent)]/20 transition-colors"
+              aria-label="Open settings"
+            >
+              {profile?.full_name?.trim().charAt(0).toUpperCase() || 'A'}
+            </button>
+          </div>
         </header>
 
         {/* View mode tabs */}

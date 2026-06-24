@@ -27,6 +27,7 @@ export const ICONS = {
   Run: Footprints,
   Food: Utensils,
   Skincare: Sparkles,
+  AICoach: Sparkles,
   CreateExercise: Dumbbell,
   ExpandDown: ChevronDown,
   Spinner: Loader2,
