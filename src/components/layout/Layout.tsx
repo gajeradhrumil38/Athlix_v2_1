@@ -133,8 +133,8 @@ export const Layout: React.FC = () => {
       <ProgressBar />
       {/* ── Desktop sidebar ───────────────────────────── */}
       <aside
-        className="hidden md:flex flex-col w-60 shrink-0 lg-nav"
-        style={{ borderRight: '1px solid rgba(255,255,255,0.10)' }}
+        className="hidden md:flex flex-col w-60 shrink-0"
+        style={{ background: 'var(--bg-base)', borderRight: '1px solid rgba(255,255,255,0.06)' }}
       >
         {/* Logo */}
         <div className="px-6 py-5 border-b border-[var(--border)]">

@@ -1056,11 +1056,12 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
               >
                 {/* Exercise name header */}
                 <div className="shrink-0 border-b border-white/5">
-                  <div className="px-4 pt-3 pb-2 flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
+                  <div className="px-4 pt-3 pb-2">
+                    {/* Row 1: muscle group (left) + type selector + delete (right) */}
+                    <div className="flex items-center justify-between gap-2 mb-2">
                       {/* Muscle group — tap to change */}
                       {editingExerciseGroup ? (
-                        <div className="flex flex-wrap gap-1.5 mb-2">
+                        <div className="flex flex-wrap gap-1.5 flex-1">
                           {['Chest','Back','Shoulders','Biceps','Triceps','Legs','Core','Cardio','Yoga'].map((g) => (
                             <button key={g} type="button"
                               onClick={() => { handleChangeExerciseGroup(activeIndex, g); setEditingExerciseGroup(false); }}
@@ -1076,7 +1077,7 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
                       ) : (
                         <button type="button"
                           onClick={() => { setEditingExerciseGroup(true); setEditingExerciseName(false); }}
-                          className="flex items-center gap-1.5 mb-1.5 active:opacity-60 cursor-pointer"
+                          className="flex items-center gap-1.5 active:opacity-60 cursor-pointer"
                         >
                           <Tag className="w-3 h-3" style={{ color: muscleColor(currentExercise.muscleGroup) }} />
                           <span className="text-[10px] font-bold uppercase" style={{ letterSpacing: '0.2em', color: muscleColor(currentExercise.muscleGroup) }}>
@@ -1084,9 +1085,59 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
                           </span>
                         </button>
                       )}
-                      {/* Exercise name — tap to rename */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* 3-way input type selector: TIME | WEIGHT | REPS */}
+                        {(() => {
+                          const activeType = currentExercise.inputTypeOverride ?? resolveExerciseInputType(currentExercise.name);
+                          const segments: { type: ExerciseInputType; icon: React.ReactNode; label: string }[] = [
+                            { type: 'time_only',   icon: <Timer className="w-3 h-3" />,  label: 'Time'   },
+                            { type: 'weight_reps', icon: <Weight className="w-3 h-3" />, label: 'Weight' },
+                            { type: 'reps_only',   icon: <span className="text-[10px] font-black leading-none">#</span>, label: 'Reps' },
+                          ];
+                          return (
+                            <div
+                              className="flex h-8 rounded-lg overflow-hidden shrink-0"
+                              style={{ border: '1px solid var(--border)', background: 'var(--bg-elevated)' }}
+                            >
+                              {segments.map(({ type, icon, label }) => {
+                                const isActive = activeType === type;
+                                return (
+                                  <button
+                                    key={type}
+                                    type="button"
+                                    onClick={() => handleCycleInputType(activeIndex, type)}
+                                    className="flex items-center gap-1 px-2.5 text-[10px] font-bold uppercase tracking-wide transition-all"
+                                    style={{
+                                      background: isActive ? 'rgba(200,255,0,0.14)' : 'transparent',
+                                      color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                                      borderRight: '1px solid var(--border)',
+                                    }}
+                                    aria-label={`Switch to ${label} mode`}
+                                    aria-pressed={isActive}
+                                  >
+                                    {icon}
+                                    {label}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                        {/* Delete button */}
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveExercise(activeIndex)}
+                          className="flex h-[34px] w-[34px] items-center justify-center rounded-lg shrink-0 transition-colors"
+                          style={{ background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.25)', color: '#f87171' }}
+                          aria-label="Remove exercise"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                    {/* Row 2: exercise name — full width */}
                       {editingExerciseName ? (
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex items-center gap-2">
                           <input
                             autoFocus
                             value={exerciseNameInput}
@@ -1107,64 +1158,14 @@ export const ActiveWorkout: React.FC<ActiveWorkoutProps> = ({
                       ) : (
                         <button type="button"
                           onClick={() => { setExerciseNameInput(currentExercise.name); setEditingExerciseName(true); setEditingExerciseGroup(false); }}
-                          className="flex items-start gap-2 w-full text-left active:opacity-60 cursor-pointer"
+                          className="flex items-center gap-2 w-full text-left active:opacity-60 cursor-pointer"
                         >
-                          <p className="text-[32px] font-black text-[var(--text-primary)] leading-[1.05] tracking-tight" style={{ wordBreak: 'break-word' }}>
+                          <p className="text-[26px] font-black text-[var(--text-primary)] leading-[1.1] tracking-tight">
                             {currentExercise.name}
                           </p>
-                          <Pencil className="w-3.5 h-3.5 mt-2 shrink-0" style={{ color: 'var(--text-muted)' }} />
+                          <Pencil className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--text-muted)' }} />
                         </button>
                       )}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0 mt-1">
-                      {/* 3-way input type selector: TIME | WEIGHT | REPS */}
-                      {(() => {
-                        const activeType = currentExercise.inputTypeOverride ?? resolveExerciseInputType(currentExercise.name);
-                        const segments: { type: ExerciseInputType; icon: React.ReactNode; label: string }[] = [
-                          { type: 'time_only',   icon: <Timer className="w-3 h-3" />,  label: 'Time'   },
-                          { type: 'weight_reps', icon: <Weight className="w-3 h-3" />, label: 'Weight' },
-                          { type: 'reps_only',   icon: <span className="text-[10px] font-black leading-none">#</span>, label: 'Reps' },
-                        ];
-                        return (
-                          <div
-                            className="flex h-8 rounded-lg overflow-hidden shrink-0"
-                            style={{ border: '1px solid var(--border)', background: 'var(--bg-elevated)' }}
-                          >
-                            {segments.map(({ type, icon, label }) => {
-                              const isActive = activeType === type;
-                              return (
-                                <button
-                                  key={type}
-                                  type="button"
-                                  onClick={() => handleCycleInputType(activeIndex, type)}
-                                  className="flex items-center gap-1 px-2.5 text-[10px] font-bold uppercase tracking-wide transition-all"
-                                  style={{
-                                    background: isActive ? 'rgba(200,255,0,0.14)' : 'transparent',
-                                    color: isActive ? 'var(--accent)' : 'var(--text-muted)',
-                                    borderRight: '1px solid var(--border)',
-                                  }}
-                                  aria-label={`Switch to ${label} mode`}
-                                  aria-pressed={isActive}
-                                >
-                                  {icon}
-                                  {label}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        );
-                      })()}
-                      {/* Delete button */}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveExercise(activeIndex)}
-                        className="flex h-[34px] w-[34px] items-center justify-center rounded-lg shrink-0 transition-colors"
-                        style={{ background: 'rgba(248,113,113,0.12)', border: '1px solid rgba(248,113,113,0.25)', color: '#f87171' }}
-                        aria-label="Remove exercise"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
                   </div>
                 </div>
                 <ExerciseContent
