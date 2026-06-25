@@ -43,22 +43,24 @@ export const ICON_SIZE = {
   xl: 32
 }
 
+// Wrapper component to enforce consistent styling
 interface AppIconProps {
   name: IconName
   size?: keyof typeof ICON_SIZE
   color?: string
   className?: string
+  strokeWidth?: number
 }
 
-// Wrapper component to enforce consistent styling
 export const AppIcon: React.FC<AppIconProps> = ({
   name,
   size = 'md',
   color = 'currentColor',
-  className = ''
+  className = '',
+  strokeWidth = 1.75,
 }) => {
   const IconComponent = ICONS[name]
-  
+
   if (!IconComponent) {
     console.warn(`Icon "${name}" not found in registry.`)
     return null
@@ -68,7 +70,7 @@ export const AppIcon: React.FC<AppIconProps> = ({
     <IconComponent
       size={ICON_SIZE[size]}
       color={color}
-      strokeWidth={2}
+      strokeWidth={strokeWidth}
       className={className}
     />
   )

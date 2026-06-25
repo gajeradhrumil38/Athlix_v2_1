@@ -285,13 +285,26 @@ export const Layout: React.FC = () => {
       {/* ── Mobile bottom nav ─────────────────────────── */}
       {!isImmersiveRoute && (
         <>
-          {/* Fade gradient above the floating nav pill */}
+          {/* Distortion + blur zone above the pill — warps content entering the glass */}
           <div
-            className="md:hidden fixed left-0 right-0 z-[97] pointer-events-none"
+            className="md:hidden fixed left-3 right-3 z-[97] pointer-events-none"
             style={{
-              bottom: 'calc(88px + env(safe-area-inset-bottom))',
-              height: 44,
-              background: 'linear-gradient(to bottom, transparent, rgba(3,5,8,0.72))',
+              bottom: 'calc(76px + env(safe-area-inset-bottom))',
+              height: 40,
+              borderRadius: '20px 20px 0 0',
+              backdropFilter: 'blur(18px) saturate(1.6)',
+              WebkitBackdropFilter: 'blur(18px) saturate(1.6)',
+              maskImage: 'linear-gradient(to bottom, transparent, black)',
+              WebkitMaskImage: 'linear-gradient(to bottom, transparent, black)',
+            }}
+          />
+          {/* Dark scrim that fades page content into the blur zone */}
+          <div
+            className="md:hidden fixed left-0 right-0 z-[96] pointer-events-none"
+            style={{
+              bottom: 'calc(76px + env(safe-area-inset-bottom))',
+              height: 56,
+              background: 'linear-gradient(to bottom, transparent, rgba(3,5,8,0.88))',
             }}
           />
 
@@ -326,10 +339,10 @@ export const Layout: React.FC = () => {
                     bottom: 7,
                     left: `calc(${activeNavSlot * 20}% + 5px)`,
                     width: 'calc(20% - 10px)',
-                    background: 'rgba(255, 255, 255, 0.07)',
-                    borderRadius: 26,
-                    border: '1px solid rgba(255, 255, 255, 0.14)',
-                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.10)',
+                    background: 'transparent',
+                    borderRadius: 11,
+                    border: '1px solid rgba(255, 255, 255, 0.10)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
                     transition: 'left 0.40s cubic-bezier(0.34, 1.56, 0.64, 1)',
                     pointerEvents: 'none',
                     zIndex: 0,
@@ -356,7 +369,7 @@ export const Layout: React.FC = () => {
                         transform: tappedTab === item.path ? 'scale(0.84)' : isActive ? 'scale(1.06)' : 'scale(1)',
                         transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), filter 0.22s ease, color 0.22s ease',
                       }}>
-                        <AppIcon name={item.icon} size="md" />
+                        <AppIcon name={item.icon} size="lg" />
                       </span>
                       <span style={{ fontSize: '10px', fontWeight: isActive ? 600 : 500, letterSpacing: '0.15px', lineHeight: 1, color: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.38)', transition: 'color 0.22s ease' }}>
                         {item.label}
@@ -411,7 +424,7 @@ export const Layout: React.FC = () => {
                         transform: tappedTab === item.path ? 'scale(0.84)' : isActive ? 'scale(1.06)' : 'scale(1)',
                         transition: 'transform 0.18s cubic-bezier(0.34,1.56,0.64,1), filter 0.22s ease, color 0.22s ease',
                       }}>
-                        <AppIcon name={item.icon} size="md" />
+                        <AppIcon name={item.icon} size="lg" />
                       </span>
                       <span style={{ fontSize: '10px', fontWeight: isActive ? 600 : 500, letterSpacing: '0.15px', lineHeight: 1, color: isActive ? 'var(--accent)' : 'rgba(255,255,255,0.38)', transition: 'color 0.22s ease' }}>
                         {item.label}
