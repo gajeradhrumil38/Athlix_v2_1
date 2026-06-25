@@ -301,13 +301,21 @@ export const Layout: React.FC = () => {
             style={{ bottom: 'calc(10px + env(safe-area-inset-bottom))' }}
           >
             <div
-              className="relative flex h-[66px] w-full items-center rounded-[33px] lg-nav"
-              style={{
-                border: '1px solid rgba(255,255,255,0.15)',
-                boxShadow: '0 8px 40px rgba(0,0,0,0.70), inset 0 1.5px 0 rgba(255,255,255,0.32), inset 0 -1px 0 rgba(0,0,0,0.40), inset 1px 0 0 rgba(255,255,255,0.06), inset -1px 0 0 rgba(255,255,255,0.06)',
-                overflow: 'visible',
-              }}
+              className="relative flex h-[66px] w-full items-center rounded-[33px]"
+              style={{ overflow: 'visible' }}
             >
+              {/* Glass layer — overflow:hidden clips backdrop-filter to pill shape */}
+              <div
+                aria-hidden="true"
+                className="lg-nav pointer-events-none"
+                style={{
+                  position: 'absolute', inset: 0,
+                  borderRadius: 33,
+                  overflow: 'hidden',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  boxShadow: '0 8px 40px rgba(0,0,0,0.70), inset 0 1.5px 0 rgba(255,255,255,0.32), inset 0 -1px 0 rgba(0,0,0,0.40), inset 1px 0 0 rgba(255,255,255,0.06), inset -1px 0 0 rgba(255,255,255,0.06)',
+                }}
+              />
                   {/* Sliding active indicator — spans all 5 slots (20% each) */}
               {activeNavSlot >= 0 && (
                 <div
@@ -318,10 +326,10 @@ export const Layout: React.FC = () => {
                     bottom: 7,
                     left: `calc(${activeNavSlot * 20}% + 5px)`,
                     width: 'calc(20% - 10px)',
-                    background: 'rgba(200, 255, 0, 0.13)',
+                    background: 'rgba(255, 255, 255, 0.07)',
                     borderRadius: 26,
-                    border: '1px solid rgba(200, 255, 0, 0.22)',
-                    boxShadow: '0 0 16px rgba(200,255,0,0.12), inset 0 1px 0 rgba(255,255,255,0.10)',
+                    border: '1px solid rgba(255, 255, 255, 0.14)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.10)',
                     transition: 'left 0.40s cubic-bezier(0.34, 1.56, 0.64, 1)',
                     pointerEvents: 'none',
                     zIndex: 0,
