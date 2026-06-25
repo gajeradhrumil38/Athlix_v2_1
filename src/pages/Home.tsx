@@ -524,12 +524,12 @@ export const Home: React.FC = () => {
     date_navigator: (
       <div key="date_navigator" className="flex flex-col gap-2">
         <header
-          className="sticky top-0 z-40 lg-nav scroll-fade-header grid grid-cols-[1fr_auto_1fr] items-center px-1"
+          className="sticky top-0 z-40 grid grid-cols-[1fr_auto_1fr] items-center px-1"
           style={{
             paddingTop: 'env(safe-area-inset-top)',
             minHeight: 'calc(44px + env(safe-area-inset-top))',
+            background: 'var(--bg-base)',
             borderBottom: '1px solid rgba(255,255,255,0.06)',
-            '--scroll-fade-color': 'rgba(3,5,8,0.95)',
           } as React.CSSProperties}
         >
           {/* Left: streak + today */}

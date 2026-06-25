@@ -583,18 +583,3 @@
   position: relative;
 }
 
-.scroll-fade-header::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -24px;
-  height: 24px;
-  background: linear-gradient(
-    to bottom,
-    var(--scroll-fade-color, var(--bg-base)) 0%,
-    transparent 100%
-  );
-  pointer-events: none;
-  z-index: 1;
-}

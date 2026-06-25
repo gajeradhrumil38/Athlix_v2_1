@@ -1366,9 +1366,10 @@ export const Calendar: React.FC = () => {
 
       {/* ── Sticky Header ── */}
       <div
-        className="sticky top-0 z-20 scroll-fade-header lg-nav"
+        className="sticky top-0 z-20"
         style={{
-          borderBottom: '1px solid rgba(255,255,255,0.08)',
+          background: 'var(--bg-base)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
         }}
       >
         {/* ── Expanded controls (hidden when scrolled) ── */}
