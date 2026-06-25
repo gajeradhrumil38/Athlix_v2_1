@@ -312,8 +312,8 @@ export const Layout: React.FC = () => {
                   position: 'absolute', inset: 0,
                   borderRadius: 33,
                   overflow: 'hidden',
-                  border: '1px solid rgba(255,255,255,0.15)',
-                  boxShadow: '0 8px 40px rgba(0,0,0,0.70), inset 0 1.5px 0 rgba(255,255,255,0.32), inset 0 -1px 0 rgba(0,0,0,0.40), inset 1px 0 0 rgba(255,255,255,0.06), inset -1px 0 0 rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.20)',
+                  boxShadow: '0 12px 48px rgba(0,0,0,0.75), inset 0 1.5px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.50), inset 1px 0 0 rgba(255,255,255,0.10), inset -1px 0 0 rgba(255,255,255,0.10)',
                 }}
               />
                   {/* Sliding active indicator — spans all 5 slots (20% each) */}

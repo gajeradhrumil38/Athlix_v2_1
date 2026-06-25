@@ -57,7 +57,7 @@
     --border-subtle: rgba(255, 255, 255, 0.05);
 
     /* ── Liquid Glass materials ───────────────────────────────────────── */
-    --lg-nav-bg:   rgba(18, 18, 22, 0.55);
+    --lg-nav-bg:   rgba(22, 26, 32, 0.28);
     --lg-sheet-bg: rgba(18, 18, 24, 0.90);
 
     /* ── Text ─────────────────────────────────────── */
@@ -215,8 +215,9 @@
   /* ── Liquid Glass material utilities ─────────────────── */
   .lg-nav {
     background: var(--lg-nav-bg);
-    backdrop-filter: blur(60px) saturate(2.2) brightness(1.12);
-    -webkit-backdrop-filter: blur(60px) saturate(2.2) brightness(1.12);
+    /* contrast() prevents muddy blur — makes colours behind vivid like real glass */
+    backdrop-filter: blur(64px) saturate(2.8) brightness(1.18) contrast(1.12);
+    -webkit-backdrop-filter: blur(64px) saturate(2.8) brightness(1.18) contrast(1.12);
   }
 
   .lg-sheet {
@@ -299,15 +300,17 @@
     border-radius: inherit;
     pointer-events: none;
     z-index: 0;
+    /* Rim is bright at perimeter, transparent at center — SVG displaces it for lens refraction */
     background: radial-gradient(
       ellipse at 50% 50%,
-      transparent 55%,
-      rgba(255, 255, 255, 0.05) 75%,
-      rgba(255, 255, 255, 0.09) 100%
+      transparent 42%,
+      rgba(255, 255, 255, 0.06) 65%,
+      rgba(255, 255, 255, 0.18) 85%,
+      rgba(255, 255, 255, 0.28) 100%
     );
     filter: url(#lg-edge);
     mix-blend-mode: screen;
-    opacity: 0.8;
+    opacity: 1;
   }
 
   @media (prefers-reduced-motion: reduce) {
