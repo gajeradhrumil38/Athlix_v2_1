@@ -213,11 +213,24 @@
   }
 
   /* ── Liquid Glass material utilities ─────────────────── */
-  .lg-nav {
-    background: var(--lg-nav-bg);
-    /* contrast() prevents muddy blur — makes colours behind vivid like real glass */
-    backdrop-filter: blur(64px) saturate(2.8) brightness(1.18) contrast(1.12);
-    -webkit-backdrop-filter: blur(64px) saturate(2.8) brightness(1.18) contrast(1.12);
+
+  /* Backdrop blur + creativoma displacement layer.
+     filter: url(#lg-liquid) applies feDisplacementMap to the blurred pixels —
+     the turbulence noise warps what's seen through the glass organically.
+     Safari can't combine feDisplacementMap with backdrop-filter reliably,
+     so a UA-based class .lg-safari switches to the simplified filter. */
+  .lg-distortion {
+    position: absolute;
+    inset: 0;
+    backdrop-filter: blur(40px) saturate(2.2) brightness(1.1);
+    -webkit-backdrop-filter: blur(40px) saturate(2.2) brightness(1.1);
+    filter: url(#lg-liquid);
+    isolation: isolate;
+  }
+
+  /* Safari/iOS: simplified filter (no displacement, just texture blend) */
+  .lg-safari .lg-distortion {
+    filter: url(#lg-liquid-simple);
   }
 
   .lg-sheet {
@@ -281,59 +294,48 @@
    * isolation: isolate keeps the z-index local so the overlay can sit above
    * content without escaping the element's stacking context.
    */
-  .lg-nav,
-  .lg-sheet {
+  /* lg-specular — specular highlights layer (sits above tint, below nav content).
+     ::before = edge-weighted rim refraction (bright perimeter, dark center).
+     ::after  = ambient riding light sweep (slow left→right shimmer). */
+  .lg-specular {
+    position: absolute;
+    inset: 0;
     isolation: isolate;
   }
 
-  /*
-   * Lens-rim layer (nikdelvin edge-weighted technique).
-   * ::before carries a radial gradient that's bright ONLY at the perimeter —
-   * so when #lg-edge displaces it, the visual displacement is concentrated
-   * at the glass boundary (max refraction) and invisible at the center
-   * (zero displacement) — exactly how a physical glass edge works.
-   */
-  .lg-nav::before {
+  .lg-specular::before {
     content: '';
     position: absolute;
     inset: 0;
     border-radius: inherit;
     pointer-events: none;
-    z-index: 0;
-    /* Rim is bright at perimeter, transparent at center — SVG displaces it for lens refraction */
     background: radial-gradient(
       ellipse at 50% 50%,
       transparent 42%,
-      rgba(255, 255, 255, 0.06) 65%,
-      rgba(255, 255, 255, 0.18) 85%,
-      rgba(255, 255, 255, 0.28) 100%
+      rgba(255, 255, 255, 0.05) 65%,
+      rgba(255, 255, 255, 0.15) 85%,
+      rgba(255, 255, 255, 0.24) 100%
     );
     filter: url(#lg-edge);
     mix-blend-mode: screen;
-    opacity: 1;
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .lg-nav::before {
-      filter: none;
-    }
+    .lg-specular::before { filter: none; }
   }
 
-  .lg-nav::after,
-  .lg-sheet::after {
+  .lg-specular::after {
     content: '';
     position: absolute;
     inset: 0;
     border-radius: inherit;
     pointer-events: none;
-    z-index: 1;
-    /* Wide soft band that sweeps left→right — the "riding light" */
     background: linear-gradient(
       105deg,
       transparent 0%,
       transparent 25%,
-      rgba(255, 255, 255, 0.11) 45%,
-      rgba(255, 255, 255, 0.06) 55%,
+      rgba(255, 255, 255, 0.10) 45%,
+      rgba(255, 255, 255, 0.05) 55%,
       transparent 75%,
       transparent 100%
     );
@@ -345,12 +347,15 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .lg-nav::after,
-    .lg-sheet::after {
+    .lg-specular::after {
       animation: none;
       filter: none;
       background-position: 50% 0;
     }
+  }
+
+  .lg-sheet {
+    isolation: isolate;
   }
 
 }

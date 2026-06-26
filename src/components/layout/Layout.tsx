@@ -92,6 +92,13 @@ export const Layout: React.FC = () => {
     return () => { if (tapTimerRef.current) window.clearTimeout(tapTimerRef.current); };
   }, []);
 
+  // Mark <html> with lg-safari class so CSS can switch to the simplified SVG filter
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    const isSafari = /^((?!chrome|android).)*safari/i.test(ua) || /iPad|iPhone|iPod/.test(ua);
+    if (isSafari) document.documentElement.classList.add('lg-safari');
+  }, []);
+
   /* ── Back navigation ─────────────────────────────────── */
   const handleBack = () => {
     if (!canGoBack) return;
@@ -317,18 +324,27 @@ export const Layout: React.FC = () => {
               className="relative flex h-[66px] w-full items-center rounded-[33px]"
               style={{ overflow: 'visible' }}
             >
-              {/* Glass layer — overflow:hidden clips backdrop-filter to pill shape */}
+              {/* Glass shell — clips all layers to pill shape */}
               <div
                 aria-hidden="true"
-                className="lg-nav pointer-events-none"
+                className="pointer-events-none"
                 style={{
                   position: 'absolute', inset: 0,
                   borderRadius: 33,
                   overflow: 'hidden',
-                  border: '1px solid rgba(255,255,255,0.20)',
-                  boxShadow: '0 12px 48px rgba(0,0,0,0.75), inset 0 1.5px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.50), inset 1px 0 0 rgba(255,255,255,0.10), inset -1px 0 0 rgba(255,255,255,0.10)',
+                  border: '1px solid rgba(255,255,255,0.18)',
+                  boxShadow: '0 12px 48px rgba(0,0,0,0.75), inset 0 1.5px 0 rgba(255,255,255,0.40), inset 0 -1px 0 rgba(0,0,0,0.50)',
                 }}
-              />
+              >
+                {/* Layer 1 — backdrop blur + liquid displacement (creativoma technique).
+                    The SVG feDisplacementMap warps the already-blurred background pixels,
+                    creating organic lens distortion. Chrome uses full filter; Safari fallback. */}
+                <div className="lg-distortion" />
+                {/* Layer 2 — dark tint overlay */}
+                <div style={{ position: 'absolute', inset: 0, background: 'var(--lg-nav-bg)' }} />
+                {/* Layer 3 — specular rim glow + riding shimmer */}
+                <div className="lg-specular" />
+              </div>
                   {/* Sliding active indicator — spans all 5 slots (20% each) */}
               {activeNavSlot >= 0 && (
                 <div
