@@ -57,7 +57,7 @@
     --border-subtle: rgba(255, 255, 255, 0.05);
 
     /* ── Liquid Glass materials ───────────────────────────────────────── */
-    --lg-nav-bg:   rgba(14, 16, 20, 0.22);
+    --lg-nav-bg:   transparent;
     --lg-sheet-bg: rgba(18, 18, 24, 0.90);
 
     /* ── Text ─────────────────────────────────────── */
@@ -219,23 +219,23 @@
      the turbulence noise warps what's seen through the glass organically.
      Safari can't combine feDisplacementMap with backdrop-filter reliably,
      so a UA-based class .lg-safari switches to the simplified filter. */
-  /* Creativoma approach: LOW blur + HIGH displacement = visible lens warp.
-     The warp IS the effect — content behind is distorted through the glass lens.
-     blur(6px) keeps background readable so displacement is visible. */
+  /* Exacty the creativoma debug-tuned values:
+     backdrop blur 2px (near transparent) + displacement scale 100 at
+     baseFreq 0.005×0.017 + seed 0 + gaussian 2.5.
+     Low blur keeps background visible so the warp distortion reads clearly. */
   .lg-distortion {
     position: absolute;
     inset: 0;
-    backdrop-filter: blur(6px) saturate(1.8);
-    -webkit-backdrop-filter: blur(6px) saturate(1.8);
+    backdrop-filter: blur(2px);
+    -webkit-backdrop-filter: blur(2px);
     filter: url(#lg-liquid);
     isolation: isolate;
   }
 
-  /* Safari/iOS: feDisplacementMap + backdrop-filter unreliable; use texture blend.
-     Compensate with stronger blur since warp won't show. */
+  /* Safari/iOS fallback — stronger blur since displacement won't show */
   .lg-safari .lg-distortion {
-    backdrop-filter: blur(28px) saturate(2.2) brightness(1.12);
-    -webkit-backdrop-filter: blur(28px) saturate(2.2) brightness(1.12);
+    backdrop-filter: blur(24px) saturate(2.0) brightness(1.1);
+    -webkit-backdrop-filter: blur(24px) saturate(2.0) brightness(1.1);
     filter: url(#lg-liquid-simple);
   }
 
@@ -317,10 +317,9 @@
     pointer-events: none;
     background: radial-gradient(
       ellipse at 50% 50%,
-      transparent 42%,
-      rgba(255, 255, 255, 0.05) 65%,
-      rgba(255, 255, 255, 0.15) 85%,
-      rgba(255, 255, 255, 0.24) 100%
+      transparent 55%,
+      rgba(255, 255, 255, 0.03) 75%,
+      rgba(255, 255, 255, 0.07) 100%
     );
     filter: url(#lg-edge);
     mix-blend-mode: screen;
@@ -339,10 +338,10 @@
     background: linear-gradient(
       105deg,
       transparent 0%,
-      transparent 25%,
-      rgba(255, 255, 255, 0.10) 45%,
-      rgba(255, 255, 255, 0.05) 55%,
-      transparent 75%,
+      transparent 30%,
+      rgba(255, 255, 255, 0.04) 48%,
+      rgba(255, 255, 255, 0.02) 52%,
+      transparent 70%,
       transparent 100%
     );
     background-size: 250% 100%;
