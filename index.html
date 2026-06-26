@@ -39,7 +39,7 @@
           Chrome/non-Safari only; Safari falls back to lg-liquid-simple.
         -->
         <filter id="lg-liquid" x="0%" y="0%" width="100%" height="100%" filterUnits="objectBoundingBox" color-interpolation-filters="sRGB">
-          <feTurbulence type="fractalNoise" baseFrequency="0.008 0.008" numOctaves="1" seed="2" result="turbulence"/>
+          <feTurbulence type="fractalNoise" baseFrequency="0.008 0.008" numOctaves="1" seed="1.5" result="turbulence"/>
           <feComponentTransfer in="turbulence" result="mapped">
             <feFuncR type="gamma" amplitude="1" exponent="10" offset="0.5"/>
             <feFuncG type="gamma" amplitude="0" exponent="1" offset="0"/>
@@ -50,7 +50,7 @@
             <fePointLight x="-200" y="-200" z="300"/>
           </feSpecularLighting>
           <feComposite in="specLight" operator="arithmetic" k1="0" k2="1" k3="1" k4="0" result="litImage"/>
-          <feDisplacementMap in="SourceGraphic" in2="softMap" scale="80" xChannelSelector="R" yChannelSelector="G"/>
+          <feDisplacementMap in="SourceGraphic" in2="softMap" scale="150" xChannelSelector="R" yChannelSelector="G"/>
         </filter>
 
         <!--

@@ -57,7 +57,7 @@
     --border-subtle: rgba(255, 255, 255, 0.05);
 
     /* ── Liquid Glass materials ───────────────────────────────────────── */
-    --lg-nav-bg:   rgba(14, 16, 20, 0.52);
+    --lg-nav-bg:   rgba(14, 16, 20, 0.22);
     --lg-sheet-bg: rgba(18, 18, 24, 0.90);
 
     /* ── Text ─────────────────────────────────────── */
@@ -219,17 +219,23 @@
      the turbulence noise warps what's seen through the glass organically.
      Safari can't combine feDisplacementMap with backdrop-filter reliably,
      so a UA-based class .lg-safari switches to the simplified filter. */
+  /* Creativoma approach: LOW blur + HIGH displacement = visible lens warp.
+     The warp IS the effect — content behind is distorted through the glass lens.
+     blur(6px) keeps background readable so displacement is visible. */
   .lg-distortion {
     position: absolute;
     inset: 0;
-    backdrop-filter: blur(40px) saturate(2.2) brightness(1.1);
-    -webkit-backdrop-filter: blur(40px) saturate(2.2) brightness(1.1);
+    backdrop-filter: blur(6px) saturate(1.8);
+    -webkit-backdrop-filter: blur(6px) saturate(1.8);
     filter: url(#lg-liquid);
     isolation: isolate;
   }
 
-  /* Safari/iOS: simplified filter (no displacement, just texture blend) */
+  /* Safari/iOS: feDisplacementMap + backdrop-filter unreliable; use texture blend.
+     Compensate with stronger blur since warp won't show. */
   .lg-safari .lg-distortion {
+    backdrop-filter: blur(28px) saturate(2.2) brightness(1.12);
+    -webkit-backdrop-filter: blur(28px) saturate(2.2) brightness(1.12);
     filter: url(#lg-liquid-simple);
   }
 

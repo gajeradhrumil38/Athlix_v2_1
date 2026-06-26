@@ -332,8 +332,8 @@ export const Layout: React.FC = () => {
                   position: 'absolute', inset: 0,
                   borderRadius: 33,
                   overflow: 'hidden',
-                  border: '1px solid rgba(255,255,255,0.18)',
-                  boxShadow: '0 12px 48px rgba(0,0,0,0.75), inset 0 1.5px 0 rgba(255,255,255,0.40), inset 0 -1px 0 rgba(0,0,0,0.50)',
+                  border: '1px solid rgba(255,255,255,0.22)',
+                  boxShadow: '0 6px 6px rgba(0,0,0,0.22), 0 0 20px rgba(0,0,0,0.18), inset 0 1.5px 0 rgba(255,255,255,0.38), inset 0 -1px 0 rgba(0,0,0,0.40)',
                 }}
               >
                 {/* Layer 1 — backdrop blur + liquid displacement (creativoma technique).
