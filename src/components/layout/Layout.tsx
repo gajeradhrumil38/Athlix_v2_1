@@ -332,18 +332,14 @@ export const Layout: React.FC = () => {
                   position: 'absolute', inset: 0,
                   borderRadius: 33,
                   overflow: 'hidden',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  boxShadow: '0 6px 6px rgba(0,0,0,0.22), 0 0 20px rgba(0,0,0,0.18)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  boxShadow: '0 8px 32px rgba(0,0,0,0.40), 0 0 0 1px rgba(255,255,255,0.06)',
                 }}
               >
-                {/* Layer 1 — backdrop blur + liquid displacement (creativoma technique).
-                    The SVG feDisplacementMap warps the already-blurred background pixels,
-                    creating organic lens distortion. Chrome uses full filter; Safari fallback. */}
+                {/* Layer 1 — backdrop blur + liquid displacement */}
                 <div className="lg-distortion" />
-                {/* Layer 2 — dark tint overlay */}
+                {/* Layer 2 — dark tint */}
                 <div style={{ position: 'absolute', inset: 0, background: 'var(--lg-nav-bg)' }} />
-                {/* Layer 3 — specular rim glow + riding shimmer */}
-                <div className="lg-specular" />
               </div>
                   {/* Sliding active indicator — spans all 5 slots (20% each) */}
               {activeNavSlot >= 0 && (
