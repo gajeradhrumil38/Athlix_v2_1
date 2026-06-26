@@ -57,7 +57,7 @@
     --border-subtle: rgba(255, 255, 255, 0.05);
 
     /* ── Liquid Glass materials ───────────────────────────────────────── */
-    --lg-nav-bg:   transparent;
+    --lg-nav-bg:   rgba(10, 12, 16, 0.35);
     --lg-sheet-bg: rgba(18, 18, 24, 0.90);
 
     /* ── Text ─────────────────────────────────────── */
@@ -219,23 +219,22 @@
      the turbulence noise warps what's seen through the glass organically.
      Safari can't combine feDisplacementMap with backdrop-filter reliably,
      so a UA-based class .lg-safari switches to the simplified filter. */
-  /* Exacty the creativoma debug-tuned values:
-     backdrop blur 2px (near transparent) + displacement scale 100 at
-     baseFreq 0.005×0.017 + seed 0 + gaussian 2.5.
-     Low blur keeps background visible so the warp distortion reads clearly. */
+  /* backdrop-filter: blur(20px) makes content behind the pill visibly blurred.
+     The SVG displacement filter then warps those blurred pixels into liquid lens
+     waves. Higher blur = more visible frosted effect behind the nav. */
   .lg-distortion {
     position: absolute;
     inset: 0;
-    backdrop-filter: blur(2px);
-    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(20px) saturate(1.8);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
     filter: url(#lg-liquid);
     isolation: isolate;
   }
 
-  /* Safari/iOS fallback — stronger blur since displacement won't show */
+  /* Safari/iOS fallback */
   .lg-safari .lg-distortion {
-    backdrop-filter: blur(24px) saturate(2.0) brightness(1.1);
-    -webkit-backdrop-filter: blur(24px) saturate(2.0) brightness(1.1);
+    backdrop-filter: blur(28px) saturate(2.0) brightness(1.1);
+    -webkit-backdrop-filter: blur(28px) saturate(2.0) brightness(1.1);
     filter: url(#lg-liquid-simple);
   }
 
