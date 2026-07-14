@@ -17,9 +17,11 @@ struct SignInView: View {
                 TextField("Email", text: $email)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
+                    .textContentType(.emailAddress)
                     .textFieldStyle(.roundedBorder)
 
                 SecureField("Password", text: $password)
+                    .textContentType(.password)
                     .textFieldStyle(.roundedBorder)
 
                 if let error = authManager.errorMessage {

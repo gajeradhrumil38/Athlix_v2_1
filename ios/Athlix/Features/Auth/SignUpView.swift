@@ -8,40 +8,49 @@ struct SignUpView: View {
     @State private var password = ""
 
     var body: some View {
-        VStack(spacing: 16) {
-            Text("Create your account")
-                .font(.title2.bold())
-                .foregroundStyle(ColorTokens.textPrimary)
+        NavigationStack {
+            VStack(spacing: 16) {
+                Text("Create your account")
+                    .font(.title2.bold())
+                    .foregroundStyle(ColorTokens.textPrimary)
 
-            TextField("Email", text: $email)
-                .textInputAutocapitalization(.never)
-                .keyboardType(.emailAddress)
-                .textFieldStyle(.roundedBorder)
+                TextField("Email", text: $email)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.emailAddress)
+                    .textContentType(.emailAddress)
+                    .textFieldStyle(.roundedBorder)
 
-            SecureField("Password", text: $password)
-                .textFieldStyle(.roundedBorder)
+                SecureField("Password", text: $password)
+                    .textContentType(.newPassword)
+                    .textFieldStyle(.roundedBorder)
 
-            if let error = authManager.errorMessage {
-                Text(error).foregroundStyle(ColorTokens.red).font(.footnote)
-            }
-
-            Button {
-                Task {
-                    await authManager.signUp(email: email, password: password)
-                    if authManager.user != nil { dismiss() }
+                if let error = authManager.errorMessage {
+                    Text(error).foregroundStyle(ColorTokens.red).font(.footnote)
                 }
-            } label: {
-                if authManager.isLoading {
-                    ProgressView()
-                } else {
-                    Text("Sign Up").frame(maxWidth: .infinity)
+
+                Button {
+                    Task {
+                        await authManager.signUp(email: email, password: password)
+                        if authManager.user != nil { dismiss() }
+                    }
+                } label: {
+                    if authManager.isLoading {
+                        ProgressView()
+                    } else {
+                        Text("Sign Up").frame(maxWidth: .infinity)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(ColorTokens.accent)
+                .disabled(email.isEmpty || password.isEmpty || authManager.isLoading)
+            }
+            .padding(24)
+            .background(ColorTokens.bgBase)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
                 }
             }
-            .buttonStyle(.borderedProminent)
-            .tint(ColorTokens.accent)
-            .disabled(email.isEmpty || password.isEmpty || authManager.isLoading)
         }
-        .padding(24)
-        .background(ColorTokens.bgBase)
     }
 }
