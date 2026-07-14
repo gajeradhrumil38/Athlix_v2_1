@@ -38,6 +38,7 @@ public final class AuthManager {
         do {
             user = try await client.signUp(email: email, password: password)
         } catch {
+            user = nil
             errorMessage = "Could not create account. Try a different email."
         }
         isLoading = false
@@ -49,6 +50,7 @@ public final class AuthManager {
         do {
             user = try await client.signInWithApple(idToken: idToken, nonce: nonce)
         } catch {
+            user = nil
             errorMessage = "Sign in with Apple failed. Please try again."
         }
         isLoading = false
