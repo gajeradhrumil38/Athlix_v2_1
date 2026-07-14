@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		614813C1629A8CBA1751CDCF /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBDD3F03C7ADB93D4EB6A0F4 /* RootView.swift */; };
 		D3E05A8B25FE1AF18C6C5C52 /* AthlixApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45BE7CFBA6C7B866052A5F9 /* AthlixApp.swift */; };
 		EA3FFBF4B822A58CCF78D9F0 /* AthlixCore in Frameworks */ = {isa = PBXBuildFile; productRef = 3A8D9625D32093B32C7AB9DB /* AthlixCore */; };
 /* End PBXBuildFile section */
@@ -17,6 +18,7 @@
 		8E1512DFFA451559387C14FD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B43061965F2D113F8241335A /* AthlixCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AthlixCore; path = AthlixCore; sourceTree = SOURCE_ROOT; };
 		B45BE7CFBA6C7B866052A5F9 /* AthlixApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AthlixApp.swift; sourceTree = "<group>"; };
+		EBDD3F03C7ADB93D4EB6A0F4 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -62,6 +64,7 @@
 				7BD3C79225CF29A46176DE19 /* Athlix.entitlements */,
 				B45BE7CFBA6C7B866052A5F9 /* AthlixApp.swift */,
 				8E1512DFFA451559387C14FD /* Info.plist */,
+				EBDD3F03C7ADB93D4EB6A0F4 /* RootView.swift */,
 			);
 			path = Athlix;
 			sourceTree = "<group>";
@@ -127,6 +130,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D3E05A8B25FE1AF18C6C5C52 /* AthlixApp.swift in Sources */,
+				614813C1629A8CBA1751CDCF /* RootView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
