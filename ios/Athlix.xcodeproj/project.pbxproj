@@ -7,18 +7,30 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0E7265B7FD95D0E8C2F85EEA /* PlaceholderLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081560AE3DA529FA223035F2 /* PlaceholderLogView.swift */; };
+		5862D577D9A5BDAD7EB7AECE /* PlaceholderCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12D09086A7BED0BAFFB00412 /* PlaceholderCalendarView.swift */; };
+		58754E70DD8B221E0862AEAB /* PlaceholderDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584E63FE504017F8B939B03D /* PlaceholderDashboardView.swift */; };
 		614813C1629A8CBA1751CDCF /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBDD3F03C7ADB93D4EB6A0F4 /* RootView.swift */; };
+		82571FE5C7267615F9EB7941 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6021C3981E6D1CA249DB96E4 /* MainTabView.swift */; };
+		A09B348E34A8E4C015714458 /* PlaceholderProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 346AB6CA0D8084348CBA7F83 /* PlaceholderProgressView.swift */; };
 		D3E05A8B25FE1AF18C6C5C52 /* AthlixApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45BE7CFBA6C7B866052A5F9 /* AthlixApp.swift */; };
+		DFB61FF8F7FC4B83B29F6A89 /* PlaceholderRunView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7C727D6D0ED1B1CF3A87E72 /* PlaceholderRunView.swift */; };
 		EA3FFBF4B822A58CCF78D9F0 /* AthlixCore in Frameworks */ = {isa = PBXBuildFile; productRef = 3A8D9625D32093B32C7AB9DB /* AthlixCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		081560AE3DA529FA223035F2 /* PlaceholderLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderLogView.swift; sourceTree = "<group>"; };
+		12D09086A7BED0BAFFB00412 /* PlaceholderCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderCalendarView.swift; sourceTree = "<group>"; };
+		346AB6CA0D8084348CBA7F83 /* PlaceholderProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderProgressView.swift; sourceTree = "<group>"; };
+		584E63FE504017F8B939B03D /* PlaceholderDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderDashboardView.swift; sourceTree = "<group>"; };
+		6021C3981E6D1CA249DB96E4 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		61834EDDA3FF07A9F5474171 /* Athlix.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Athlix.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7BD3C79225CF29A46176DE19 /* Athlix.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Athlix.entitlements; sourceTree = "<group>"; };
 		8E1512DFFA451559387C14FD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		B43061965F2D113F8241335A /* AthlixCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AthlixCore; path = AthlixCore; sourceTree = SOURCE_ROOT; };
 		B45BE7CFBA6C7B866052A5F9 /* AthlixApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AthlixApp.swift; sourceTree = "<group>"; };
 		EBDD3F03C7ADB93D4EB6A0F4 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		F7C727D6D0ED1B1CF3A87E72 /* PlaceholderRunView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderRunView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -33,6 +45,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		4A8F727D9A28FF7572BE789D /* Calendar */ = {
+			isa = PBXGroup;
+			children = (
+				12D09086A7BED0BAFFB00412 /* PlaceholderCalendarView.swift */,
+			);
+			path = Calendar;
+			sourceTree = "<group>";
+		};
 		51B540FE387F73A9802CF499 = {
 			isa = PBXGroup;
 			children = (
@@ -40,6 +60,14 @@
 				6D45D6DA7FC15F3DBC507259 /* Packages */,
 				EFA2112B8A84D825C5754144 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		67EAB033E71695703E37B86F /* Navigation */ = {
+			isa = PBXGroup;
+			children = (
+				6021C3981E6D1CA249DB96E4 /* MainTabView.swift */,
+			);
+			path = Navigation;
 			sourceTree = "<group>";
 		};
 		6D45D6DA7FC15F3DBC507259 /* Packages */ = {
@@ -50,12 +78,56 @@
 			name = Packages;
 			sourceTree = "<group>";
 		};
+		77EB68AA761E4AE8478F2D93 /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				584E63FE504017F8B939B03D /* PlaceholderDashboardView.swift */,
+			);
+			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		BDC6D4E3AD2C236024133081 /* Progress */ = {
+			isa = PBXGroup;
+			children = (
+				346AB6CA0D8084348CBA7F83 /* PlaceholderProgressView.swift */,
+			);
+			path = Progress;
+			sourceTree = "<group>";
+		};
+		C04F94BB918C86DC579A6361 /* Workout */ = {
+			isa = PBXGroup;
+			children = (
+				081560AE3DA529FA223035F2 /* PlaceholderLogView.swift */,
+			);
+			path = Workout;
+			sourceTree = "<group>";
+		};
+		E29F58BE98894BB3BFAEDFC4 /* Running */ = {
+			isa = PBXGroup;
+			children = (
+				F7C727D6D0ED1B1CF3A87E72 /* PlaceholderRunView.swift */,
+			);
+			path = Running;
+			sourceTree = "<group>";
+		};
 		EFA2112B8A84D825C5754144 /* Products */ = {
 			isa = PBXGroup;
 			children = (
 				61834EDDA3FF07A9F5474171 /* Athlix.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		F65648D7E304FEC7EB709E68 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				4A8F727D9A28FF7572BE789D /* Calendar */,
+				77EB68AA761E4AE8478F2D93 /* Dashboard */,
+				BDC6D4E3AD2C236024133081 /* Progress */,
+				E29F58BE98894BB3BFAEDFC4 /* Running */,
+				C04F94BB918C86DC579A6361 /* Workout */,
+			);
+			path = Features;
 			sourceTree = "<group>";
 		};
 		F903B38A3C52C1FE9EB3D2F2 /* Athlix */ = {
@@ -65,6 +137,8 @@
 				B45BE7CFBA6C7B866052A5F9 /* AthlixApp.swift */,
 				8E1512DFFA451559387C14FD /* Info.plist */,
 				EBDD3F03C7ADB93D4EB6A0F4 /* RootView.swift */,
+				F65648D7E304FEC7EB709E68 /* Features */,
+				67EAB033E71695703E37B86F /* Navigation */,
 			);
 			path = Athlix;
 			sourceTree = "<group>";
@@ -130,6 +204,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				D3E05A8B25FE1AF18C6C5C52 /* AthlixApp.swift in Sources */,
+				82571FE5C7267615F9EB7941 /* MainTabView.swift in Sources */,
+				5862D577D9A5BDAD7EB7AECE /* PlaceholderCalendarView.swift in Sources */,
+				58754E70DD8B221E0862AEAB /* PlaceholderDashboardView.swift in Sources */,
+				0E7265B7FD95D0E8C2F85EEA /* PlaceholderLogView.swift in Sources */,
+				A09B348E34A8E4C015714458 /* PlaceholderProgressView.swift in Sources */,
+				DFB61FF8F7FC4B83B29F6A89 /* PlaceholderRunView.swift in Sources */,
 				614813C1629A8CBA1751CDCF /* RootView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
