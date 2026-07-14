@@ -1,0 +1,24 @@
+name: Athlix
+options:
+  bundleIdPrefix: com.athlix
+  deploymentTarget:
+    iOS: "17.0"
+packages:
+  AthlixCore:
+    path: AthlixCore
+targets:
+  Athlix:
+    type: application
+    platform: iOS
+    sources:
+      - path: Athlix
+    dependencies:
+      - package: AthlixCore
+        product: AthlixCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.athlix.app
+        INFOPLIST_FILE: Athlix/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Athlix/Athlix.entitlements
+        SWIFT_VERSION: "6.0"
+        TARGETED_DEVICE_FAMILY: "1"
