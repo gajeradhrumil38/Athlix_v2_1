@@ -48,6 +48,14 @@ The web app's Muscle Map uses a third-party package (`react-muscle-highlighter`)
 - **`SVGPathParser`** (new, in `AthlixCore`, fully unit-testable): parses the extracted path strings into SwiftUI `Path`. Handles all 7 command types found in the real data, including elliptical arcs (`a`/`A`) via the standard SVG-arc-to-cubic-Bézier conversion algorithm. **This is the highest-risk, most novel piece of this milestone** and gets dedicated TDD treatment: tests run against real extracted path fixtures (not synthetic toy paths), asserting parsed `Path` geometry (bounding box, subpath count) matches expectations — not just "doesn't crash."
 - **`MuscleBodyView`**: SwiftUI view rendering the parsed front/back silhouettes, coloring each muscle-group region by training intensity (`SLUG_HEX` + `INTENSITY_ALPHA` ported 1:1 from `MuscleMap.tsx`), with a front/back toggle control.
 
+### Visual fidelity requirement
+
+The Muscle Map must look the same as the current web app's version — same body silhouette shapes, same per-muscle-group regions, same colors and intensity shading, same front/back toggle behavior. This is a hard requirement, not a "close enough" native reinterpretation:
+
+- Every path string extracted from `bodyFront.js`/`bodyBack.js` is ported verbatim (no simplification, no redrawing, no approximating curves) — the parser's job is to faithfully reproduce the exact same geometry, just in SwiftUI's `Path` representation instead of SVG.
+- Color values (`SLUG_HEX` hex codes, `INTENSITY_ALPHA` opacity tiers) are copied exactly, not re-approximated.
+- Manual verification for this widget specifically includes a **side-by-side visual comparison**: a screenshot of the native SwiftUI Muscle Map next to a screenshot of the current web app's Muscle Map (same test data/muscle groups), confirming the silhouette shapes and coloring genuinely match — this is a stronger bar than the milestone's general "manual on-device verification," specifically because visual fidelity was called out as a hard requirement.
+
 ## Loading & Error Handling
 
 - **Per-widget, not global**: each widget manages its own loading/error state independently. A skeleton placeholder (matching `ColorTokens.bgSurface` card shape) shows while loading; SwiftData cache means repeat visits typically resolve instantly.
