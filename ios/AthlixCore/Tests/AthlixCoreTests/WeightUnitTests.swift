@@ -20,4 +20,14 @@ final class WeightUnitTests: XCTestCase {
         XCTAssertEqual(WeightUnit.format(44.09, unit: .lbs), "44.1 lbs")
         XCTAssertEqual(WeightUnit.format(20, unit: .kg), "20.0 kg")
     }
+
+    func testConvertNonFiniteReturnsZero() {
+        XCTAssertEqual(WeightUnit.convert(.infinity, from: .kg, to: .lbs), 0)
+        XCTAssertEqual(WeightUnit.convert(.nan, from: .kg, to: .lbs), 0)
+    }
+
+    func testFormatUsesFixedLocaleDecimalSeparator() {
+        // Regardless of the process's current locale, output must use "." as the decimal separator.
+        XCTAssertEqual(WeightUnit.format(44.09, unit: .lbs), "44.1 lbs")
+    }
 }
