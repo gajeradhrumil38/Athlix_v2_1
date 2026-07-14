@@ -10,7 +10,8 @@ final class ProfileTests: XCTestCase {
             "unit_preference": "kg",
             "theme_preference": "dark",
             "body_weight": 78.5,
-            "height_cm": 178.0
+            "height_feet": 5,
+            "height_inches": 10
         }
         """.data(using: .utf8)!
 
@@ -22,7 +23,8 @@ final class ProfileTests: XCTestCase {
         XCTAssertEqual(profile.unitPreference, .kg)
         XCTAssertEqual(profile.themePreference, "dark")
         XCTAssertEqual(profile.bodyWeight, 78.5)
-        XCTAssertEqual(profile.heightCm, 178.0)
+        XCTAssertEqual(profile.heightFeet, 5)
+        XCTAssertEqual(profile.heightInches, 10)
     }
 
     func testDecodesWithMissingOptionalFields() throws {
@@ -33,7 +35,8 @@ final class ProfileTests: XCTestCase {
             "unit_preference": "lbs",
             "theme_preference": "darker",
             "body_weight": null,
-            "height_cm": null
+            "height_feet": null,
+            "height_inches": null
         }
         """.data(using: .utf8)!
 
@@ -42,5 +45,7 @@ final class ProfileTests: XCTestCase {
         XCTAssertNil(profile.fullName)
         XCTAssertEqual(profile.unitPreference, .lbs)
         XCTAssertNil(profile.bodyWeight)
+        XCTAssertNil(profile.heightFeet)
+        XCTAssertNil(profile.heightInches)
     }
 }

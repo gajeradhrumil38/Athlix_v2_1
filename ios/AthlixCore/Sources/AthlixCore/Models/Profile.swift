@@ -6,7 +6,8 @@ public struct Profile: Codable, Equatable, Sendable {
     public let unitPreference: WeightUnit
     public let themePreference: String
     public let bodyWeight: Double?
-    public let heightCm: Double?
+    public let heightFeet: Int?
+    public let heightInches: Int?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -14,6 +15,7 @@ public struct Profile: Codable, Equatable, Sendable {
         case unitPreference = "unit_preference"
         case themePreference = "theme_preference"
         case bodyWeight = "body_weight"
-        case heightCm = "height_cm"
+        case heightFeet = "height_feet"
+        case heightInches = "height_inches"
     }
 }
