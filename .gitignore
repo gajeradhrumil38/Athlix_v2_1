@@ -16,3 +16,5 @@ coverage/
 
 # Supabase CLI cache
 supabase/.temp/
+
+.superpowers/
