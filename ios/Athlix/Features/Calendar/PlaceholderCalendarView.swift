@@ -1,7 +1,11 @@
 import SwiftUI
+import AthlixCore
 
 struct PlaceholderCalendarView: View {
     var body: some View {
-        Text("Calendar").foregroundStyle(.white)
+        ZStack {
+            ColorTokens.bgBase.ignoresSafeArea()
+            Text("Calendar").foregroundStyle(ColorTokens.textPrimary)
+        }
     }
 }

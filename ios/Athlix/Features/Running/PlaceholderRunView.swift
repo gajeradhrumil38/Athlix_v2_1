@@ -1,7 +1,11 @@
 import SwiftUI
+import AthlixCore
 
 struct PlaceholderRunView: View {
     var body: some View {
-        Text("Run").foregroundStyle(.white)
+        ZStack {
+            ColorTokens.bgBase.ignoresSafeArea()
+            Text("Run").foregroundStyle(ColorTokens.textPrimary)
+        }
     }
 }

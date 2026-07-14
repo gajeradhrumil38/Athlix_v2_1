@@ -1,7 +1,11 @@
 import SwiftUI
+import AthlixCore
 
 struct PlaceholderLogView: View {
     var body: some View {
-        Text("Log Workout").foregroundStyle(.white)
+        ZStack {
+            ColorTokens.bgBase.ignoresSafeArea()
+            Text("Log Workout").foregroundStyle(ColorTokens.textPrimary)
+        }
     }
 }

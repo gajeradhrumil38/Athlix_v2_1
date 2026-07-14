@@ -1,7 +1,11 @@
 import SwiftUI
+import AthlixCore
 
 struct PlaceholderProgressView: View {
     var body: some View {
-        Text("Progress").foregroundStyle(.white)
+        ZStack {
+            ColorTokens.bgBase.ignoresSafeArea()
+            Text("Progress").foregroundStyle(ColorTokens.textPrimary)
+        }
     }
 }

@@ -1,7 +1,11 @@
 import SwiftUI
+import AthlixCore
 
 struct PlaceholderDashboardView: View {
     var body: some View {
-        Text("Home").foregroundStyle(.white)
+        ZStack {
+            ColorTokens.bgBase.ignoresSafeArea()
+            Text("Home").foregroundStyle(ColorTokens.textPrimary)
+        }
     }
 }
