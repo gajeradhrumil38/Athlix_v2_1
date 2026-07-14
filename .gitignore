@@ -18,3 +18,8 @@ coverage/
 supabase/.temp/
 
 .superpowers/
+
+# Xcode user-specific state
+ios/**/xcuserdata/
+ios/**/*.xcodeproj/project.xcworkspace/xcuserdata/
+ios/build/
