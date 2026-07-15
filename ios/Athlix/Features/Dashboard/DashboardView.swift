@@ -20,7 +20,7 @@ struct DashboardView: View {
                     PRBannerView(personalRecords: viewModel.personalRecords)
                     TodayWorkoutView(todaysWorkout: todaysWorkout(from: viewModel.workouts))
                     MuscleRadarView(regionLoads: regionLoads(from: viewModel))
-                    AIWeeklySummaryView(trainedMuscleGroups: viewModel.workouts.flatMap { $0.muscleGroups ?? [] })
+                    AIWeeklySummaryView(trainedMuscleGroups: uniqueOrdered(viewModel.workouts.flatMap { $0.muscleGroups ?? [] }))
                 } else {
                     ProgressView().tint(ColorTokens.accent)
                 }
@@ -68,5 +68,10 @@ struct DashboardView: View {
         let maxLoad = byRegion.values.max() ?? 1
         guard maxLoad > 0 else { return byRegion }
         return byRegion.mapValues { $0 / maxLoad }
+    }
+
+    private func uniqueOrdered(_ items: [String]) -> [String] {
+        var seen = Set<String>()
+        return items.filter { seen.insert($0).inserted }
     }
 }
