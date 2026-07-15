@@ -37,8 +37,15 @@ final class DashboardViewModel {
     /// preferable to an error state while a background refresh is pending.
     func loadWorkouts(from: Date, to: Date) async {
         let cachedUserId = userId
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        let fromString = formatter.string(from: from)
+        let toString = formatter.string(from: to)
+
         let cached = (try? modelContext.fetch(
-            FetchDescriptor<CachedWorkout>(predicate: #Predicate { $0.userId == cachedUserId })
+            FetchDescriptor<CachedWorkout>(predicate: #Predicate { workout in
+                workout.userId == cachedUserId && workout.date >= fromString && workout.date <= toString
+            })
         )) ?? []
         if !cached.isEmpty {
             workouts = cached.map(\.asWorkout)
@@ -49,7 +56,7 @@ final class DashboardViewModel {
         do {
             let fresh = try await workoutRepository.fetchWorkouts(userId: userId, from: from, to: to)
             workouts = fresh
-            writeThroughWorkoutsCache(fresh)
+            writeThroughWorkoutsCache(fresh, fromString: fromString, toString: toString)
         } catch {
             if workouts.isEmpty {
                 workoutsErrorMessage = "Couldn't load workouts."
@@ -84,7 +91,10 @@ final class DashboardViewModel {
     /// Fetch-then-update-or-insert per record, rather than a blind insert,
     /// since SwiftData's @Attribute(.unique) dedup-on-insert behavior isn't
     /// reliable enough across OS versions to trust for upserts.
-    private func writeThroughWorkoutsCache(_ fresh: [Workout]) {
+    private func writeThroughWorkoutsCache(_ fresh: [Workout], fromString: String, toString: String) {
+        let cachedUserId = userId
+        let freshIds = Set(fresh.map(\.id))
+
         for workout in fresh {
             let workoutId = workout.id
             let existing = try? modelContext.fetch(
@@ -102,6 +112,20 @@ final class DashboardViewModel {
                 modelContext.insert(CachedWorkout(from: workout))
             }
         }
+
+        // Evict cached rows in this date range that are no longer present in the
+        // fresh network result (handles server-side deletions and prevents the
+        // cache from accumulating stale rows within a range we've now confirmed
+        // is authoritative).
+        let staleInRange = (try? modelContext.fetch(
+            FetchDescriptor<CachedWorkout>(predicate: #Predicate { entry in
+                entry.userId == cachedUserId && entry.date >= fromString && entry.date <= toString
+            })
+        )) ?? []
+        for entry in staleInRange where !freshIds.contains(entry.id) {
+            modelContext.delete(entry)
+        }
+
         try? modelContext.save()
     }
 
