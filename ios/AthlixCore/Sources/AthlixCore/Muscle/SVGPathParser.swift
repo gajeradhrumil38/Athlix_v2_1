@@ -114,7 +114,10 @@ struct PathScanner {
             return c
         }
         // Implicit repeat: a number follows without a new command letter.
-        if let previous, c == "-" || c == "." || c.isNumber {
+        // Z/z takes no arguments, so it can never implicitly repeat -- treat
+        // a bare number after Z as malformed input and stop parsing rather
+        // than looping forever on unconsumed input.
+        if let previous, previous.lowercased() != "z", c == "-" || c == "." || c == "+" || c.isNumber {
             if previous.lowercased() == "m" {
                 return previous.isLowercase ? "l" : "L"
             }
