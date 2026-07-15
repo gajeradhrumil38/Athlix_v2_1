@@ -3,21 +3,27 @@ import SwiftUI
 @testable import AthlixCore
 
 final class SVGArcConverterTests: XCTestCase {
-    func testSimpleQuarterCircleArc() {
+    func testSemicircleArcBulgesBeyondChordBoundingBox() {
+        // A straight chord between (-10,0) and (10,0) has bounding box y∈[0,0].
+        // The true semicircular arc (r=10, sweep=1, large-arc=0) bulges to
+        // y≈-10 at its midpoint -- unlike a diagonal quarter-circle (where the
+        // chord and arc share the same bounding-box corners), this case
+        // genuinely distinguishes real arc curvature from a straight-line
+        // placeholder: a straight line would keep minY at 0, while the real
+        // arc's minY must reach well below 0.
         var path = Path()
-        path.move(to: CGPoint(x: 10, y: 0))
+        path.move(to: CGPoint(x: -10, y: 0))
         SVGArcConverter.appendArc(
             to: &path,
-            from: CGPoint(x: 10, y: 0),
-            to: CGPoint(x: 0, y: 10),
+            from: CGPoint(x: -10, y: 0),
+            to: CGPoint(x: 10, y: 0),
             radiusX: 10, radiusY: 10,
             xAxisRotationDegrees: 0,
             largeArcFlag: false,
             sweepFlag: true
         )
         let bounds = path.boundingRect
-        XCTAssertGreaterThan(bounds.maxX, 9)
-        XCTAssertGreaterThan(bounds.maxY, 9)
+        XCTAssertLessThan(bounds.minY, -5)
     }
 
     func testRealChestPathWithArcSegmentParsesWithoutCrashing() {
