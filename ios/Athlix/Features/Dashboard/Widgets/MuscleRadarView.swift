@@ -5,7 +5,7 @@ struct MuscleRadarView: View {
     /// Region name -> normalized load (0...1), e.g. ["Chest": 0.8, "Legs": 0.4, ...]
     let regionLoads: [String: Double]
 
-    private let regions = ["Chest", "Back", "Shoulders", "Legs", "Core", "Arms"]
+    private let regions = ["Chest", "Shoulders", "Back", "Biceps", "Legs", "Glutes", "Core", "Triceps"]
 
     var body: some View {
         VStack(spacing: 8) {

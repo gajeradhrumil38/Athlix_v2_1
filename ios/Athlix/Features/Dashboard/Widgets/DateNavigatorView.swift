@@ -56,6 +56,6 @@ struct DateNavigatorView: View {
     }
 }
 
-enum DashboardViewMode {
+enum DashboardViewMode: Hashable {
     case day, week, month
 }

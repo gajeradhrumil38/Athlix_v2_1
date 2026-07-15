@@ -198,4 +198,23 @@ final class DashboardViewModel {
         let weekAgo = utcCalendar.date(byAdding: .day, value: -7, to: todayStart) ?? todayStart
         return (from: weekAgo, to: todayStart)
     }
+
+    /// Builds a UTC-anchored [start, end] date range for the given `date` and
+    /// `viewMode` (Day: just that day; Week: the 7 days ending on `date`;
+    /// Month: the 30 days ending on `date`) -- mirrors lastSevenDaysRangeUTC's
+    /// UTC-anchoring rationale (must match WorkoutRepository's UTC-formatted
+    /// query boundaries).
+    static func rangeUTC(for date: Date, viewMode: DashboardViewMode) -> (from: Date, to: Date) {
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
+        let dayStart = utcCalendar.startOfDay(for: date)
+        let daysBack: Int
+        switch viewMode {
+        case .day: daysBack = 0
+        case .week: daysBack = 7
+        case .month: daysBack = 30
+        }
+        let start = utcCalendar.date(byAdding: .day, value: -daysBack, to: dayStart) ?? dayStart
+        return (from: start, to: dayStart)
+    }
 }

@@ -44,10 +44,20 @@ struct DashboardView: View {
                 modelContext: modelContext
             )
             viewModel = vm
-            let range = DashboardViewModel.lastSevenDaysRangeUTC()
-            await vm.loadWorkouts(from: range.from, to: range.to)
-            await vm.loadPersonalRecords()
+            await reloadData(vm)
         }
+        .onChange(of: currentDate) { _, _ in
+            Task { if let viewModel { await reloadData(viewModel) } }
+        }
+        .onChange(of: viewMode) { _, _ in
+            Task { if let viewModel { await reloadData(viewModel) } }
+        }
+    }
+
+    private func reloadData(_ vm: DashboardViewModel) async {
+        let range = DashboardViewModel.rangeUTC(for: currentDate, viewMode: viewMode)
+        await vm.loadWorkouts(from: range.from, to: range.to)
+        await vm.loadPersonalRecords()
     }
 
     private func todaysWorkout(from workouts: [Workout]) -> Workout? {
