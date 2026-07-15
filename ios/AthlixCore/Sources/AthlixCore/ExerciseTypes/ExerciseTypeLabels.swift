@@ -16,6 +16,7 @@ public enum ExerciseTypeLabels {
         }
     }
 
+    /// `secondary == nil` means this exercise type has no secondary dial field.
     public static func inputLabels(
         for type: ExerciseInputType,
         weightUnit: WeightUnit = .lbs,
@@ -44,8 +45,14 @@ public enum ExerciseTypeLabels {
 
     public static func formatSetValue(kind: DialFieldKind, value: Double) -> String {
         switch kind {
-        case .weight, .distance: return String(format: "%.1f", value)
-        default: return String(Int(value.rounded()))
+        case .weight, .distance:
+            // Force en_US_POSIX so the decimal separator is always "." regardless of
+            // device locale (e.g. de_DE/fr_FR use ",") — same fix as WeightUnit.format.
+            return String(format: "%.1f", locale: Locale(identifier: "en_US_POSIX"), value)
+        default:
+            // .toNearestOrAwayFromZero (Swift's default .rounded()) intentionally, to match
+            // JS Math.round's behavior for non-negative values — do not simplify to truncation.
+            return String(Int(value.rounded()))
         }
     }
 }

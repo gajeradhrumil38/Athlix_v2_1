@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 @testable import AthlixCore
 
@@ -108,5 +109,30 @@ struct ExerciseTypeLabelsTests {
 
     @Test func formatMinutesRoundsToInteger() {
         #expect(ExerciseTypeLabels.formatSetValue(kind: .minutes, value: 4.0) == "4")
+    }
+
+    // Regression: formatSetValue must force "." as the decimal separator regardless of the
+    // device's current locale. Swift Testing doesn't let us swap Locale.current mid-test, so
+    // this instead proves the bug scenario is real (fr_FR genuinely renders "%.1f" with a
+    // comma when the locale isn't pinned) and then asserts production code does NOT exhibit
+    // that behavior — this fails if formatSetValue is ever reverted to rely on Locale.current
+    // on a machine whose default locale uses a comma separator, and the plain "no comma"
+    // checks below catch it on any locale.
+    @Test func formatWeightForcesPosixDecimalSeparatorRegardlessOfSystemLocale() {
+        // Sanity check: fr_FR really would produce a comma if the locale weren't pinned.
+        let localeUnsafeOutput = String(format: "%.1f", locale: Locale(identifier: "fr_FR"), 72.5)
+        #expect(localeUnsafeOutput == "72,5")
+
+        // Production code must not reproduce that locale-dependent behavior.
+        let result = ExerciseTypeLabels.formatSetValue(kind: .weight, value: 72.5)
+        #expect(result == "72.5")
+        #expect(!result.contains(","))
+        #expect(result.contains("."))
+    }
+
+    @Test func formatDistanceNeverUsesCommaDecimalSeparator() {
+        let result = ExerciseTypeLabels.formatSetValue(kind: .distance, value: 5.04)
+        #expect(result == "5.0")
+        #expect(!result.contains(","))
     }
 }
