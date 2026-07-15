@@ -143,7 +143,18 @@ public enum MuscleBodyPaths {
         ]),
     ]
 
-    /// Ported verbatim from node_modules/react-muscle-highlighter/dist/esm/assets/bodyBack.js
+    /// Ported from node_modules/react-muscle-highlighter/dist/esm/assets/bodyBack.js,
+    /// with one deliberate change: each path's leading (absolute) moveto had 724
+    /// subtracted from its x-coordinate. The source library draws front and back
+    /// as one combined sprite (viewBox "0 0 724 1448" front, "724 0 724 1448" back),
+    /// so back-view paths are authored 724 units to the right of the front-view
+    /// origin. Rendering front/back as SEPARATE views (as this app does) requires
+    /// re-basing back paths to start at x=0 -- do NOT re-run the raw extraction
+    /// script against the npm source without reapplying this -724 shift, or the
+    /// Back toggle will render almost entirely off-screen again (see commit 501da86).
+    /// Only the leading M needed adjusting: every other command in these paths is
+    /// relative (lowercase l/c/q/a), so a constant x-translation only touches the
+    /// one absolute anchor point per path.
     public static let back: [MuscleBodyPathEntry] = [
         MuscleBodyPathEntry(slug: "neck", pathStrings: [
             "M298.74 290.63a.62.61 25.9 01-.36-1.03q1.71-1.83 4.11-3.11c8.19-4.35 19.4-8.3 23.38-17.48q8.48-19.57 8.22-40.85-.05-4.38.57-5.76c1.98-4.38 9.65-3.66 13.85-2.91 4.3.76 4.71 3.25 4.68 7.3q-.2 24.11-.88 48.2c-.12 4.25 1.6 15.84-4.88 16.32-14.57 1.08-32.6 1.81-48.69-.68z",
