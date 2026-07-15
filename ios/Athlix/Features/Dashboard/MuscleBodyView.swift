@@ -7,6 +7,22 @@ struct MuscleBodyView: View {
     let intensityBySlug: [String: Int]
     @Binding var view: MuscleBodyViewSide
 
+    // Cached once per process -- SVG path strings are static data, so their
+    // parsed Path never changes and doesn't need re-computing on every
+    // SwiftUI re-render.
+    private static let parsedFrontPaths: [String: Path] = cachedPaths(for: MuscleBodyPaths.front)
+    private static let parsedBackPaths: [String: Path] = cachedPaths(for: MuscleBodyPaths.back)
+
+    private static func cachedPaths(for entries: [MuscleBodyPathEntry]) -> [String: Path] {
+        var result: [String: Path] = [:]
+        for entry in entries {
+            for pathString in entry.pathStrings {
+                result[pathString] = SVGPathParser.parse(pathString)
+            }
+        }
+        return result
+    }
+
     // Ported verbatim from MuscleMap.tsx's SLUG_HEX table.
     private static let slugHex: [String: String] = [
         "chest": "F09595", "biceps": "85B7EB", "triceps": "AFA9EC",
@@ -21,27 +37,30 @@ struct MuscleBodyView: View {
     private static let intensityAlpha: [Double] = [0.45, 0.65, 0.85, 1.0]
 
     private func color(forSlug slug: String) -> Color {
-        let hex = Self.slugHex[slug] ?? Self.fallbackHex
         let intensity = intensityBySlug[slug] ?? 0
-        guard intensity > 0 else { return Color(hex: hex).opacity(0.15) }
+        guard intensity > 0 else {
+            return Color(hex: slug == "head" ? "bebebe" : "3f3f3f")
+        }
+        let hex = Self.slugHex[slug] ?? Self.fallbackHex
         let alpha = Self.intensityAlpha[min(intensity, 4) - 1]
         return Color(hex: hex).opacity(alpha)
     }
 
     var body: some View {
         let entries = view == .front ? MuscleBodyPaths.front : MuscleBodyPaths.back
+        let cache = view == .front ? Self.parsedFrontPaths : Self.parsedBackPaths
         GeometryReader { geometry in
             ZStack {
                 ForEach(entries, id: \.slug) { entry in
                     ForEach(entry.pathStrings, id: \.self) { pathString in
-                        SVGPathParser.parse(pathString)
+                        (cache[pathString] ?? Path())
                             .fill(color(forSlug: entry.slug))
                     }
                 }
             }
             .scaleEffect(
                 x: geometry.size.width / 512,
-                y: geometry.size.height / 512,
+                y: geometry.size.height / 900,
                 anchor: .topLeading
             )
         }
