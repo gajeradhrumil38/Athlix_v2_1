@@ -59,12 +59,15 @@ struct MuscleBodyView: View {
                 }
             }
             .scaleEffect(
-                x: geometry.size.width / 512,
-                y: geometry.size.height / 900,
+                x: geometry.size.width / 724,
+                y: geometry.size.height / 1448,
                 anchor: .topLeading
             )
         }
-        .aspectRatio(512.0 / 900.0, contentMode: .fit)
+        // Real canvas dimensions per react-muscle-highlighter's own SVG viewBox
+        // ("0 0 724 1448" front, "724 0 724 1448" back) -- verified directly
+        // against the source library, not assumed.
+        .aspectRatio(724.0 / 1448.0, contentMode: .fit)
     }
 }
 
