@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 import AthlixCore
 
 @main
@@ -9,6 +10,7 @@ struct AthlixApp: App {
         WindowGroup {
             RootView()
                 .environment(authManager)
+                .modelContainer(for: [CachedWorkout.self, CachedPersonalRecord.self])
                 .task {
                     await authManager.restoreSession()
                 }

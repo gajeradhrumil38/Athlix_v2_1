@@ -8,11 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		0E7265B7FD95D0E8C2F85EEA /* PlaceholderLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081560AE3DA529FA223035F2 /* PlaceholderLogView.swift */; };
+		27F3DA640D807734B7720E70 /* CachedWorkout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 019CB6DDE71BC7551CBF0E22 /* CachedWorkout.swift */; };
 		4E8906A7A0BDAF7C0B51F90F /* SignInWithAppleButtonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC846B5B291516618F30C690 /* SignInWithAppleButtonView.swift */; };
 		5862D577D9A5BDAD7EB7AECE /* PlaceholderCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12D09086A7BED0BAFFB00412 /* PlaceholderCalendarView.swift */; };
 		58754E70DD8B221E0862AEAB /* PlaceholderDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584E63FE504017F8B939B03D /* PlaceholderDashboardView.swift */; };
 		614813C1629A8CBA1751CDCF /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBDD3F03C7ADB93D4EB6A0F4 /* RootView.swift */; };
 		82571FE5C7267615F9EB7941 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6021C3981E6D1CA249DB96E4 /* MainTabView.swift */; };
+		9E9762CD2899932CA15A177B /* CachedPersonalRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E9898DA8C6403BA4FC5085 /* CachedPersonalRecord.swift */; };
 		A09B348E34A8E4C015714458 /* PlaceholderProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 346AB6CA0D8084348CBA7F83 /* PlaceholderProgressView.swift */; };
 		AE668C5D9CA9D3C9674C2DA7 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44A9BC67B49671EB5C6BC709 /* SignInView.swift */; };
 		D2044A859FA3C92C80F9C151 /* MuscleBodyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC5DBD019A634AEAB198BE51 /* MuscleBodyView.swift */; };
@@ -23,11 +25,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		019CB6DDE71BC7551CBF0E22 /* CachedWorkout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedWorkout.swift; sourceTree = "<group>"; };
 		081560AE3DA529FA223035F2 /* PlaceholderLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderLogView.swift; sourceTree = "<group>"; };
 		12D09086A7BED0BAFFB00412 /* PlaceholderCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderCalendarView.swift; sourceTree = "<group>"; };
 		346AB6CA0D8084348CBA7F83 /* PlaceholderProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderProgressView.swift; sourceTree = "<group>"; };
 		44A9BC67B49671EB5C6BC709 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
 		584E63FE504017F8B939B03D /* PlaceholderDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderDashboardView.swift; sourceTree = "<group>"; };
+		58E9898DA8C6403BA4FC5085 /* CachedPersonalRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedPersonalRecord.swift; sourceTree = "<group>"; };
 		6021C3981E6D1CA249DB96E4 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		61834EDDA3FF07A9F5474171 /* Athlix.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Athlix.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7BD3C79225CF29A46176DE19 /* Athlix.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Athlix.entitlements; sourceTree = "<group>"; };
@@ -59,6 +63,15 @@
 				12D09086A7BED0BAFFB00412 /* PlaceholderCalendarView.swift */,
 			);
 			path = Calendar;
+			sourceTree = "<group>";
+		};
+		4CDD05D11D16B833BE639367 /* Data */ = {
+			isa = PBXGroup;
+			children = (
+				58E9898DA8C6403BA4FC5085 /* CachedPersonalRecord.swift */,
+				019CB6DDE71BC7551CBF0E22 /* CachedWorkout.swift */,
+			);
+			path = Data;
 			sourceTree = "<group>";
 		};
 		51B540FE387F73A9802CF499 = {
@@ -157,6 +170,7 @@
 				B45BE7CFBA6C7B866052A5F9 /* AthlixApp.swift */,
 				8E1512DFFA451559387C14FD /* Info.plist */,
 				EBDD3F03C7ADB93D4EB6A0F4 /* RootView.swift */,
+				4CDD05D11D16B833BE639367 /* Data */,
 				F65648D7E304FEC7EB709E68 /* Features */,
 				67EAB033E71695703E37B86F /* Navigation */,
 			);
@@ -224,6 +238,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				D3E05A8B25FE1AF18C6C5C52 /* AthlixApp.swift in Sources */,
+				9E9762CD2899932CA15A177B /* CachedPersonalRecord.swift in Sources */,
+				27F3DA640D807734B7720E70 /* CachedWorkout.swift in Sources */,
 				82571FE5C7267615F9EB7941 /* MainTabView.swift in Sources */,
 				D2044A859FA3C92C80F9C151 /* MuscleBodyView.swift in Sources */,
 				5862D577D9A5BDAD7EB7AECE /* PlaceholderCalendarView.swift in Sources */,
