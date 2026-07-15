@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0E7265B7FD95D0E8C2F85EEA /* PlaceholderLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081560AE3DA529FA223035F2 /* PlaceholderLogView.swift */; };
 		191B0D278CC46C96FF6490FA /* DateNavigatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFD0429FEF2ADD6441149E69 /* DateNavigatorView.swift */; };
+		23FF06595DF93C0E5551367B /* MuscleMapWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBEF6283EA033AF33A0668E /* MuscleMapWidgetView.swift */; };
 		27F3DA640D807734B7720E70 /* CachedWorkout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 019CB6DDE71BC7551CBF0E22 /* CachedWorkout.swift */; };
 		2B70DDDDDD844BC3FF28E81E /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08933B9BEC25745024335401 /* DashboardViewModel.swift */; };
 		4E8906A7A0BDAF7C0B51F90F /* SignInWithAppleButtonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC846B5B291516618F30C690 /* SignInWithAppleButtonView.swift */; };
@@ -40,6 +41,7 @@
 		6021C3981E6D1CA249DB96E4 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		61834EDDA3FF07A9F5474171 /* Athlix.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Athlix.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7BD3C79225CF29A46176DE19 /* Athlix.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Athlix.entitlements; sourceTree = "<group>"; };
+		8BBEF6283EA033AF33A0668E /* MuscleMapWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleMapWidgetView.swift; sourceTree = "<group>"; };
 		8E1512DFFA451559387C14FD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		AC5DBD019A634AEAB198BE51 /* MuscleBodyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleBodyView.swift; sourceTree = "<group>"; };
 		AC846B5B291516618F30C690 /* SignInWithAppleButtonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInWithAppleButtonView.swift; sourceTree = "<group>"; };
@@ -162,6 +164,7 @@
 			isa = PBXGroup;
 			children = (
 				FFD0429FEF2ADD6441149E69 /* DateNavigatorView.swift */,
+				8BBEF6283EA033AF33A0668E /* MuscleMapWidgetView.swift */,
 				487CB6B085AB5EE8C0665A24 /* WeeklyGoalRingView.swift */,
 			);
 			path = Widgets;
@@ -261,6 +264,7 @@
 				191B0D278CC46C96FF6490FA /* DateNavigatorView.swift in Sources */,
 				82571FE5C7267615F9EB7941 /* MainTabView.swift in Sources */,
 				D2044A859FA3C92C80F9C151 /* MuscleBodyView.swift in Sources */,
+				23FF06595DF93C0E5551367B /* MuscleMapWidgetView.swift in Sources */,
 				5862D577D9A5BDAD7EB7AECE /* PlaceholderCalendarView.swift in Sources */,
 				58754E70DD8B221E0862AEAB /* PlaceholderDashboardView.swift in Sources */,
 				0E7265B7FD95D0E8C2F85EEA /* PlaceholderLogView.swift in Sources */,
