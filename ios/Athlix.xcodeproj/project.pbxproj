@@ -14,10 +14,10 @@
 		2B70DDDDDD844BC3FF28E81E /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08933B9BEC25745024335401 /* DashboardViewModel.swift */; };
 		4E8906A7A0BDAF7C0B51F90F /* SignInWithAppleButtonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC846B5B291516618F30C690 /* SignInWithAppleButtonView.swift */; };
 		5862D577D9A5BDAD7EB7AECE /* PlaceholderCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12D09086A7BED0BAFFB00412 /* PlaceholderCalendarView.swift */; };
-		58754E70DD8B221E0862AEAB /* PlaceholderDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 584E63FE504017F8B939B03D /* PlaceholderDashboardView.swift */; };
 		614813C1629A8CBA1751CDCF /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBDD3F03C7ADB93D4EB6A0F4 /* RootView.swift */; };
 		67990839F25D2020F61201F7 /* TodayWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA002598AF0419801E25C79C /* TodayWorkoutView.swift */; };
 		82571FE5C7267615F9EB7941 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6021C3981E6D1CA249DB96E4 /* MainTabView.swift */; };
+		83D6016D8A0B943B2375BBDD /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2BFD76425748A6EF8AB5A88 /* DashboardView.swift */; };
 		897BD2C398970F183167A27A /* PRBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1CAEC18DF10CC48F5C45609 /* PRBannerView.swift */; };
 		9E9762CD2899932CA15A177B /* CachedPersonalRecord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58E9898DA8C6403BA4FC5085 /* CachedPersonalRecord.swift */; };
 		A09B348E34A8E4C015714458 /* PlaceholderProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 346AB6CA0D8084348CBA7F83 /* PlaceholderProgressView.swift */; };
@@ -25,6 +25,7 @@
 		AE668C5D9CA9D3C9674C2DA7 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44A9BC67B49671EB5C6BC709 /* SignInView.swift */; };
 		BD61A030655DA2DE1BA0A5EB /* MuscleRadarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5031DAE67DE7E8701DEEBC5 /* MuscleRadarView.swift */; };
 		C052014D36E355BD73E2C94B /* WeeklyGoalRingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 487CB6B085AB5EE8C0665A24 /* WeeklyGoalRingView.swift */; };
+		CCA937E40E9A835A445A8ECA /* AIWeeklySummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83FEEFE3DAAC2B99DD2BC8CE /* AIWeeklySummaryView.swift */; };
 		D2044A859FA3C92C80F9C151 /* MuscleBodyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC5DBD019A634AEAB198BE51 /* MuscleBodyView.swift */; };
 		D3E05A8B25FE1AF18C6C5C52 /* AthlixApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = B45BE7CFBA6C7B866052A5F9 /* AthlixApp.swift */; };
 		D94788B18DF0A394D58AD407 /* SignUpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7965FEB300E3D6E913BD964 /* SignUpView.swift */; };
@@ -41,11 +42,11 @@
 		346AB6CA0D8084348CBA7F83 /* PlaceholderProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderProgressView.swift; sourceTree = "<group>"; };
 		44A9BC67B49671EB5C6BC709 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
 		487CB6B085AB5EE8C0665A24 /* WeeklyGoalRingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyGoalRingView.swift; sourceTree = "<group>"; };
-		584E63FE504017F8B939B03D /* PlaceholderDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderDashboardView.swift; sourceTree = "<group>"; };
 		58E9898DA8C6403BA4FC5085 /* CachedPersonalRecord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedPersonalRecord.swift; sourceTree = "<group>"; };
 		6021C3981E6D1CA249DB96E4 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		61834EDDA3FF07A9F5474171 /* Athlix.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Athlix.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7BD3C79225CF29A46176DE19 /* Athlix.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Athlix.entitlements; sourceTree = "<group>"; };
+		83FEEFE3DAAC2B99DD2BC8CE /* AIWeeklySummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIWeeklySummaryView.swift; sourceTree = "<group>"; };
 		8BBEF6283EA033AF33A0668E /* MuscleMapWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleMapWidgetView.swift; sourceTree = "<group>"; };
 		8E1512DFFA451559387C14FD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		AC5DBD019A634AEAB198BE51 /* MuscleBodyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleBodyView.swift; sourceTree = "<group>"; };
@@ -54,6 +55,7 @@
 		B43061965F2D113F8241335A /* AthlixCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AthlixCore; path = AthlixCore; sourceTree = SOURCE_ROOT; };
 		B45BE7CFBA6C7B866052A5F9 /* AthlixApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AthlixApp.swift; sourceTree = "<group>"; };
 		C7965FEB300E3D6E913BD964 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
+		D2BFD76425748A6EF8AB5A88 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		DA002598AF0419801E25C79C /* TodayWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayWorkoutView.swift; sourceTree = "<group>"; };
 		EBDD3F03C7ADB93D4EB6A0F4 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		F5031DAE67DE7E8701DEEBC5 /* MuscleRadarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleRadarView.swift; sourceTree = "<group>"; };
@@ -118,9 +120,9 @@
 		77EB68AA761E4AE8478F2D93 /* Dashboard */ = {
 			isa = PBXGroup;
 			children = (
+				D2BFD76425748A6EF8AB5A88 /* DashboardView.swift */,
 				08933B9BEC25745024335401 /* DashboardViewModel.swift */,
 				AC5DBD019A634AEAB198BE51 /* MuscleBodyView.swift */,
-				584E63FE504017F8B939B03D /* PlaceholderDashboardView.swift */,
 				EFBBBF3E7135F0490A9A1642 /* Widgets */,
 			);
 			path = Dashboard;
@@ -171,6 +173,7 @@
 		EFBBBF3E7135F0490A9A1642 /* Widgets */ = {
 			isa = PBXGroup;
 			children = (
+				83FEEFE3DAAC2B99DD2BC8CE /* AIWeeklySummaryView.swift */,
 				FFD0429FEF2ADD6441149E69 /* DateNavigatorView.swift */,
 				8BBEF6283EA033AF33A0668E /* MuscleMapWidgetView.swift */,
 				F5031DAE67DE7E8701DEEBC5 /* MuscleRadarView.swift */,
@@ -269,9 +272,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CCA937E40E9A835A445A8ECA /* AIWeeklySummaryView.swift in Sources */,
 				D3E05A8B25FE1AF18C6C5C52 /* AthlixApp.swift in Sources */,
 				9E9762CD2899932CA15A177B /* CachedPersonalRecord.swift in Sources */,
 				27F3DA640D807734B7720E70 /* CachedWorkout.swift in Sources */,
+				83D6016D8A0B943B2375BBDD /* DashboardView.swift in Sources */,
 				2B70DDDDDD844BC3FF28E81E /* DashboardViewModel.swift in Sources */,
 				191B0D278CC46C96FF6490FA /* DateNavigatorView.swift in Sources */,
 				82571FE5C7267615F9EB7941 /* MainTabView.swift in Sources */,
@@ -280,7 +285,6 @@
 				BD61A030655DA2DE1BA0A5EB /* MuscleRadarView.swift in Sources */,
 				897BD2C398970F183167A27A /* PRBannerView.swift in Sources */,
 				5862D577D9A5BDAD7EB7AECE /* PlaceholderCalendarView.swift in Sources */,
-				58754E70DD8B221E0862AEAB /* PlaceholderDashboardView.swift in Sources */,
 				0E7265B7FD95D0E8C2F85EEA /* PlaceholderLogView.swift in Sources */,
 				A09B348E34A8E4C015714458 /* PlaceholderProgressView.swift in Sources */,
 				DFB61FF8F7FC4B83B29F6A89 /* PlaceholderRunView.swift in Sources */,
