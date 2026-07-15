@@ -1917,12 +1917,14 @@ git commit -m "Add SwiftData cache models for workouts and personal records"
 
 ---
 
-### Task 11: `DashboardViewModel` — ties data together
+### Task 11: `DashboardViewModel` — ties data together, with SwiftData cache read/write
 
 **Files:**
 - Create: `ios/Athlix/Features/Dashboard/DashboardViewModel.swift`
 
 No unit test: this `@Observable` class orchestrates already-tested repositories and SwiftData (both untestable/pre-tested in isolation); its own logic is thin coordination, verified via on-device manual check.
+
+**Revision note**: an earlier draft of this task built `DashboardViewModel` without ever touching `CachedWorkout`/`CachedPersonalRecord` (from Task 10) or a `ModelContext` — a code review of Task 10 caught that this would leave the SwiftData cache models completely unwired (dead code) and pointed out that `ModelContainer`'s `.modelContainer(for:)` modifier only injects `\.modelContext` into **View** descendants, not into a plain `@Observable` class constructed manually. This revision fixes both: `DashboardViewModel` now takes a `ModelContext` in its initializer (to be passed in by the owning View, which reads `@Environment(\.modelContext)`, in Task 16), reads the cache first for instant display, then fetches from network and writes through to the cache using a safe fetch-then-update-or-insert pattern (not a blind `insert`, which risks unique-constraint issues on SwiftData across OS versions per that same review). This also fixes a timezone risk flagged in Task 8's review: `WorkoutRepository.fetchWorkouts`'s `from`/`to` are formatted with a UTC-anchored `ISO8601DateFormatter`, so this ViewModel constructs its date range using UTC calendar boundaries (not `Calendar.current`, which could shift the boundary by a day in non-UTC timezones).
 
 - [ ] **Step 1: Implement `DashboardViewModel`**
 
@@ -1946,33 +1948,114 @@ final class DashboardViewModel {
     private let workoutRepository: WorkoutRepository
     private let personalRecordRepository: PersonalRecordRepository
     private let userId: String
+    private let modelContext: ModelContext
 
-    init(workoutRepository: WorkoutRepository, personalRecordRepository: PersonalRecordRepository, userId: String) {
+    init(
+        workoutRepository: WorkoutRepository,
+        personalRecordRepository: PersonalRecordRepository,
+        userId: String,
+        modelContext: ModelContext
+    ) {
         self.workoutRepository = workoutRepository
         self.personalRecordRepository = personalRecordRepository
         self.userId = userId
+        self.modelContext = modelContext
     }
 
+    /// Reads the SwiftData cache immediately (for instant display), then
+    /// fetches fresh data from the network and writes it through to the
+    /// cache. Errors are only surfaced if BOTH the cache read produced
+    /// nothing AND the network fetch failed -- a stale cache hit is always
+    /// preferable to an error state while a background refresh is pending.
     func loadWorkouts(from: Date, to: Date) async {
+        let cachedUserId = userId
+        let cached = (try? modelContext.fetch(
+            FetchDescriptor<CachedWorkout>(predicate: #Predicate { $0.userId == cachedUserId })
+        )) ?? []
+        if !cached.isEmpty {
+            workouts = cached.map(\.asWorkout)
+        }
+
         isLoadingWorkouts = true
         workoutsErrorMessage = nil
         do {
-            workouts = try await workoutRepository.fetchWorkouts(userId: userId, from: from, to: to)
+            let fresh = try await workoutRepository.fetchWorkouts(userId: userId, from: from, to: to)
+            workouts = fresh
+            writeThroughWorkoutsCache(fresh)
         } catch {
-            workoutsErrorMessage = "Couldn't load workouts."
+            if workouts.isEmpty {
+                workoutsErrorMessage = "Couldn't load workouts."
+            }
         }
         isLoadingWorkouts = false
     }
 
     func loadPersonalRecords() async {
+        let cachedUserId = userId
+        let cached = (try? modelContext.fetch(
+            FetchDescriptor<CachedPersonalRecord>(predicate: #Predicate { $0.userId == cachedUserId })
+        )) ?? []
+        if !cached.isEmpty {
+            personalRecords = cached.map(\.asPersonalRecord)
+        }
+
         isLoadingRecords = true
         recordsErrorMessage = nil
         do {
-            personalRecords = try await personalRecordRepository.fetchPersonalRecords(userId: userId)
+            let fresh = try await personalRecordRepository.fetchPersonalRecords(userId: userId)
+            personalRecords = fresh
+            writeThroughPersonalRecordsCache(fresh)
         } catch {
-            recordsErrorMessage = "Couldn't load personal records."
+            if personalRecords.isEmpty {
+                recordsErrorMessage = "Couldn't load personal records."
+            }
         }
         isLoadingRecords = false
+    }
+
+    /// Fetch-then-update-or-insert per record, rather than a blind insert,
+    /// since SwiftData's @Attribute(.unique) dedup-on-insert behavior isn't
+    /// reliable enough across OS versions to trust for upserts.
+    private func writeThroughWorkoutsCache(_ fresh: [Workout]) {
+        for workout in fresh {
+            let workoutId = workout.id
+            let existing = try? modelContext.fetch(
+                FetchDescriptor<CachedWorkout>(predicate: #Predicate { $0.id == workoutId })
+            )
+            if let match = existing?.first {
+                match.title = workout.title
+                match.date = workout.date
+                match.durationMinutes = workout.durationMinutes
+                match.notes = workout.notes
+                match.muscleGroups = workout.muscleGroups
+                match.createdAt = workout.createdAt
+                match.cachedAt = Date()
+            } else {
+                modelContext.insert(CachedWorkout(from: workout))
+            }
+        }
+        try? modelContext.save()
+    }
+
+    private func writeThroughPersonalRecordsCache(_ fresh: [PersonalRecord]) {
+        for record in fresh {
+            let recordId = record.id
+            let existing = try? modelContext.fetch(
+                FetchDescriptor<CachedPersonalRecord>(predicate: #Predicate { $0.id == recordId })
+            )
+            if let match = existing?.first {
+                match.exerciseName = record.exerciseName
+                match.bestWeight = record.bestWeight
+                match.bestReps = record.bestReps
+                match.achievedDate = record.achievedDate
+                match.createdAt = record.createdAt
+                match.exerciseDbId = record.exerciseDbId
+                match.cachedAt = Date()
+            } else {
+                modelContext.insert(CachedPersonalRecord(from: record))
+            }
+        }
+        try? modelContext.save()
     }
 
     /// Per-muscle-slug training load for the current `workouts`, using
@@ -2008,6 +2091,21 @@ final class DashboardViewModel {
         }
         return StreakCalculator.calculateStreak(workoutDates: dates, today: Date())
     }
+
+    /// Builds a UTC-anchored [start, end] date range for "the last 7 days,"
+    /// used as `loadWorkouts`'s from/to arguments. Uses a UTC calendar
+    /// (not `Calendar.current`) so the resulting day boundaries match what
+    /// `WorkoutRepository.fetchWorkouts` formats with its UTC-anchored
+    /// `ISO8601DateFormatter` -- using `Calendar.current` here could shift
+    /// the boundary by a day in non-UTC timezones relative to what the
+    /// repository actually queries against the Postgres `DATE` column.
+    static func lastSevenDaysRangeUTC(now: Date = Date()) -> (from: Date, to: Date) {
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
+        let todayStart = utcCalendar.startOfDay(for: now)
+        let weekAgo = utcCalendar.date(byAdding: .day, value: -7, to: todayStart) ?? todayStart
+        return (from: weekAgo, to: todayStart)
+    }
 }
 ```
 
@@ -2021,7 +2119,7 @@ Expected: `** BUILD SUCCEEDED **`
 ```bash
 cd /Users/dhrumilgajera/Desktop/AthlixV2.1-1
 git add ios/Athlix/Features/Dashboard/DashboardViewModel.swift
-git commit -m "Add DashboardViewModel coordinating repositories and derived muscle data"
+git commit -m "Add DashboardViewModel with SwiftData cache read/write and repository coordination"
 ```
 
 ---
@@ -2529,6 +2627,7 @@ import AthlixCore
 
 struct DashboardView: View {
     @Environment(AuthManager.self) private var authManager
+    @Environment(\.modelContext) private var modelContext
     @State private var viewModel: DashboardViewModel?
     @State private var currentDate = Date()
     @State private var viewMode: DashboardViewMode = .week
@@ -2559,15 +2658,18 @@ struct DashboardView: View {
             // their own SupabaseClient (same pattern as LiveSupabaseAuthClient in the
             // Foundation milestone) — the Athlix app target only links the AthlixCore
             // package product, not the Supabase package product directly, so it cannot
-            // construct a SupabaseClient itself.
+            // construct a SupabaseClient itself. modelContext comes from the environment
+            // since DashboardViewModel is a plain @Observable class, not a View, and
+            // .modelContainer(for:)'s environment injection only reaches View descendants.
             let vm = DashboardViewModel(
                 workoutRepository: LiveWorkoutRepository(),
                 personalRecordRepository: LivePersonalRecordRepository(),
-                userId: userId
+                userId: userId,
+                modelContext: modelContext
             )
             viewModel = vm
-            let weekAgo = Calendar.current.date(byAdding: .day, value: -7, to: Date()) ?? Date()
-            await vm.loadWorkouts(from: weekAgo, to: Date())
+            let range = DashboardViewModel.lastSevenDaysRangeUTC()
+            await vm.loadWorkouts(from: range.from, to: range.to)
             await vm.loadPersonalRecords()
         }
     }
