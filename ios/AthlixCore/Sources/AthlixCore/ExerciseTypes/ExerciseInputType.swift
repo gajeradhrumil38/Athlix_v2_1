@@ -21,7 +21,7 @@ public enum ExerciseInputType: String, Codable, Sendable, CaseIterable {
         }
     }
 
-    public var defaultSetValues: (weight: Double, reps: Int) {
+    public var defaultSetValues: (primary: Double, secondary: Int) {
         switch self {
         case .distanceTime: return (0, 5)
         case .timeOnly: return (2, 0)

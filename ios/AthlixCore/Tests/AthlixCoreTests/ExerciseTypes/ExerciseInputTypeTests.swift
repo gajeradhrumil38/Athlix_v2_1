@@ -49,44 +49,44 @@ import Testing
 
 @Test func defaultSetValuesWeightReps() {
     let defaults = ExerciseInputType.weightReps.defaultSetValues
-    #expect(defaults.weight == 0)
-    #expect(defaults.reps == 0)
+    #expect(defaults.primary == 0)
+    #expect(defaults.secondary == 0)
 }
 
 @Test func defaultSetValuesDistanceTime() {
     let defaults = ExerciseInputType.distanceTime.defaultSetValues
-    #expect(defaults.weight == 0)
-    #expect(defaults.reps == 5)
+    #expect(defaults.primary == 0)
+    #expect(defaults.secondary == 5)
 }
 
 @Test func defaultSetValuesTimeOnly() {
     let defaults = ExerciseInputType.timeOnly.defaultSetValues
-    #expect(defaults.weight == 2)
-    #expect(defaults.reps == 0)
+    #expect(defaults.primary == 2)
+    #expect(defaults.secondary == 0)
 }
 
 @Test func defaultSetValuesDistanceOnly() {
     let defaults = ExerciseInputType.distanceOnly.defaultSetValues
-    #expect(defaults.weight == 0)
-    #expect(defaults.reps == 0)
+    #expect(defaults.primary == 0)
+    #expect(defaults.secondary == 0)
 }
 
 @Test func defaultSetValuesRepsOnly() {
     let defaults = ExerciseInputType.repsOnly.defaultSetValues
-    #expect(defaults.weight == 0)
-    #expect(defaults.reps == 10)
+    #expect(defaults.primary == 0)
+    #expect(defaults.secondary == 10)
 }
 
 @Test func defaultSetValuesHeightReps() {
     let defaults = ExerciseInputType.heightReps.defaultSetValues
-    #expect(defaults.weight == 0)
-    #expect(defaults.reps == 8)
+    #expect(defaults.primary == 0)
+    #expect(defaults.secondary == 8)
 }
 
 @Test func defaultSetValuesCaloriesTime() {
     let defaults = ExerciseInputType.caloriesTime.defaultSetValues
-    #expect(defaults.weight == 0)
-    #expect(defaults.reps == 5)
+    #expect(defaults.primary == 0)
+    #expect(defaults.secondary == 5)
 }
 
 // MARK: - hasSecondaryField
