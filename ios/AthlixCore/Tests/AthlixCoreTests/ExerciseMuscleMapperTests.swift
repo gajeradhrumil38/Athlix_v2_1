@@ -76,4 +76,37 @@ final class ExerciseMuscleMapperTests: XCTestCase {
         let gluteWeight = profile.targets.first { $0.slug == "gluteal" }?.weight ?? 0
         XCTAssertEqual(gluteWeight, 0.75, accuracy: 0.001)
     }
+
+    func testNormalizeTargetsBreaksTiesByFirstOccurrenceOrder() {
+        // Two targets with identical weight: whichever appears FIRST in the
+        // input array must appear first in the output when weights tie,
+        // matching the original TypeScript Map + stable-sort semantics.
+        let targets = [
+            ExerciseMuscleTarget(slug: "triceps", weight: 0.26),
+            ExerciseMuscleTarget(slug: "gluteal", weight: 0.26),
+        ]
+        let result = ExerciseMuscleMapper.normalizeTargets(targets)
+        XCTAssertEqual(result.map(\.slug), ["triceps", "gluteal"])
+
+        // Reversed input order should reverse the tie-break too, proving this
+        // isn't accidentally still order-independent.
+        let reversed = [
+            ExerciseMuscleTarget(slug: "gluteal", weight: 0.26),
+            ExerciseMuscleTarget(slug: "triceps", weight: 0.26),
+        ]
+        let reversedResult = ExerciseMuscleMapper.normalizeTargets(reversed)
+        XCTAssertEqual(reversedResult.map(\.slug), ["gluteal", "triceps"])
+    }
+
+    func testAssaultBikeTiedWeightsAreDeterministicAcrossRepeatedCalls() {
+        // "Assault Bike" has triceps and gluteal both at weight 0.26 in the real
+        // pattern data -- run the full profile lookup many times and confirm
+        // the tie always resolves the same way (regression guard against the
+        // Dictionary-iteration-order bug this fix addresses).
+        let results = (0..<20).map { _ in
+            ExerciseMuscleMapper.profile(forExerciseName: "Assault Bike").targets.map(\.slug)
+        }
+        let distinctOrders = Set(results.map { $0.joined(separator: ",") })
+        XCTAssertTrue(results.allSatisfy { $0 == results[0] }, "Tie-break order must be deterministic across repeated calls, got varying orders: \(distinctOrders)")
+    }
 }

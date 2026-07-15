@@ -443,22 +443,31 @@ public enum ExerciseMuscleMapper {
     ]
 
     public static func normalizeTargets(_ targets: [ExerciseMuscleTarget]) -> [ExerciseMuscleTarget] {
+        var order: [String] = []
         var bySlug: [String: Double] = [:]
         for target in targets where target.weight > 0 {
+            if bySlug[target.slug] == nil {
+                order.append(target.slug)
+            }
             bySlug[target.slug, default: 0] += target.weight
         }
-        return bySlug
-            .map { ExerciseMuscleTarget(slug: $0.key, weight: ($0.value * 1000).rounded() / 1000) }
+        return order
+            .map { slug in ExerciseMuscleTarget(slug: slug, weight: ((bySlug[slug] ?? 0) * 1000).rounded() / 1000) }
             .sorted { $0.weight > $1.weight }
     }
 
     private static func deriveRegions(from targets: [ExerciseMuscleTarget]) -> (primary: [String], secondary: [String]) {
+        var order: [String] = []
         var regionWeights: [String: Double] = [:]
         for target in targets {
             guard let region = slugRegionMap[target.slug] else { continue }
+            if regionWeights[region] == nil {
+                order.append(region)
+            }
             regionWeights[region, default: 0] += target.weight
         }
-        let sorted = regionWeights.sorted { $0.value > $1.value }
+        let sorted = order.map { region in (key: region, value: regionWeights[region] ?? 0) }
+            .sorted { $0.value > $1.value }
         guard let topWeight = sorted.first?.value else {
             return (["Core"], [])
         }
