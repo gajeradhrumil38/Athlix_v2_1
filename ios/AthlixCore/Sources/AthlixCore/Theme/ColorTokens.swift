@@ -33,7 +33,7 @@ public enum ColorTokens {
     public static let lgSheetBg = Color(hex: "121218").opacity(0.90)
 }
 
-extension Color {
+public extension Color {
     init(hex: String) {
         var hexSanitized = hex.trimmingCharacters(in: .whitespacesAndNewlines)
         hexSanitized = hexSanitized.replacingOccurrences(of: "#", with: "")
