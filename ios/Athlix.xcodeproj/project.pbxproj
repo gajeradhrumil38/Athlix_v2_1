@@ -12,6 +12,8 @@
 		23FF06595DF93C0E5551367B /* MuscleMapWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBEF6283EA033AF33A0668E /* MuscleMapWidgetView.swift */; };
 		27F3DA640D807734B7720E70 /* CachedWorkout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 019CB6DDE71BC7551CBF0E22 /* CachedWorkout.swift */; };
 		2B70DDDDDD844BC3FF28E81E /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08933B9BEC25745024335401 /* DashboardViewModel.swift */; };
+		2CE0ACB381D8FD6ABA35ED09 /* WorkoutDraftStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A34F556739ED2B90E42FE47 /* WorkoutDraftStore.swift */; };
+		467BBA484B5A13D5F977C2DC /* WorkoutDraftStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 10AA0B97EC05DB59C7761A0C /* WorkoutDraftStoreTests.swift */; };
 		4E8906A7A0BDAF7C0B51F90F /* SignInWithAppleButtonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC846B5B291516618F30C690 /* SignInWithAppleButtonView.swift */; };
 		5862D577D9A5BDAD7EB7AECE /* PlaceholderCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12D09086A7BED0BAFFB00412 /* PlaceholderCalendarView.swift */; };
 		614813C1629A8CBA1751CDCF /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBDD3F03C7ADB93D4EB6A0F4 /* RootView.swift */; };
@@ -33,11 +35,23 @@
 		EA3FFBF4B822A58CCF78D9F0 /* AthlixCore in Frameworks */ = {isa = PBXBuildFile; productRef = 3A8D9625D32093B32C7AB9DB /* AthlixCore */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		31A848ADD970E04A89AF7088 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C09D661AFA6538F2F3659E43 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9E926EAD18081C7ECE91F0CD;
+			remoteInfo = Athlix;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		019CB6DDE71BC7551CBF0E22 /* CachedWorkout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedWorkout.swift; sourceTree = "<group>"; };
 		0638A965E78081075D4391E5 /* TrainNextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainNextView.swift; sourceTree = "<group>"; };
 		081560AE3DA529FA223035F2 /* PlaceholderLogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderLogView.swift; sourceTree = "<group>"; };
 		08933B9BEC25745024335401 /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
+		0A34F556739ED2B90E42FE47 /* WorkoutDraftStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDraftStore.swift; sourceTree = "<group>"; };
+		10AA0B97EC05DB59C7761A0C /* WorkoutDraftStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDraftStoreTests.swift; sourceTree = "<group>"; };
 		12D09086A7BED0BAFFB00412 /* PlaceholderCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderCalendarView.swift; sourceTree = "<group>"; };
 		346AB6CA0D8084348CBA7F83 /* PlaceholderProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderProgressView.swift; sourceTree = "<group>"; };
 		44A9BC67B49671EB5C6BC709 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
@@ -60,6 +74,7 @@
 		EBDD3F03C7ADB93D4EB6A0F4 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
 		F5031DAE67DE7E8701DEEBC5 /* MuscleRadarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleRadarView.swift; sourceTree = "<group>"; };
 		F7C727D6D0ED1B1CF3A87E72 /* PlaceholderRunView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderRunView.swift; sourceTree = "<group>"; };
+		F9852E232663431D2D69008B /* AthlixTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = AthlixTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FFD0429FEF2ADD6441149E69 /* DateNavigatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateNavigatorView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -88,6 +103,7 @@
 			children = (
 				58E9898DA8C6403BA4FC5085 /* CachedPersonalRecord.swift */,
 				019CB6DDE71BC7551CBF0E22 /* CachedWorkout.swift */,
+				0A34F556739ED2B90E42FE47 /* WorkoutDraftStore.swift */,
 			);
 			path = Data;
 			sourceTree = "<group>";
@@ -96,6 +112,7 @@
 			isa = PBXGroup;
 			children = (
 				F903B38A3C52C1FE9EB3D2F2 /* Athlix */,
+				BEADB6D3442A9459645B80C4 /* AthlixTests */,
 				6D45D6DA7FC15F3DBC507259 /* Packages */,
 				EFA2112B8A84D825C5754144 /* Products */,
 			);
@@ -146,6 +163,14 @@
 			path = Progress;
 			sourceTree = "<group>";
 		};
+		BEADB6D3442A9459645B80C4 /* AthlixTests */ = {
+			isa = PBXGroup;
+			children = (
+				10AA0B97EC05DB59C7761A0C /* WorkoutDraftStoreTests.swift */,
+			);
+			path = AthlixTests;
+			sourceTree = "<group>";
+		};
 		C04F94BB918C86DC579A6361 /* Workout */ = {
 			isa = PBXGroup;
 			children = (
@@ -166,6 +191,7 @@
 			isa = PBXGroup;
 			children = (
 				61834EDDA3FF07A9F5474171 /* Athlix.app */,
+				F9852E232663431D2D69008B /* AthlixTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -215,6 +241,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		7B080444D8AA70D0E0C30130 /* AthlixTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = BCF889A1702357C626772E54 /* Build configuration list for PBXNativeTarget "AthlixTests" */;
+			buildPhases = (
+				87A8C14BA94F647309470476 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				2C81E270C0FAB5E08A7C8F64 /* PBXTargetDependency */,
+			);
+			name = AthlixTests;
+			packageProductDependencies = (
+			);
+			productName = AthlixTests;
+			productReference = F9852E232663431D2D69008B /* AthlixTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		9E926EAD18081C7ECE91F0CD /* Athlix */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = FDA6AAE435EC6F6A6D67A094 /* Build configuration list for PBXNativeTarget "Athlix" */;
@@ -263,11 +307,20 @@
 			projectRoot = "";
 			targets = (
 				9E926EAD18081C7ECE91F0CD /* Athlix */,
+				7B080444D8AA70D0E0C30130 /* AthlixTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
+		87A8C14BA94F647309470476 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				467BBA484B5A13D5F977C2DC /* WorkoutDraftStoreTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		8ACAA59EFEBFF701B61AAB75 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -295,10 +348,19 @@
 				67990839F25D2020F61201F7 /* TodayWorkoutView.swift in Sources */,
 				A254FDFDCD96B9646F440CA1 /* TrainNextView.swift in Sources */,
 				C052014D36E355BD73E2C94B /* WeeklyGoalRingView.swift in Sources */,
+				2CE0ACB381D8FD6ABA35ED09 /* WorkoutDraftStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		2C81E270C0FAB5E08A7C8F64 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9E926EAD18081C7ECE91F0CD /* Athlix */;
+			targetProxy = 31A848ADD970E04A89AF7088 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		131AB5DBC0AAC5B6BA470012 /* Release */ = {
@@ -354,6 +416,24 @@
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		19007D91E8CCA1304383C09B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.athlix.AthlixTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Athlix.app/Athlix";
 			};
 			name = Release;
 		};
@@ -438,6 +518,24 @@
 			};
 			name = Debug;
 		};
+		CD03D3A62AC321DD27B670BF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.athlix.AthlixTests;
+				SDKROOT = iphoneos;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Athlix.app/Athlix";
+			};
+			name = Debug;
+		};
 		F0B0BC2517E85793BE51D1FB /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -459,6 +557,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		BCF889A1702357C626772E54 /* Build configuration list for PBXNativeTarget "AthlixTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CD03D3A62AC321DD27B670BF /* Debug */,
+				19007D91E8CCA1304383C09B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		C46D09C1BCC232A5EA0E25DC /* Build configuration list for PBXProject "Athlix" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

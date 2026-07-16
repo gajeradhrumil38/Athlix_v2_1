@@ -22,3 +22,24 @@ targets:
         CODE_SIGN_ENTITLEMENTS: Athlix/Athlix.entitlements
         SWIFT_VERSION: "6.0"
         TARGETED_DEVICE_FAMILY: "1"
+  AthlixTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: AthlixTests
+    dependencies:
+      - target: Athlix
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "6.0"
+        TARGETED_DEVICE_FAMILY: "1"
+schemes:
+  Athlix:
+    build:
+      targets:
+        Athlix: all
+        AthlixTests: [test]
+    test:
+      targets:
+        - AthlixTests
