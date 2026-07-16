@@ -93,7 +93,12 @@ public final class LiveTemplateRepository: TemplateRepository, @unchecked Sendab
             )
         }
         let params = RPCParams(p_template_id: nil, p_title: title, p_exercises: payload)
-        return try? await client.rpc("save_template_with_exercises", params: params).execute().value
+        do {
+            return try await client.rpc("save_template_with_exercises", params: params).execute().value
+        } catch {
+            print("TemplateRepository: RPC create failed, falling back to direct path: \(error)")
+            return nil
+        }
     }
 
     private struct TemplateRow: Encodable {
