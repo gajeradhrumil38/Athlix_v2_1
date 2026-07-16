@@ -9,6 +9,29 @@ actor MockWorkoutRepository: WorkoutRepository {
         if shouldThrow { throw RepositoryError.network }
         return stubbedWorkouts
     }
+
+    // Unused by this file's tests -- present only to satisfy the WorkoutRepository protocol.
+    // See WorkoutRepositorySaveTests.swift for meaningful coverage of these methods.
+    func saveWorkout(userId: String, input: NewWorkoutInput) async throws -> Workout {
+        if shouldThrow { throw RepositoryError.network }
+        return stubbedWorkouts.first ?? Workout(
+            id: "stub", userId: userId, title: input.title, date: input.date,
+            durationMinutes: input.durationMinutes, notes: input.notes, muscleGroups: nil, createdAt: ""
+        )
+    }
+
+    func deleteWorkout(userId: String, workoutId: String) async throws {
+        if shouldThrow { throw RepositoryError.network }
+    }
+
+    func renameWorkout(userId: String, workoutId: String, newTitle: String) async throws {
+        if shouldThrow { throw RepositoryError.network }
+    }
+
+    func updateWorkoutSets(userId: String, workoutId: String, exercises: [NewWorkoutExercise]) async throws -> (exercises: [ExerciseSet], muscleGroups: [String]) {
+        if shouldThrow { throw RepositoryError.network }
+        return ([], [])
+    }
 }
 
 extension MockWorkoutRepository {
