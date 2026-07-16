@@ -88,6 +88,39 @@ private func makeNontrivialDraft() -> WorkoutDraft {
     }
 }
 
+@Test func draftRoundTripWithOptionalWeightTrue() throws {
+    // Covers the third state of ExerciseEntry.optionalWeight (nil/false already
+    // exercised by makeNontrivialDraft) — weighted push-ups opting in to
+    // tracking added weight alongside their normal reps-only fields.
+    let weightedPushUps = ExerciseEntry(
+        id: "ex-3",
+        name: "Weighted Push-Ups",
+        muscleGroup: "Chest",
+        exerciseDbId: "weighted-push-ups",
+        sets: [
+            LoggedSet(id: "s5", weight: 25, reps: 12, done: true, isPR: false, plannedWeight: 25, plannedReps: 12),
+        ],
+        optionalWeight: true,
+        inputTypeOverride: .repsOnly,
+        lastSession: nil
+    )
+
+    let draft = WorkoutDraft(
+        id: "draft-def",
+        title: "Bodyweight Day",
+        startAt: Date(timeIntervalSince1970: 1_752_100_000),
+        elapsedSeconds: 300,
+        exercises: [weightedPushUps],
+        notes: nil,
+        savedAt: Date(timeIntervalSince1970: 1_752_100_300)
+    )
+
+    let data = try makeEncoder().encode(draft)
+    let decoded = try makeDecoder().decode(WorkoutDraft.self, from: data)
+    #expect(decoded == draft)
+    #expect(decoded.exercises[0].optionalWeight == true)
+}
+
 @Test func draftRoundTripWithNoExercisesAndNilFields() throws {
     let draft = WorkoutDraft(
         id: nil,

@@ -61,6 +61,15 @@ public struct ExerciseEntry: Codable, Equatable, Sendable, Identifiable {
     public var muscleGroup: String
     public var exerciseDbId: String?
     public var sets: [LoggedSet]
+
+    /// Tri-state flag for exercises where added weight is optional (e.g. weighted
+    /// push-ups, which are normally reps-only but can optionally track added weight):
+    /// - `nil`: unset — inherit the default optional-weight behavior for this
+    ///   exercise's `ExerciseInputType` (i.e. no override has been chosen).
+    /// - `false`: explicitly NOT optional — weight is required/absent per the
+    ///   exercise's normal input type, with no optional-weight affordance shown.
+    /// - `true`: explicitly optional — the user has opted in to tracking added
+    ///   weight alongside the exercise's normal fields (e.g. reps).
     public var optionalWeight: Bool?
     public var inputTypeOverride: ExerciseInputType?
     public var lastSession: LastSessionSummary?
@@ -81,6 +90,11 @@ public struct ExerciseEntry: Codable, Equatable, Sendable, Identifiable {
 /// An ACTIVE (not-yet-saved) workout session, kept in memory/on-disk as a
 /// recoverable draft. Distinct from a persisted workout row in Supabase.
 public struct WorkoutDraft: Codable, Equatable, Sendable {
+    /// `var`, unlike the `let id` on `ExerciseEntry`/`LoggedSet`: a draft has no
+    /// stable identity until its first save (it starts as `nil` while purely
+    /// local/in-progress and is assigned once persisted), whereas child entries
+    /// and sets are stable local identities from the moment they're created in
+    /// the UI, so their ids never need to change post-creation.
     public var id: String?
     public var title: String
     public var startAt: Date
