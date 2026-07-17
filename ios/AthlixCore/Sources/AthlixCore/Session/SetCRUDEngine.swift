@@ -10,6 +10,15 @@ public enum SetCRUDEngine {
     /// Matches the web app's hard cap on sets per exercise.
     public static let maxSetsPerExercise = 20
 
+    /// Whether `sets` is already at (or somehow beyond) `maxSetsPerExercise`.
+    /// Lets a caller check proactively — before calling `addSet`/`copySet` —
+    /// so it can show a "max 20 sets" message rather than inferring the cap
+    /// was hit after the fact by diffing the no-op result (which is
+    /// indistinguishable from an invalid-index no-op).
+    public static func isAtCap(_ sets: [LoggedSet]) -> Bool {
+        sets.count >= maxSetsPerExercise
+    }
+
     /// Appends a new set seeded from the last existing set's weight/reps (a
     /// starting point for the user to adjust), with `done`/`isPR` reset and no
     /// planned values. No-op once at `maxSetsPerExercise`.

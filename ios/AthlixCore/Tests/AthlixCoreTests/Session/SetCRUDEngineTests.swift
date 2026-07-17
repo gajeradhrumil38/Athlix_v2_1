@@ -33,6 +33,16 @@ private func makeSets(count: Int) -> [LoggedSet] {
     (0..<count).map { makeSet(id: "s\($0)", weight: Double($0), reps: $0) }
 }
 
+// MARK: - isAtCap
+
+@Test func isAtCapIsFalseJustBelowCap() {
+    #expect(SetCRUDEngine.isAtCap(makeSets(count: 19)) == false)
+}
+
+@Test func isAtCapIsTrueAtCap() {
+    #expect(SetCRUDEngine.isAtCap(makeSets(count: 20)) == true)
+}
+
 // MARK: - addSet
 
 @Test func addSetSeedsFromLastSetWeightAndReps() {
