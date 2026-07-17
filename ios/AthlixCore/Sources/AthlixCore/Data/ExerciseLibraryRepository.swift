@@ -104,6 +104,10 @@ public final class LiveExerciseLibraryRepository: ExerciseLibraryRepository, @un
                 .sorted { $0.orderIndex < $1.orderIndex }
 
             let lastRow = sessionRows.last ?? row
+            // web's getRecentExerciseOptions (unlike getLastExerciseSession) treats a zero/absent
+            // `sets` as 1 for volume purposes (`r.sets || 1`). buildLastSessionSummary above has
+            // no such fallback. This is a real asymmetry in the web source itself, preserved here
+            // verbatim -- not a bug to "fix" into consistency with the other function.
             let totalVolume = sessionRows.reduce(0.0) { $0 + $1.weight * Double($1.reps) * Double($1.sets == 0 ? 1 : $1.sets) }
 
             let session = LastSessionSummary(
@@ -144,11 +148,19 @@ public final class LiveExerciseLibraryRepository: ExerciseLibraryRepository, @un
         return nameMatches + muscleGroupExtras
     }
 
+    // Shared "visible to this user" predicate: a default (non-custom) exercise, or a custom
+    // exercise this user owns. Mirrors the `!exercise.is_custom || exercise.user_id === userId`
+    // check duplicated across web's getExerciseLibraryByGroup, addCustomExercise, and the
+    // server-side `is_custom.eq.false,user_id.eq.X` OR filter in fetchExerciseLibraryRows.
+    static func isVisible(_ item: ExerciseLibraryItem, to userId: String) -> Bool {
+        !item.isCustom || item.userId == userId
+    }
+
     // Mirrors web's getExerciseLibraryByGroup (~L2213-2219): filter to the given group and to
     // rows visible to this user (default, or their own custom entries), sorted alphabetically.
     static func filterLibraryByGroup(all: [ExerciseLibraryItem], muscleGroup: String, userId: String) -> [ExerciseLibraryItem] {
         all
-            .filter { $0.muscleGroup == muscleGroup && (!$0.isCustom || $0.userId == userId) }
+            .filter { $0.muscleGroup == muscleGroup && isVisible($0, to: userId) }
             .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
     }
 
@@ -160,7 +172,7 @@ public final class LiveExerciseLibraryRepository: ExerciseLibraryRepository, @un
         return rows.first {
             $0.muscleGroup == muscleGroup &&
             $0.name.lowercased() == normalized &&
-            (!$0.isCustom || $0.userId == userId)
+            isVisible($0, to: userId)
         }
     }
 
@@ -383,7 +395,10 @@ public final class LiveExerciseLibraryRepository: ExerciseLibraryRepository, @un
     }
 }
 
-private extension Array {
+// `internal` (not `private`) so ExerciseLibraryRepositoryTests can assert on chunk
+// boundaries directly via @testable import, rather than only indirectly through the
+// network-calling fetchJoinedExerciseRows.
+extension Array {
     func chunked(_ size: Int) -> [[Element]] {
         guard size > 0 else { return [self] }
         return stride(from: 0, to: count, by: size).map {

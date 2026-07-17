@@ -21,12 +21,12 @@ actor InMemoryExerciseLibraryRepository: ExerciseLibraryRepository {
     var workoutIdsForUser: [String] = []
 
     func searchLibrary(userId: String, query: String) async throws -> [ExerciseLibraryItem] {
-        let visible = libraryRows.filter { !$0.isCustom || $0.userId == userId }
+        let visible = libraryRows.filter { LiveExerciseLibraryRepository.isVisible($0, to: userId) }
         return LiveExerciseLibraryRepository.searchTiers(all: visible, query: query)
     }
 
     func libraryByGroup(userId: String, muscleGroup: String) async throws -> [ExerciseLibraryItem] {
-        let visible = libraryRows.filter { !$0.isCustom || $0.userId == userId }
+        let visible = libraryRows.filter { LiveExerciseLibraryRepository.isVisible($0, to: userId) }
         return LiveExerciseLibraryRepository.filterLibraryByGroup(all: visible, muscleGroup: muscleGroup, userId: userId)
     }
 
@@ -69,7 +69,7 @@ actor InMemoryExerciseLibraryRepository: ExerciseLibraryRepository {
 
     func addCustomExercise(userId: String, name: String, muscleGroup: String) async throws -> ExerciseLibraryItem {
         let normalizedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let visible = libraryRows.filter { !$0.isCustom || $0.userId == userId }
+        let visible = libraryRows.filter { LiveExerciseLibraryRepository.isVisible($0, to: userId) }
         if let existing = LiveExerciseLibraryRepository.findExistingExercise(in: visible, name: normalizedName, muscleGroup: muscleGroup, userId: userId) {
             return existing
         }
@@ -340,5 +340,53 @@ final class ExerciseLibraryRepositoryTests: XCTestCase {
         XCTAssertNil(result.exerciseDbId)
         let inserts = await mock.insertCalls
         XCTAssertEqual(inserts.count, 1)
+    }
+
+    // MARK: - chunked(_:) batching boundary
+    //
+    // fetchJoinedExerciseRows batches workout ids into groups of 400 to avoid URL/query-length
+    // limits (mirroring web's `chunk(workoutIds, 400)`). That call itself needs a real network
+    // layer to exercise end-to-end, so these tests hit the `chunked(_:)` Array extension
+    // directly -- the actual boundary logic -- rather than only indirectly through a mock that
+    // bypasses chunking by working off pre-seeded rows.
+
+    func testChunkedExactlyOneChunkSizeReturnsSingleFullChunk() {
+        let items = Array(0..<400)
+
+        let chunks = items.chunked(400)
+
+        XCTAssertEqual(chunks.count, 1)
+        XCTAssertEqual(chunks.first?.count, 400)
+    }
+
+    func testChunkedOneOverChunkSizeReturnsTwoChunksWithTrailingRemainder() {
+        let items = Array(0..<401)
+
+        let chunks = items.chunked(400)
+
+        XCTAssertEqual(chunks.count, 2)
+        XCTAssertEqual(chunks.first?.count, 400)
+        XCTAssertEqual(chunks.last?.count, 1)
+        XCTAssertEqual(chunks.last?.first, 400)
+    }
+
+    func testChunkedExactlyTwoChunkSizesReturnsTwoFullChunks() {
+        let items = Array(0..<800)
+
+        let chunks = items.chunked(400)
+
+        XCTAssertEqual(chunks.count, 2)
+        XCTAssertEqual(chunks[0].count, 400)
+        XCTAssertEqual(chunks[1].count, 400)
+        XCTAssertEqual(chunks[0], Array(0..<400))
+        XCTAssertEqual(chunks[1], Array(400..<800))
+    }
+
+    func testChunkedEmptyArrayReturnsNoChunks() {
+        let items: [Int] = []
+
+        let chunks = items.chunked(400)
+
+        XCTAssertTrue(chunks.isEmpty, "An empty array in must produce zero chunks, not a single empty chunk")
     }
 }
