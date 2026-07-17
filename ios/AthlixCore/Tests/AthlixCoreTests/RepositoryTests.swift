@@ -32,6 +32,11 @@ actor MockWorkoutRepository: WorkoutRepository {
         if shouldThrow { throw RepositoryError.network }
         return ([], [])
     }
+
+    func fetchWorkoutExercises(userId: String, workoutId: String) async throws -> [ExerciseSet] {
+        if shouldThrow { throw RepositoryError.network }
+        return []
+    }
 }
 
 extension MockWorkoutRepository {

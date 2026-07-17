@@ -161,29 +161,15 @@ final class ActiveWorkoutViewModel {
         isPaused = true
     }
 
-    /// KNOWN GAP (flagged for review, not silently guessed on): the task's
-    /// prescribed behavior is to fetch a past date's saved workout via
-    /// `WorkoutRepository.fetchWorkouts` and reconstruct `[ExerciseEntry]` by
-    /// grouping the flat `ExerciseSet` rows it returns, one `LoggedSet` per
-    /// row. However `WorkoutRepository.fetchWorkouts` returns `[Workout]`
-    /// (title/date/duration/notes/muscleGroups metadata only) -- `Workout`
-    /// has no nested exercises/sets, and the protocol has no other read
-    /// method that exposes a single workout's flat `exercises` table rows
-    /// (`updateWorkoutSets` is a destructive write path: it deletes and
-    /// replaces every row for the workout, so it must NOT be (ab)used here
-    /// just to read). Adding a new read method to `WorkoutRepository` would
-    /// touch `AthlixCore`, which this task's own verification step assumes is
-    /// unaffected ("cd ios/AthlixCore && swift test to confirm no AthlixCore
-    /// regressions -- should be unaffected since this task only touches the
-    /// app target"), and would also require updating the `MockWorkoutRepository`
-    /// in `AthlixCoreTests/RepositoryTests.swift` to keep that package
-    /// compiling, which is out of scope for an app-target-only task per the
-    /// task framing. So: this loads the workout's metadata (title, notes,
-    /// approximate elapsed time from `durationMinutes`) when a match exists,
-    /// but currently leaves `exercises` EMPTY rather than reconstructed --
-    /// past-date editing will show the right title/date/notes but no sets
-    /// until a follow-up task adds a `WorkoutRepository` method exposing a
-    /// single workout's exercise rows (e.g. `fetchWorkoutExercises(userId:workoutId:)`).
+    /// Fetches the given date's saved workout (via `fetchWorkouts` scoped to
+    /// that single day) and, if one exists, its flat `exercises` table rows
+    /// (via `fetchWorkoutExercises`), then reconstructs `[ExerciseEntry]` by
+    /// grouping same-named rows in their existing `order_index` order -- one
+    /// `LoggedSet` per row, `done: true` since these are already-completed
+    /// sets from a saved workout. Each group's `ExerciseEntry` takes its
+    /// `muscleGroup`/`exerciseDbId` from its first row (rows for the same
+    /// exercise name are expected to share the same muscle group/db id,
+    /// matching how `saveWorkout` originally wrote them).
     private func loadPastDate(_ dateString: String) async {
         entryMode = .pastDateEdit(date: dateString)
         exercises = []
@@ -198,13 +184,43 @@ final class ActiveWorkoutViewModel {
             startAt = date
             elapsedSeconds = (workout.durationMinutes ?? 0) * 60
             isPaused = true
-            // exercises intentionally left empty -- see doc comment above.
+
+            let rows = try await workoutRepository.fetchWorkoutExercises(userId: userId, workoutId: workout.id)
+            exercises = Self.groupExerciseRows(rows)
         } catch {
             // Fetch failure: leave the blank pastDateEdit state in place
             // rather than propagating -- per-action isolation, matching the
             // design spec's "Error Handling" stance (a failed lookup here
             // shouldn't crash session entry; the user can still log fresh
             // sets for the date).
+        }
+    }
+
+    /// Groups flat `ExerciseSet` rows (already ordered by `order_index`
+    /// ascending, per `fetchWorkoutExercises`'s contract) into `[ExerciseEntry]`
+    /// by exact `name` match, preserving first-seen order of each name.
+    private static func groupExerciseRows(_ rows: [ExerciseSet]) -> [ExerciseEntry] {
+        var order: [String] = []
+        var byName: [String: [ExerciseSet]] = [:]
+        for row in rows {
+            if byName[row.name] == nil { order.append(row.name) }
+            byName[row.name, default: []].append(row)
+        }
+
+        return order.map { name in
+            let rowsForName = byName[name] ?? []
+            let sets = rowsForName.map { row in
+                LoggedSet(
+                    id: row.id, weight: row.weight, reps: row.reps, done: true,
+                    isPR: false, plannedWeight: nil, plannedReps: nil
+                )
+            }
+            let first = rowsForName[0]
+            return ExerciseEntry(
+                id: UUID().uuidString, name: name, muscleGroup: first.muscleGroup ?? "",
+                exerciseDbId: first.exerciseDbId, sets: sets,
+                optionalWeight: nil, inputTypeOverride: nil, lastSession: nil
+            )
         }
     }
 

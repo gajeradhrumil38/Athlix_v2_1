@@ -162,10 +162,18 @@ actor InMemoryWorkoutRepository: WorkoutRepository {
 
         return (rows, muscleGroups)
     }
+
+    func fetchWorkoutExercises(userId: String, workoutId: String) async throws -> [ExerciseSet] {
+        guard let owned = workouts[workoutId], owned.userId == userId else {
+            throw RepositoryError.unknown("Workout not found.")
+        }
+        return (exerciseRows[workoutId] ?? []).sorted { $0.orderIndex < $1.orderIndex }
+    }
 }
 
 extension InMemoryWorkoutRepository {
     func seedWorkout(_ workout: Workout) { workouts[workout.id] = workout }
+    func seedExerciseRows(_ rows: [ExerciseSet], forWorkoutId workoutId: String) { exerciseRows[workoutId] = rows }
     func seedPersonalRecord(_ record: PersonalRecord) { personalRecords[record.exerciseName] = record }
     func setRpcShouldFail(_ value: Bool) { rpcShouldFail = value }
     func setRpcSucceedsButFetchFails(_ value: Bool) { rpcSucceedsButFetchFails = value }
@@ -482,5 +490,67 @@ final class WorkoutRepositorySaveTests: XCTestCase {
         XCTAssertEqual(Set(updatedWorkout?.muscleGroups ?? []), Set(["Chest", "Legs"]))
         let storedExercises = await mock.exerciseRows["w1"]
         XCTAssertEqual(storedExercises?.count, 4)
+    }
+
+    // MARK: - fetchWorkoutExercises
+
+    func testFetchWorkoutExercisesReturnsRowsOrderedByOrderIndex() async throws {
+        let mock = InMemoryWorkoutRepository()
+        await mock.seedWorkout(Workout(
+            id: "w1", userId: "u1", title: "Push Day", date: "2026-07-15",
+            durationMinutes: 45, notes: nil, muscleGroups: ["Chest"], createdAt: "2026-07-15T00:00:00Z"
+        ))
+        let rows = [
+            ExerciseSet(id: "e2", workoutId: "w1", name: "Bench Press", muscleGroup: "Chest", sets: 1, reps: 6, weight: 145, unit: "lbs", orderIndex: 1, exerciseDbId: nil),
+            ExerciseSet(id: "e1", workoutId: "w1", name: "Bench Press", muscleGroup: "Chest", sets: 1, reps: 8, weight: 135, unit: "lbs", orderIndex: 0, exerciseDbId: nil),
+            ExerciseSet(id: "e3", workoutId: "w1", name: "Overhead Press", muscleGroup: "Shoulders", sets: 1, reps: 8, weight: 65, unit: "lbs", orderIndex: 2, exerciseDbId: nil),
+        ]
+        await mock.seedExerciseRows(rows, forWorkoutId: "w1")
+
+        let result = try await mock.fetchWorkoutExercises(userId: "u1", workoutId: "w1")
+
+        XCTAssertEqual(result.map(\.id), ["e1", "e2", "e3"], "should be ordered by order_index ascending")
+    }
+
+    func testFetchWorkoutExercisesThrowsWhenNotOwnedByUser() async throws {
+        let mock = InMemoryWorkoutRepository()
+        await mock.seedWorkout(Workout(
+            id: "w1", userId: "someone-else", title: "Push Day", date: "2026-07-15",
+            durationMinutes: 45, notes: nil, muscleGroups: nil, createdAt: "2026-07-15T00:00:00Z"
+        ))
+
+        do {
+            _ = try await mock.fetchWorkoutExercises(userId: "u1", workoutId: "w1")
+            XCTFail("Expected fetch to throw for unowned workout")
+        } catch {
+            if case RepositoryError.unknown(let message) = error as! RepositoryError {
+                XCTAssertEqual(message, "Workout not found.")
+            } else {
+                XCTFail("Unexpected error type: \(error)")
+            }
+        }
+    }
+
+    func testFetchWorkoutExercisesThrowsWhenWorkoutDoesNotExist() async throws {
+        let mock = InMemoryWorkoutRepository()
+
+        do {
+            _ = try await mock.fetchWorkoutExercises(userId: "u1", workoutId: "missing")
+            XCTFail("Expected fetch to throw for a nonexistent workout")
+        } catch {
+            XCTAssertEqual(error as? RepositoryError, .unknown("Workout not found."))
+        }
+    }
+
+    func testFetchWorkoutExercisesReturnsEmptyArrayWhenWorkoutHasNoExerciseRows() async throws {
+        let mock = InMemoryWorkoutRepository()
+        await mock.seedWorkout(Workout(
+            id: "w1", userId: "u1", title: "Empty Day", date: "2026-07-15",
+            durationMinutes: 0, notes: nil, muscleGroups: nil, createdAt: "2026-07-15T00:00:00Z"
+        ))
+
+        let result = try await mock.fetchWorkoutExercises(userId: "u1", workoutId: "w1")
+
+        XCTAssertEqual(result, [])
     }
 }

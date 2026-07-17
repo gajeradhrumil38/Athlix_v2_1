@@ -7,15 +7,20 @@ import AthlixCore
 actor MockWorkoutRepository: WorkoutRepository {
     var stubbedWorkouts: [Workout] = []
     var stubbedSaveResult: Workout?
+    var stubbedExerciseRows: [ExerciseSet] = []
     var shouldThrowOnFetch = false
     var shouldThrowOnSave = false
+    var shouldThrowOnFetchExercises = false
     private(set) var lastSaveInput: NewWorkoutInput?
     private(set) var lastFetchRange: (from: Date, to: Date)?
+    private(set) var lastFetchExercisesWorkoutId: String?
 
     func setStubbedWorkouts(_ workouts: [Workout]) { stubbedWorkouts = workouts }
     func setStubbedSaveResult(_ workout: Workout) { stubbedSaveResult = workout }
+    func setStubbedExerciseRows(_ rows: [ExerciseSet]) { stubbedExerciseRows = rows }
     func setShouldThrowOnFetch(_ value: Bool) { shouldThrowOnFetch = value }
     func setShouldThrowOnSave(_ value: Bool) { shouldThrowOnSave = value }
+    func setShouldThrowOnFetchExercises(_ value: Bool) { shouldThrowOnFetchExercises = value }
     func getLastSaveInput() -> NewWorkoutInput? { lastSaveInput }
 
     func fetchWorkouts(userId: String, from: Date, to: Date) async throws -> [Workout] {
@@ -38,6 +43,12 @@ actor MockWorkoutRepository: WorkoutRepository {
     func renameWorkout(userId: String, workoutId: String, newTitle: String) async throws {}
     func updateWorkoutSets(userId: String, workoutId: String, exercises: [NewWorkoutExercise]) async throws -> (exercises: [ExerciseSet], muscleGroups: [String]) {
         ([], [])
+    }
+
+    func fetchWorkoutExercises(userId: String, workoutId: String) async throws -> [ExerciseSet] {
+        lastFetchExercisesWorkoutId = workoutId
+        if shouldThrowOnFetchExercises { throw RepositoryError.network }
+        return stubbedExerciseRows
     }
 }
 
@@ -115,6 +126,39 @@ final class ActiveWorkoutViewModelTests: XCTestCase {
         LoggedSet(id: id, weight: weight, reps: reps, done: done, isPR: false, plannedWeight: nil, plannedReps: nil)
     }
 
+    // `ExerciseSet` (AthlixCore) has no public initializer -- only an implicit
+    // internal memberwise one, visible to `AthlixCoreTests` via `@testable
+    // import AthlixCore` but NOT to this file, which only does `@testable
+    // import Athlix` (a plain `import AthlixCore`). Round-tripping through its
+    // public `Codable` conformance is the only way to construct a fixture row
+    // here without adding a new public initializer to a committed AthlixCore
+    // model just for test convenience.
+    private struct ExerciseSetFixtureCoder: Encodable {
+        let id: String
+        let workout_id: String
+        let name: String
+        let muscle_group: String?
+        let sets: Int
+        let reps: Int
+        let weight: Double
+        let unit: String
+        let order_index: Int
+        let exercise_db_id: String?
+    }
+
+    private func makeExerciseSetRow(
+        id: String, workoutId: String, name: String, muscleGroup: String?,
+        reps: Int, weight: Double, orderIndex: Int, exerciseDbId: String?, unit: String = "lbs"
+    ) -> ExerciseSet {
+        let coder = ExerciseSetFixtureCoder(
+            id: id, workout_id: workoutId, name: name, muscle_group: muscleGroup,
+            sets: 1, reps: reps, weight: weight, unit: unit,
+            order_index: orderIndex, exercise_db_id: exerciseDbId
+        )
+        let data = try! JSONEncoder().encode(coder)
+        return try! JSONDecoder().decode(ExerciseSet.self, from: data)
+    }
+
     // MARK: - Entry resolution
 
     func testResolveEntryResumesValidDraftOverAnyDeepLink() async {
@@ -180,6 +224,44 @@ final class ActiveWorkoutViewModelTests: XCTestCase {
         XCTAssertEqual(sut.title, "Leg Day")
         XCTAssertEqual(sut.notes, "past notes")
         XCTAssertEqual(sut.elapsedSeconds, 45 * 60)
+    }
+
+    func testResolveEntryPastDateReconstructsExercisesGroupedByName() async {
+        let workout = Workout(
+            id: "w1", userId: "user-1", title: "Leg Day", date: "2026-07-01",
+            durationMinutes: 45, notes: nil, muscleGroups: ["Legs"],
+            createdAt: "2026-07-01T00:00:00Z"
+        )
+        await workoutRepo.setStubbedWorkouts([workout])
+        let rows = [
+            makeExerciseSetRow(id: "r1", workoutId: "w1", name: "Squat", muscleGroup: "Legs", reps: 8, weight: 225, orderIndex: 0, exerciseDbId: "db-squat"),
+            makeExerciseSetRow(id: "r2", workoutId: "w1", name: "Squat", muscleGroup: "Legs", reps: 6, weight: 235, orderIndex: 1, exerciseDbId: "db-squat"),
+            makeExerciseSetRow(id: "r3", workoutId: "w1", name: "Leg Press", muscleGroup: "Legs", reps: 10, weight: 315, orderIndex: 2, exerciseDbId: nil),
+        ]
+        await workoutRepo.setStubbedExerciseRows(rows)
+
+        let sut = makeSUT()
+        await sut.resolveEntry(deepLink: .pastDate("2026-07-01"))
+
+        XCTAssertEqual(sut.exercises.map(\.name), ["Squat", "Leg Press"])
+        XCTAssertEqual(sut.exercises[0].sets.count, 2)
+        XCTAssertEqual(sut.exercises[0].sets.map(\.weight), [225, 235])
+        XCTAssertEqual(sut.exercises[0].sets.map(\.reps), [8, 6])
+        XCTAssertTrue(sut.exercises[0].sets.allSatisfy(\.done), "reconstructed sets from a saved workout should be marked done")
+        XCTAssertEqual(sut.exercises[0].exerciseDbId, "db-squat")
+        XCTAssertEqual(sut.exercises[1].sets.count, 1)
+        XCTAssertEqual(sut.exercises[1].sets[0].weight, 315)
+
+        let fetchedWorkoutId = await workoutRepo.lastFetchExercisesWorkoutId
+        XCTAssertEqual(fetchedWorkoutId, "w1")
+    }
+
+    func testResolveEntryPastDateWithNoSavedWorkoutLeavesExercisesEmpty() async {
+        let sut = makeSUT()
+        await sut.resolveEntry(deepLink: .pastDate("2026-07-01"))
+
+        XCTAssertEqual(sut.entryMode, .pastDateEdit(date: "2026-07-01"))
+        XCTAssertTrue(sut.exercises.isEmpty)
     }
 
     func testResolveEntryNothingFallsBackToBlank() async {

@@ -7,6 +7,13 @@ public protocol WorkoutRepository: Sendable {
     func deleteWorkout(userId: String, workoutId: String) async throws
     func renameWorkout(userId: String, workoutId: String, newTitle: String) async throws
     func updateWorkoutSets(userId: String, workoutId: String, exercises: [NewWorkoutExercise]) async throws -> (exercises: [ExerciseSet], muscleGroups: [String])
+    /// Read-only fetch of a single workout's flat `exercises` table rows, ordered by
+    /// `order_index` ascending. Used by past-date session editing to reconstruct
+    /// `[ExerciseEntry]` client-side by grouping same-named rows. Verifies ownership of
+    /// `workoutId` via `userId` first (the `exercises` table itself has no `user_id`
+    /// column -- see `supabase/schema.sql`), throwing `RepositoryError.unknown("Workout
+    /// not found.")` if not owned, mirroring `updateWorkoutSets`'s ownership check.
+    func fetchWorkoutExercises(userId: String, workoutId: String) async throws -> [ExerciseSet]
 }
 
 // A named struct rather than a bare tuple: a tuple's positional literal args (e.g.
@@ -408,6 +415,40 @@ public final class LiveWorkoutRepository: WorkoutRepository, @unchecked Sendable
                 )
             }
             return (resultExercises, muscleGroups)
+        } catch let error as RepositoryError {
+            throw error
+        } catch {
+            throw RepositoryError.unknown("\(error)")
+        }
+    }
+
+    // MARK: - fetchWorkoutExercises
+
+    // Read-only counterpart to updateWorkoutSets's ownership check: verify the workout
+    // belongs to userId first (same pattern/message), then fetch its exercise rows ordered
+    // by order_index. Used by ActiveWorkoutViewModel's past-date edit flow to reconstruct
+    // [ExerciseEntry] client-side by grouping same-named rows.
+    public func fetchWorkoutExercises(userId: String, workoutId: String) async throws -> [ExerciseSet] {
+        do {
+            let owned: [WorkoutIdRow] = try await client
+                .from("workouts")
+                .select("id")
+                .eq("id", value: workoutId)
+                .eq("user_id", value: userId)
+                .execute()
+                .value
+            if owned.isEmpty {
+                throw RepositoryError.unknown("Workout not found.")
+            }
+
+            let rows: [ExerciseSet] = try await client
+                .from("exercises")
+                .select()
+                .eq("workout_id", value: workoutId)
+                .order("order_index", ascending: true)
+                .execute()
+                .value
+            return rows
         } catch let error as RepositoryError {
             throw error
         } catch {
