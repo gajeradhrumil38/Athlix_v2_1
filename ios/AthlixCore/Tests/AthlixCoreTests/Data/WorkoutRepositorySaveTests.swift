@@ -11,18 +11,20 @@ actor InMemoryWorkoutRepository: WorkoutRepository {
     var personalRecords: [String: PersonalRecord] = [:] // keyed by exerciseName
 
     var rpcShouldFail = false
+    var rpcSucceedsButFetchFails = false
     var rpcWorkoutId = "rpc-workout-id"
 
     var deleteCalls: [(workoutId: String, userId: String)] = []
     var renameCalls: [(workoutId: String, userId: String, title: String)] = []
     var networkCallCount = 0
+    var directPathCallCount = 0 // tracks how many times saveWorkoutDirect's insert path ran
 
     func fetchWorkouts(userId: String, from: Date, to: Date) async throws -> [Workout] {
         workouts.values.filter { $0.userId == userId }
     }
 
     func saveWorkout(userId: String, input: NewWorkoutInput) async throws -> Workout {
-        let validExercises: [(exercise: NewWorkoutExercise, sets: [(reps: Int, weight: Double, unit: String)])] =
+        let validExercises: [(exercise: NewWorkoutExercise, sets: [CompletedSetInput])] =
             input.exercises.compactMap { ex in
                 let sets = ex.completedSets.filter { $0.reps > 0 || $0.weight > 0 }
                 return sets.isEmpty ? nil : (ex, sets)
@@ -32,6 +34,13 @@ actor InMemoryWorkoutRepository: WorkoutRepository {
         }
 
         networkCallCount += 1
+
+        // RPC succeeded but the follow-up fetch failed: this must throw directly and must NOT
+        // fall through to the direct insert path (that would silently duplicate the workout the
+        // RPC already wrote server-side). Mirrors the split-scope fix in LiveWorkoutRepository.
+        if rpcSucceedsButFetchFails {
+            throw RepositoryError.unknown("Workout saved, but failed to fetch it.")
+        }
 
         if !rpcShouldFail {
             let workout = Workout(
@@ -44,6 +53,7 @@ actor InMemoryWorkoutRepository: WorkoutRepository {
         }
 
         // Fallback direct path
+        directPathCallCount += 1
         let workoutId = UUID().uuidString.lowercased()
         let muscleGroups = Array(Set(validExercises.compactMap { $0.exercise.muscleGroup }.filter { !$0.isEmpty }))
         let workout = Workout(
@@ -68,8 +78,10 @@ actor InMemoryWorkoutRepository: WorkoutRepository {
 
                 let candidate = (weight: set.weight, reps: set.reps, exerciseDbId: pair.exercise.exerciseDbId)
                 if let existing = bestFromNewWorkout[pair.exercise.name] {
-                    if candidate.weight > existing.weight ||
-                        (candidate.weight == existing.weight && candidate.reps > existing.reps) {
+                    if LiveWorkoutRepository.isBetterRecord(
+                        candidateWeight: candidate.weight, candidateReps: candidate.reps,
+                        existingWeight: existing.weight, existingReps: existing.reps
+                    ) {
                         bestFromNewWorkout[pair.exercise.name] = candidate
                     }
                 } else {
@@ -81,9 +93,10 @@ actor InMemoryWorkoutRepository: WorkoutRepository {
 
         for (exerciseName, candidate) in bestFromNewWorkout {
             let existing = personalRecords[exerciseName]
-            let shouldReplace = existing == nil ||
-                candidate.weight > existing!.bestWeight ||
-                (candidate.weight == existing!.bestWeight && candidate.reps > existing!.bestReps)
+            let shouldReplace = existing == nil || LiveWorkoutRepository.isBetterRecord(
+                candidateWeight: candidate.weight, candidateReps: candidate.reps,
+                existingWeight: existing!.bestWeight, existingReps: existing!.bestReps
+            )
             if !shouldReplace { continue }
             personalRecords[exerciseName] = PersonalRecord(
                 id: existing?.id ?? UUID().uuidString.lowercased(), userId: userId, exerciseName: exerciseName,
@@ -118,7 +131,7 @@ actor InMemoryWorkoutRepository: WorkoutRepository {
             throw RepositoryError.unknown("Workout not found.")
         }
 
-        let valid = exercises.compactMap { ex -> (exercise: NewWorkoutExercise, sets: [(reps: Int, weight: Double, unit: String)])? in
+        let valid = exercises.compactMap { ex -> (exercise: NewWorkoutExercise, sets: [CompletedSetInput])? in
             let sets = ex.completedSets.filter { $0.reps > 0 || $0.weight > 0 }
             return sets.isEmpty ? nil : (ex, sets)
         }
@@ -155,14 +168,19 @@ extension InMemoryWorkoutRepository {
     func seedWorkout(_ workout: Workout) { workouts[workout.id] = workout }
     func seedPersonalRecord(_ record: PersonalRecord) { personalRecords[record.exerciseName] = record }
     func setRpcShouldFail(_ value: Bool) { rpcShouldFail = value }
+    func setRpcSucceedsButFetchFails(_ value: Bool) { rpcSucceedsButFetchFails = value }
 }
 
 final class WorkoutRepositorySaveTests: XCTestCase {
+    private func sets(_ values: [(reps: Int, weight: Double, unit: String)]) -> [CompletedSetInput] {
+        values.map { CompletedSetInput(reps: $0.reps, weight: $0.weight, unit: $0.unit) }
+    }
+
     private func exercise(
         name: String = "Bench Press",
         muscleGroup: String? = "Chest",
         exerciseDbId: String? = nil,
-        completedSets: [(reps: Int, weight: Double, unit: String)] = [(reps: 8, weight: 135, unit: "lbs")]
+        completedSets: [CompletedSetInput] = [CompletedSetInput(reps: 8, weight: 135, unit: "lbs")]
     ) -> NewWorkoutExercise {
         NewWorkoutExercise(name: name, muscleGroup: muscleGroup, exerciseDbId: exerciseDbId, completedSets: completedSets)
     }
@@ -173,7 +191,7 @@ final class WorkoutRepositorySaveTests: XCTestCase {
         let mock = InMemoryWorkoutRepository()
         let input = NewWorkoutInput(
             title: "Empty Day", date: "2026-07-15", durationMinutes: 30, notes: nil,
-            exercises: [exercise(completedSets: [(reps: 0, weight: 0, unit: "lbs")])]
+            exercises: [exercise(completedSets: sets([(reps: 0, weight: 0, unit: "lbs")]))]
         )
 
         do {
@@ -209,6 +227,31 @@ final class WorkoutRepositorySaveTests: XCTestCase {
         XCTAssertEqual(stored, result)
     }
 
+    // MARK: - saveWorkout: RPC succeeds but fetch-back fails (must NOT duplicate-write)
+
+    func testSaveWorkoutThrowsWhenRPCSucceedsButFetchBackFailsAndDoesNotFallBackToDirectInsert() async throws {
+        let mock = InMemoryWorkoutRepository()
+        await mock.setRpcSucceedsButFetchFails(true)
+        let input = NewWorkoutInput(
+            title: "Push Day", date: "2026-07-15", durationMinutes: 45, notes: nil,
+            exercises: [exercise()]
+        )
+
+        do {
+            _ = try await mock.saveWorkout(userId: "u1", input: input)
+            XCTFail("Expected fetch-back failure to throw")
+        } catch {
+            if case RepositoryError.unknown(let message) = error as! RepositoryError {
+                XCTAssertEqual(message, "Workout saved, but failed to fetch it.")
+            } else {
+                XCTFail("Unexpected error type: \(error)")
+            }
+        }
+
+        let directCalls = await mock.directPathCallCount
+        XCTAssertEqual(directCalls, 0, "A fetch-back failure after a successful RPC must not fall through to the direct insert path (would duplicate-write)")
+    }
+
     // MARK: - saveWorkout: fallback path + PR best-of logic
 
     func testSaveWorkoutFallbackCreatesNewPRWhenNoneExists() async throws {
@@ -216,7 +259,7 @@ final class WorkoutRepositorySaveTests: XCTestCase {
         await mock.setRpcShouldFail(true)
         let input = NewWorkoutInput(
             title: "Push Day", date: "2026-07-15", durationMinutes: 45, notes: nil,
-            exercises: [exercise(name: "Overhead Press", completedSets: [(reps: 5, weight: 95, unit: "lbs")])]
+            exercises: [exercise(name: "Overhead Press", completedSets: sets([(reps: 5, weight: 95, unit: "lbs")]))]
         )
 
         _ = try await mock.saveWorkout(userId: "u1", input: input)
@@ -224,6 +267,8 @@ final class WorkoutRepositorySaveTests: XCTestCase {
         let pr = await mock.personalRecords["Overhead Press"]
         XCTAssertEqual(pr?.bestWeight, 95)
         XCTAssertEqual(pr?.bestReps, 5)
+        let directCalls = await mock.directPathCallCount
+        XCTAssertEqual(directCalls, 1)
     }
 
     func testSaveWorkoutFallbackReplacesPRWhenExistingIsLowerWeight() async throws {
@@ -235,7 +280,7 @@ final class WorkoutRepositorySaveTests: XCTestCase {
         ))
         let input = NewWorkoutInput(
             title: "Leg Day", date: "2026-07-15", durationMinutes: 45, notes: nil,
-            exercises: [exercise(name: "Squat", completedSets: [(reps: 5, weight: 275, unit: "lbs")])]
+            exercises: [exercise(name: "Squat", completedSets: sets([(reps: 5, weight: 275, unit: "lbs")]))]
         )
 
         _ = try await mock.saveWorkout(userId: "u1", input: input)
@@ -254,7 +299,7 @@ final class WorkoutRepositorySaveTests: XCTestCase {
         ))
         let input = NewWorkoutInput(
             title: "Leg Day", date: "2026-07-15", durationMinutes: 45, notes: nil,
-            exercises: [exercise(name: "Squat", completedSets: [(reps: 5, weight: 275, unit: "lbs")])]
+            exercises: [exercise(name: "Squat", completedSets: sets([(reps: 5, weight: 275, unit: "lbs")]))]
         )
 
         _ = try await mock.saveWorkout(userId: "u1", input: input)
@@ -273,7 +318,7 @@ final class WorkoutRepositorySaveTests: XCTestCase {
         ))
         let input = NewWorkoutInput(
             title: "Pull Day", date: "2026-07-15", durationMinutes: 45, notes: nil,
-            exercises: [exercise(name: "Deadlift", completedSets: [(reps: 5, weight: 315, unit: "lbs")])]
+            exercises: [exercise(name: "Deadlift", completedSets: sets([(reps: 5, weight: 315, unit: "lbs")]))]
         )
 
         _ = try await mock.saveWorkout(userId: "u1", input: input)
@@ -291,7 +336,7 @@ final class WorkoutRepositorySaveTests: XCTestCase {
         ))
         let input = NewWorkoutInput(
             title: "Pull Day", date: "2026-07-15", durationMinutes: 45, notes: nil,
-            exercises: [exercise(name: "Deadlift", completedSets: [(reps: 3, weight: 315, unit: "lbs")])]
+            exercises: [exercise(name: "Deadlift", completedSets: sets([(reps: 3, weight: 315, unit: "lbs")]))]
         )
 
         _ = try await mock.saveWorkout(userId: "u1", input: input)
@@ -299,6 +344,35 @@ final class WorkoutRepositorySaveTests: XCTestCase {
         let pr = await mock.personalRecords["Deadlift"]
         XCTAssertEqual(pr?.bestReps, 5, "Equal weight with fewer reps should not replace the existing PR")
         XCTAssertEqual(pr?.id, "pr-1")
+    }
+
+    // MARK: - LiveWorkoutRepository.isBetterRecord: direct unit tests
+    //
+    // These call the real production comparison function directly (not a hand-copied
+    // reimplementation), so a future regression there (e.g. `>` silently becoming `>=`) is
+    // caught here even if the higher-level mock-based tests above happen to still pass.
+
+    func testIsBetterRecordTrueForNewExerciseWithNoExistingRecord() {
+        // "No existing record" is modeled by the caller as `existing == nil`, short-circuiting
+        // before this comparison runs; this call demonstrates any candidate beats a 0/0 baseline.
+        XCTAssertTrue(LiveWorkoutRepository.isBetterRecord(candidateWeight: 95, candidateReps: 5, existingWeight: 0, existingReps: 0))
+    }
+
+    func testIsBetterRecordTrueWhenExistingIsLowerWeight() {
+        XCTAssertTrue(LiveWorkoutRepository.isBetterRecord(candidateWeight: 275, candidateReps: 5, existingWeight: 225, existingReps: 5))
+    }
+
+    func testIsBetterRecordFalseWhenExistingIsHigherWeight() {
+        XCTAssertFalse(LiveWorkoutRepository.isBetterRecord(candidateWeight: 275, candidateReps: 5, existingWeight: 315, existingReps: 3))
+    }
+
+    func testIsBetterRecordTrueWhenEqualWeightAndMoreReps() {
+        XCTAssertTrue(LiveWorkoutRepository.isBetterRecord(candidateWeight: 315, candidateReps: 5, existingWeight: 315, existingReps: 3))
+    }
+
+    func testIsBetterRecordFalseWhenEqualWeightAndFewerOrEqualReps() {
+        XCTAssertFalse(LiveWorkoutRepository.isBetterRecord(candidateWeight: 315, candidateReps: 3, existingWeight: 315, existingReps: 5))
+        XCTAssertFalse(LiveWorkoutRepository.isBetterRecord(candidateWeight: 315, candidateReps: 5, existingWeight: 315, existingReps: 5))
     }
 
     // MARK: - deleteWorkout
@@ -372,7 +446,7 @@ final class WorkoutRepositorySaveTests: XCTestCase {
         do {
             _ = try await mock.updateWorkoutSets(
                 userId: "u1", workoutId: "w1",
-                exercises: [exercise(completedSets: [(reps: 0, weight: 0, unit: "lbs")])]
+                exercises: [exercise(completedSets: sets([(reps: 0, weight: 0, unit: "lbs")]))]
             )
             XCTFail("Expected filtering failure")
         } catch {
@@ -394,10 +468,10 @@ final class WorkoutRepositorySaveTests: XCTestCase {
         let result = try await mock.updateWorkoutSets(
             userId: "u1", workoutId: "w1",
             exercises: [
-                exercise(name: "Bench Press", muscleGroup: "Chest", completedSets: [(reps: 8, weight: 135, unit: "lbs")]),
-                exercise(name: "Squat", muscleGroup: "Legs", completedSets: [(reps: 5, weight: 225, unit: "lbs")]),
-                exercise(name: "Plank", muscleGroup: nil, completedSets: [(reps: 1, weight: 0, unit: "lbs")]),
-                exercise(name: "Curl", muscleGroup: "", completedSets: [(reps: 10, weight: 25, unit: "lbs")]),
+                exercise(name: "Bench Press", muscleGroup: "Chest", completedSets: sets([(reps: 8, weight: 135, unit: "lbs")])),
+                exercise(name: "Squat", muscleGroup: "Legs", completedSets: sets([(reps: 5, weight: 225, unit: "lbs")])),
+                exercise(name: "Plank", muscleGroup: nil, completedSets: sets([(reps: 1, weight: 0, unit: "lbs")])),
+                exercise(name: "Curl", muscleGroup: "", completedSets: sets([(reps: 10, weight: 25, unit: "lbs")])),
             ]
         )
 

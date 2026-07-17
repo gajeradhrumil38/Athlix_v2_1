@@ -9,12 +9,27 @@ public protocol WorkoutRepository: Sendable {
     func updateWorkoutSets(userId: String, workoutId: String, exercises: [NewWorkoutExercise]) async throws -> (exercises: [ExerciseSet], muscleGroups: [String])
 }
 
+// A named struct rather than a bare tuple: a tuple's positional literal args (e.g.
+// `(135, 8, "lbs")`) would let a reps/weight swap typo compile silently since both are
+// numeric-literal-convertible. The explicit memberwise init below enforces argument labels
+// at every call site.
+public struct CompletedSetInput: Sendable {
+    public let reps: Int
+    public let weight: Double
+    public let unit: String
+    public init(reps: Int, weight: Double, unit: String) {
+        self.reps = reps
+        self.weight = weight
+        self.unit = unit
+    }
+}
+
 public struct NewWorkoutExercise: Sendable {
     public let name: String
     public let muscleGroup: String?
     public let exerciseDbId: String?
-    public let completedSets: [(reps: Int, weight: Double, unit: String)]
-    public init(name: String, muscleGroup: String?, exerciseDbId: String?, completedSets: [(reps: Int, weight: Double, unit: String)]) {
+    public let completedSets: [CompletedSetInput]
+    public init(name: String, muscleGroup: String?, exerciseDbId: String?, completedSets: [CompletedSetInput]) {
         self.name = name; self.muscleGroup = muscleGroup; self.exerciseDbId = exerciseDbId; self.completedSets = completedSets
     }
 }
@@ -60,6 +75,49 @@ public final class LiveWorkoutRepository: WorkoutRepository, @unchecked Sendable
         }
     }
 
+    // MARK: - Shared filtering / row-building helpers
+    //
+    // Used by both saveWorkout's fallback path and updateWorkoutSets, mirroring how the web
+    // source applies the identical "reps>0 || weight>0" filter and flat exercise-row shape in
+    // both saveWorkout and updateWorkoutSets.
+
+    typealias ValidExercisePair = (exercise: NewWorkoutExercise, sets: [CompletedSetInput])
+
+    private func filterValidExercises(_ exercises: [NewWorkoutExercise]) -> [ValidExercisePair] {
+        exercises.compactMap { ex in
+            let sets = ex.completedSets.filter { $0.reps > 0 || $0.weight > 0 }
+            return sets.isEmpty ? nil : (ex, sets)
+        }
+    }
+
+    private func distinctNonEmptyMuscleGroups(_ pairs: [ValidExercisePair]) -> [String] {
+        Array(Set(pairs.compactMap { $0.exercise.muscleGroup }.filter { !$0.isEmpty }))
+    }
+
+    private func buildExerciseInserts(for pairs: [ValidExercisePair], workoutId: String, startOrder: Int = 0) -> [ExerciseInsert] {
+        var rows: [ExerciseInsert] = []
+        var order = startOrder
+        for pair in pairs {
+            for set in pair.sets {
+                rows.append(ExerciseInsert(
+                    id: UUID().uuidString.lowercased(), workout_id: workoutId, name: pair.exercise.name,
+                    muscle_group: pair.exercise.muscleGroup, sets: 1, reps: set.reps, weight: set.weight,
+                    unit: set.unit, order_index: order, exercise_db_id: pair.exercise.exerciseDbId
+                ))
+                order += 1
+            }
+        }
+        return rows
+    }
+
+    // Pure comparison extracted so it's independently unit-testable, rather than only exercised
+    // indirectly through a hand-copied reimplementation in test mocks. Matches web's best-of rule
+    // (src/lib/supabaseData.ts ~L1701-1704): a candidate replaces the existing record if it has
+    // strictly higher weight, or equal weight with strictly more reps.
+    static func isBetterRecord(candidateWeight: Double, candidateReps: Int, existingWeight: Double, existingReps: Int) -> Bool {
+        candidateWeight > existingWeight || (candidateWeight == existingWeight && candidateReps > existingReps)
+    }
+
     // MARK: - saveWorkout
 
     private struct CompletedSetPayload: Encodable {
@@ -88,12 +146,15 @@ public final class LiveWorkoutRepository: WorkoutRepository, @unchecked Sendable
     // throw before any network call if nothing survives. Try the RPC first; on success, re-fetch
     // and return the workout row. On RPC failure, fall back to a direct insert path that also
     // recomputes per-exercise-name personal records (best-of by weight, then reps).
+    //
+    // IMPORTANT: the RPC call and the post-RPC fetch-back are two SEPARATE failure scopes. Web
+    // only falls back to the manual insert path when the RPC itself errors or returns no id
+    // (L1609-1614). If the RPC succeeds but the follow-up `workouts` select throws, web throws
+    // "Workout saved, but failed to fetch it." and stops (L1621-1623) -- it does NOT re-run the
+    // insert path, since that would silently duplicate the workout/exercise/PR rows the RPC
+    // already wrote server-side.
     public func saveWorkout(userId: String, input: NewWorkoutInput) async throws -> Workout {
-        let validExercises: [(exercise: NewWorkoutExercise, sets: [(reps: Int, weight: Double, unit: String)])] =
-            input.exercises.compactMap { ex in
-                let sets = ex.completedSets.filter { $0.reps > 0 || $0.weight > 0 }
-                return sets.isEmpty ? nil : (ex, sets)
-            }
+        let validExercises = filterValidExercises(input.exercises)
         if validExercises.isEmpty {
             throw RepositoryError.unknown("Complete at least one set before saving.")
         }
@@ -111,8 +172,22 @@ public final class LiveWorkoutRepository: WorkoutRepository, @unchecked Sendable
             p_notes: input.notes, p_exercises: payload
         )
 
+        let workoutId: String
         do {
-            let workoutId: String = try await client.rpc("save_workout_with_sets", params: params).execute().value
+            workoutId = try await client.rpc("save_workout_with_sets", params: params).execute().value
+        } catch {
+            print("WorkoutRepository: RPC save failed, falling back to direct path: \(error)")
+            do {
+                return try await saveWorkoutDirect(userId: userId, input: input, validExercises: validExercises)
+            } catch {
+                throw RepositoryError.unknown("\(error)")
+            }
+        }
+
+        // RPC succeeded -- the fetch-back is now its own failure scope. A failure here must NOT
+        // fall through to saveWorkoutDirect, or we'd insert a second workout/exercise/PR set on
+        // top of what the RPC already committed server-side.
+        do {
             let workout: Workout = try await client
                 .from("workouts")
                 .select()
@@ -122,13 +197,7 @@ public final class LiveWorkoutRepository: WorkoutRepository, @unchecked Sendable
                 .value
             return workout
         } catch {
-            print("WorkoutRepository: RPC save failed, falling back to direct path: \(error)")
-        }
-
-        do {
-            return try await saveWorkoutDirect(userId: userId, input: input, validExercises: validExercises)
-        } catch {
-            throw RepositoryError.unknown("\(error)")
+            throw RepositoryError.unknown("Workout saved, but failed to fetch it.")
         }
     }
 
@@ -167,12 +236,11 @@ public final class LiveWorkoutRepository: WorkoutRepository, @unchecked Sendable
     }
 
     private func saveWorkoutDirect(
-        userId: String, input: NewWorkoutInput,
-        validExercises: [(exercise: NewWorkoutExercise, sets: [(reps: Int, weight: Double, unit: String)])]
+        userId: String, input: NewWorkoutInput, validExercises: [ValidExercisePair]
     ) async throws -> Workout {
         let workoutId = UUID().uuidString.lowercased()
         let createdAt = ISO8601DateFormatter().string(from: Date())
-        let muscleGroups = Array(Set(validExercises.compactMap { $0.exercise.muscleGroup }.filter { !$0.isEmpty }))
+        let muscleGroups = distinctNonEmptyMuscleGroups(validExercises)
 
         _ = try await client
             .from("workouts")
@@ -182,23 +250,17 @@ public final class LiveWorkoutRepository: WorkoutRepository, @unchecked Sendable
             ), onConflict: "id")
             .execute()
 
-        var rows: [ExerciseInsert] = []
-        var order = 0
-        var bestFromNewWorkout: [String: (weight: Double, reps: Int, exerciseDbId: String?)] = [:]
+        let rows = buildExerciseInserts(for: validExercises, workoutId: workoutId)
 
+        var bestFromNewWorkout: [String: (weight: Double, reps: Int, exerciseDbId: String?)] = [:]
         for pair in validExercises {
             for set in pair.sets {
-                rows.append(ExerciseInsert(
-                    id: UUID().uuidString.lowercased(), workout_id: workoutId, name: pair.exercise.name,
-                    muscle_group: pair.exercise.muscleGroup, sets: 1, reps: set.reps, weight: set.weight,
-                    unit: set.unit, order_index: order, exercise_db_id: pair.exercise.exerciseDbId
-                ))
-                order += 1
-
                 let candidate = (weight: set.weight, reps: set.reps, exerciseDbId: pair.exercise.exerciseDbId)
                 if let existing = bestFromNewWorkout[pair.exercise.name] {
-                    if candidate.weight > existing.weight ||
-                        (candidate.weight == existing.weight && candidate.reps > existing.reps) {
+                    if Self.isBetterRecord(
+                        candidateWeight: candidate.weight, candidateReps: candidate.reps,
+                        existingWeight: existing.weight, existingReps: existing.reps
+                    ) {
                         bestFromNewWorkout[pair.exercise.name] = candidate
                     }
                 } else {
@@ -224,9 +286,10 @@ public final class LiveWorkoutRepository: WorkoutRepository, @unchecked Sendable
         var rowsToUpsert: [PersonalRecordUpsert] = []
         for (exerciseName, candidate) in bestFromNewWorkout {
             let existing = existingByName[exerciseName]
-            let shouldReplace = existing == nil ||
-                candidate.weight > existing!.bestWeight ||
-                (candidate.weight == existing!.bestWeight && candidate.reps > existing!.bestReps)
+            let shouldReplace = existing == nil || Self.isBetterRecord(
+                candidateWeight: candidate.weight, candidateReps: candidate.reps,
+                existingWeight: existing!.bestWeight, existingReps: existing!.bestReps
+            )
             if !shouldReplace { continue }
 
             rowsToUpsert.append(PersonalRecordUpsert(
@@ -298,6 +361,12 @@ public final class LiveWorkoutRepository: WorkoutRepository, @unchecked Sendable
     // Mirrors web's updateWorkoutSets (~L1743-1815): verify ownership first, filter exercises the
     // same way saveWorkout does, throw a distinct message if nothing survives, then replace all
     // exercise rows for the workout and recompute muscle_groups as the distinct non-empty set.
+    //
+    // The ownership check below is a client-side convenience for a friendlier error message, not
+    // the real security boundary -- RLS (`user_id = auth.uid()`) is what actually enforces this
+    // server-side. The subsequent `exercises` delete/insert calls are scoped only by workout_id
+    // (no user_id filter of their own), same as the real web source; that's safe only because
+    // ownership was already confirmed above and RLS on `workouts`/`exercises` backs it up.
     public func updateWorkoutSets(userId: String, workoutId: String, exercises: [NewWorkoutExercise]) async throws -> (exercises: [ExerciseSet], muscleGroups: [String]) {
         do {
             let owned: [WorkoutIdRow] = try await client
@@ -311,33 +380,19 @@ public final class LiveWorkoutRepository: WorkoutRepository, @unchecked Sendable
                 throw RepositoryError.unknown("Workout not found.")
             }
 
-            let valid = exercises.compactMap { ex -> (exercise: NewWorkoutExercise, sets: [(reps: Int, weight: Double, unit: String)])? in
-                let sets = ex.completedSets.filter { $0.reps > 0 || $0.weight > 0 }
-                return sets.isEmpty ? nil : (ex, sets)
-            }
+            let valid = filterValidExercises(exercises)
             if valid.isEmpty {
                 throw RepositoryError.unknown("Keep at least one set, or delete the workout instead.")
             }
 
-            var rows: [ExerciseInsert] = []
-            var order = 0
-            for pair in valid {
-                for set in pair.sets {
-                    rows.append(ExerciseInsert(
-                        id: UUID().uuidString.lowercased(), workout_id: workoutId, name: pair.exercise.name,
-                        muscle_group: pair.exercise.muscleGroup, sets: 1, reps: set.reps, weight: set.weight,
-                        unit: set.unit, order_index: order, exercise_db_id: pair.exercise.exerciseDbId
-                    ))
-                    order += 1
-                }
-            }
+            let rows = buildExerciseInserts(for: valid, workoutId: workoutId)
 
             _ = try await client.from("exercises").delete().eq("workout_id", value: workoutId).execute()
             if !rows.isEmpty {
                 _ = try await client.from("exercises").insert(rows).execute()
             }
 
-            let muscleGroups = Array(Set(valid.compactMap { $0.exercise.muscleGroup }.filter { !$0.isEmpty }))
+            let muscleGroups = distinctNonEmptyMuscleGroups(valid)
             _ = try await client
                 .from("workouts")
                 .update(MuscleGroupsUpdate(muscle_groups: muscleGroups))
