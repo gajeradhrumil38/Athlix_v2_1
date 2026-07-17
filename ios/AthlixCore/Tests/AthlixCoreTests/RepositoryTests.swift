@@ -45,6 +45,13 @@ actor MockPersonalRecordRepository: PersonalRecordRepository {
     func fetchPersonalRecords(userId: String) async throws -> [PersonalRecord] {
         stubbedRecords
     }
+
+    // Unused by this file's tests -- present only to satisfy the PersonalRecordRepository
+    // protocol. See PersonalRecordRepositoryTests.swift for meaningful coverage.
+    func countNewPRs(userId: String, exerciseNames: [String], achievedOn date: String) async throws -> Int {
+        guard !exerciseNames.isEmpty else { return 0 }
+        return stubbedRecords.filter { exerciseNames.contains($0.exerciseName) && $0.achievedDate == date }.count
+    }
 }
 
 extension MockPersonalRecordRepository {
