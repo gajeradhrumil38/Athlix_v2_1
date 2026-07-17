@@ -126,37 +126,15 @@ final class ActiveWorkoutViewModelTests: XCTestCase {
         LoggedSet(id: id, weight: weight, reps: reps, done: done, isPR: false, plannedWeight: nil, plannedReps: nil)
     }
 
-    // `ExerciseSet` (AthlixCore) has no public initializer -- only an implicit
-    // internal memberwise one, visible to `AthlixCoreTests` via `@testable
-    // import AthlixCore` but NOT to this file, which only does `@testable
-    // import Athlix` (a plain `import AthlixCore`). Round-tripping through its
-    // public `Codable` conformance is the only way to construct a fixture row
-    // here without adding a new public initializer to a committed AthlixCore
-    // model just for test convenience.
-    private struct ExerciseSetFixtureCoder: Encodable {
-        let id: String
-        let workout_id: String
-        let name: String
-        let muscle_group: String?
-        let sets: Int
-        let reps: Int
-        let weight: Double
-        let unit: String
-        let order_index: Int
-        let exercise_db_id: String?
-    }
-
     private func makeExerciseSetRow(
         id: String, workoutId: String, name: String, muscleGroup: String?,
         reps: Int, weight: Double, orderIndex: Int, exerciseDbId: String?, unit: String = "lbs"
     ) -> ExerciseSet {
-        let coder = ExerciseSetFixtureCoder(
-            id: id, workout_id: workoutId, name: name, muscle_group: muscleGroup,
+        ExerciseSet(
+            id: id, workoutId: workoutId, name: name, muscleGroup: muscleGroup,
             sets: 1, reps: reps, weight: weight, unit: unit,
-            order_index: orderIndex, exercise_db_id: exerciseDbId
+            orderIndex: orderIndex, exerciseDbId: exerciseDbId
         )
-        let data = try! JSONEncoder().encode(coder)
-        return try! JSONDecoder().decode(ExerciseSet.self, from: data)
     }
 
     // MARK: - Entry resolution
@@ -399,11 +377,52 @@ final class ActiveWorkoutViewModelTests: XCTestCase {
         let exerciseId = sut.exercises[0].id
         for _ in 0..<19 { sut.addSet(exerciseId: exerciseId) } // 1 seeded + 19 = 20
         XCTAssertEqual(sut.exercises[0].sets.count, 20)
+        let firstSetId = sut.exercises[0].sets[0].id
 
-        sut.copySet(exerciseId: exerciseId, at: 0)
+        sut.copySet(exerciseId: exerciseId, setId: firstSetId)
 
         XCTAssertEqual(sut.exercises[0].sets.count, 20)
         XCTAssertEqual(sut.setCapMessage, "Maximum 20 sets per exercise")
+    }
+
+    func testCopySetInsertsDuplicateAfterSourceById() {
+        let sut = makeSUT()
+        sut.addExercise(name: "Bench Press", muscleGroup: "Chest", exerciseDbId: nil)
+        let exerciseId = sut.exercises[0].id
+        sut.addSet(exerciseId: exerciseId) // now 2 sets
+        let originalIds = sut.exercises[0].sets.map(\.id)
+        let sourceId = originalIds[0]
+
+        sut.copySet(exerciseId: exerciseId, setId: sourceId)
+
+        let newIds = sut.exercises[0].sets.map(\.id)
+        XCTAssertEqual(newIds.count, 3)
+        XCTAssertEqual(newIds[0], sourceId)
+        XCTAssertEqual(newIds[2], originalIds[1], "copy should be inserted immediately after the source, not appended")
+    }
+
+    func testRemoveSetById() {
+        let sut = makeSUT()
+        sut.addExercise(name: "Bench Press", muscleGroup: "Chest", exerciseDbId: nil)
+        let exerciseId = sut.exercises[0].id
+        sut.addSet(exerciseId: exerciseId) // now 2 sets
+        let ids = sut.exercises[0].sets.map(\.id)
+
+        sut.removeSet(exerciseId: exerciseId, setId: ids[0])
+
+        XCTAssertEqual(sut.exercises[0].sets.map(\.id), [ids[1]])
+    }
+
+    func testRemoveExerciseById() {
+        let sut = makeSUT()
+        sut.addExercise(name: "Bench Press", muscleGroup: "Chest", exerciseDbId: nil)
+        sut.addExercise(name: "Squat", muscleGroup: "Legs", exerciseDbId: nil)
+        let benchId = sut.exercises[0].id
+        let squatId = sut.exercises[1].id
+
+        sut.removeExercise(exerciseId: benchId)
+
+        XCTAssertEqual(sut.exercises.map(\.id), [squatId])
     }
 
     // MARK: - Exercise CRUD dedupe
@@ -545,5 +564,122 @@ final class ActiveWorkoutViewModelTests: XCTestCase {
 
         let input = await workoutRepo.getLastSaveInput()
         XCTAssertEqual(input?.durationMinutes, 2)
+    }
+
+    func testSaveFailureDoesNotClearDraft() async {
+        let store = WorkoutDraftStore(directory: tempDir)
+        let sut = ActiveWorkoutViewModel(
+            userId: "user-1", workoutRepository: workoutRepo, exerciseLibraryRepository: libraryRepo,
+            draftStore: store, title: "Push Day", startAt: Date()
+        )
+        sut.addExercise(name: "Bench Press", muscleGroup: "Chest", exerciseDbId: nil)
+        let exerciseId = sut.exercises[0].id
+        let setId = sut.exercises[0].sets[0].id
+        sut.updateSet(exerciseId: exerciseId, setId: setId, weight: 135, reps: 8)
+        sut.markSetDone(exerciseId: exerciseId, setId: setId)
+        await workoutRepo.setShouldThrowOnSave(true)
+
+        // addExercise already persisted a draft (exercises.count changed).
+        XCTAssertNotNil(store.load())
+
+        do {
+            _ = try await sut.save()
+            XCTFail("Expected save() to throw when the repository throws")
+        } catch {
+            // expected
+        }
+
+        XCTAssertNotNil(store.load(), "draft must survive a failed save -- clear() must only run on success")
+    }
+
+    // MARK: - Regression: changeDate time-of-day preservation
+
+    func testChangeDatePreservesTimeOfDay() {
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 7
+        components.day = 14
+        components.hour = 19
+        components.minute = 3
+        components.second = 27
+        let originalStart = Calendar.current.date(from: components)!
+
+        let sut = makeSUT(startAt: originalStart)
+        let originalTimeComponents = Calendar.current.dateComponents([.hour, .minute, .second], from: originalStart)
+
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+        sut.changeDate(to: yesterday)
+
+        let newTimeComponents = Calendar.current.dateComponents([.hour, .minute, .second], from: sut.startAt)
+        XCTAssertEqual(newTimeComponents.hour, originalTimeComponents.hour)
+        XCTAssertEqual(newTimeComponents.minute, originalTimeComponents.minute)
+        XCTAssertEqual(newTimeComponents.second, originalTimeComponents.second)
+        XCTAssertTrue(Calendar.current.isDate(sut.startAt, inSameDayAs: yesterday), "the DAY should still change")
+    }
+
+    // MARK: - Regression: rest timer isolation between sets
+
+    func testMarkSetDoneUnmarkingADifferentSetDoesNotStopRestTimer() {
+        let sut = makeSUT()
+        sut.addExercise(name: "Bench Press", muscleGroup: "Chest", exerciseDbId: nil)
+        let exerciseId = sut.exercises[0].id
+        sut.addSet(exerciseId: exerciseId) // now 2 sets: A, B
+        let ids = sut.exercises[0].sets.map(\.id)
+        let setAId = ids[0]
+        let setBId = ids[1]
+
+        sut.updateSet(exerciseId: exerciseId, setId: setAId, weight: 100, reps: 8)
+        sut.updateSet(exerciseId: exerciseId, setId: setBId, weight: 100, reps: 8)
+
+        // Mark B done first -- starts the (single, shared) rest timer,
+        // tracked against B's id.
+        sut.markSetDone(exerciseId: exerciseId, setId: setBId)
+        XCTAssertNotNil(sut.restSecondsLeft)
+
+        // Mark A done -- this legitimately RESTARTS the shared timer and
+        // retargets it to A (marking any new set done always (re)starts the
+        // rest timer, per the design spec). From this point on, A -- not B
+        // -- is the timer's owner.
+        sut.markSetDone(exerciseId: exerciseId, setId: setAId)
+        XCTAssertNotNil(sut.restSecondsLeft)
+        let secondsAfterRetargetingToA = sut.restSecondsLeft
+
+        // Advance the timer partway so we can prove it wasn't reset/stopped
+        // by the next step.
+        sut.restTick()
+        let secondsAfterOneTick = sut.restSecondsLeft
+        XCTAssertEqual(secondsAfterOneTick, secondsAfterRetargetingToA.map { $0 - 1 })
+
+        // Now un-mark B (still `done: true` from the first step). B is NOT
+        // the timer's current owner (A is, since A was marked done more
+        // recently) -- this is the actual regression case: un-marking a set
+        // that isn't the timer's owner must leave the running timer alone.
+        sut.markSetDone(exerciseId: exerciseId, setId: setBId)
+
+        XCTAssertFalse(sut.exercises[0].sets.first(where: { $0.id == setBId })!.done, "B itself should still un-mark correctly")
+        XCTAssertNotNil(sut.restSecondsLeft, "un-marking a set that isn't the timer's owner must not stop A's rest timer")
+        XCTAssertEqual(sut.restSecondsLeft, secondsAfterOneTick, "the timer must be untouched, not reset or stopped")
+        XCTAssertTrue(sut.exercises[0].sets.first(where: { $0.id == setAId })!.done, "A should still be marked done")
+    }
+
+    // MARK: - Regression: 30-tick periodic autosave
+
+    func testThirtyTicksTriggersPeriodicAutosave() {
+        let store = WorkoutDraftStore(directory: tempDir)
+        let sut = ActiveWorkoutViewModel(
+            userId: "user-1", workoutRepository: workoutRepo, exerciseLibraryRepository: libraryRepo,
+            draftStore: store, title: "Autosave Test", startAt: Date()
+        )
+        // No exercises added, so the exercises-count-changed autosave path
+        // never fires -- isolates this test to the periodic tick-driven path.
+        XCTAssertNil(store.load(), "no draft should exist yet")
+
+        sut.togglePause()
+        for _ in 0..<30 { sut.tick() }
+
+        let loaded = store.load()
+        XCTAssertNotNil(loaded, "the 30th tick should have persisted a draft")
+        XCTAssertEqual(loaded?.title, "Autosave Test")
+        XCTAssertEqual(loaded?.elapsedSeconds, 30)
     }
 }

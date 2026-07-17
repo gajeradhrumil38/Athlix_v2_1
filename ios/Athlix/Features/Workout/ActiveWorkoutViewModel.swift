@@ -318,19 +318,30 @@ final class ActiveWorkoutViewModel {
         persistDraft()
     }
 
-    func copySet(exerciseId: String, at index: Int) {
+    /// Id-based (not index-based) to avoid the classic stale-index bug: a
+    /// view-layer closure that captured a raw `Int` index could act on the
+    /// wrong set if an async operation (rest timer completion, autosave,
+    /// another mutation) reorders/removes items before the closure fires.
+    /// Resolves `setId` to `SetCRUDEngine.copySet`'s required index
+    /// internally -- `SetCRUDEngine`'s own signature stays index-based since
+    /// it's a pure array function; only this view model's public wrapper
+    /// needed to change.
+    func copySet(exerciseId: String, setId: String) {
         guard let idx = exercises.firstIndex(where: { $0.id == exerciseId }) else { return }
+        guard let setIdx = exercises[idx].sets.firstIndex(where: { $0.id == setId }) else { return }
         if SetCRUDEngine.isAtCap(exercises[idx].sets) {
             setCapMessage = "Maximum 20 sets per exercise"
             return
         }
-        exercises[idx].sets = SetCRUDEngine.copySet(in: exercises[idx].sets, at: index, newId: UUID().uuidString)
+        exercises[idx].sets = SetCRUDEngine.copySet(in: exercises[idx].sets, at: setIdx, newId: UUID().uuidString)
         persistDraft()
     }
 
-    func removeSet(exerciseId: String, at index: Int) {
+    /// Id-based for the same stale-index reason as `copySet`.
+    func removeSet(exerciseId: String, setId: String) {
         guard let idx = exercises.firstIndex(where: { $0.id == exerciseId }) else { return }
-        exercises[idx].sets = SetCRUDEngine.removeSet(from: exercises[idx].sets, at: index)
+        guard let setIdx = exercises[idx].sets.firstIndex(where: { $0.id == setId }) else { return }
+        exercises[idx].sets = SetCRUDEngine.removeSet(from: exercises[idx].sets, at: setIdx)
         persistDraft()
     }
 
@@ -450,9 +461,10 @@ final class ActiveWorkoutViewModel {
         exercises[idx].lastSession = summary
     }
 
-    func removeExercise(at index: Int) {
-        guard exercises.indices.contains(index) else { return }
-        exercises.remove(at: index)
+    /// Id-based for the same stale-index reason as `copySet`/`removeSet`.
+    func removeExercise(exerciseId: String) {
+        guard let idx = exercises.firstIndex(where: { $0.id == exerciseId }) else { return }
+        exercises.remove(at: idx)
         persistDraft()
     }
 
