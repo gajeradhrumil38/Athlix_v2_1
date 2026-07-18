@@ -96,6 +96,25 @@ final class PlanEditorViewModelTests: XCTestCase {
         XCTAssertFalse(sut.isDirty)
     }
 
+    func testExistingTemplateReconstructsMultipleIdenticalPlannedSets() {
+        // Guards the flattened-average reconstitution path: a TemplateExercise
+        // with defaultSets: 3 must expand into exactly 3 PlannedSets, each
+        // carrying the SAME defaultWeight/defaultReps values (this is the exact
+        // spot most likely to hide an off-by-one or field-swap bug).
+        let exercise = makeTemplateExercise(defaultSets: 3, defaultReps: 8, defaultWeight: 135)
+        let existing = makeExistingTemplate(exercises: [exercise])
+
+        let sut = makeSUT(existing: existing)
+
+        XCTAssertEqual(sut.exercises.count, 1)
+        XCTAssertEqual(sut.exercises[0].sets.count, 3)
+        XCTAssertEqual(sut.exercises[0].sets, [
+            PlannedSet(weight: 135, reps: 8),
+            PlannedSet(weight: 135, reps: 8),
+            PlannedSet(weight: 135, reps: 8),
+        ])
+    }
+
     func testSetTitleMarksDirty() {
         let sut = makeSUT(existing: makeExistingTemplate())
         sut.setTitle("New Title")
@@ -124,6 +143,17 @@ final class PlanEditorViewModelTests: XCTestCase {
         let exerciseId = sut.exercises[0].id
 
         sut.updateSet(exerciseId: exerciseId, index: 0, weight: 200, reps: 5)
+
+        XCTAssertTrue(sut.isDirty)
+    }
+
+    func testAddPlannedSetMarksDirty() {
+        let existing = makeExistingTemplate(exercises: [makeTemplateExercise()])
+        let sut = makeSUT(existing: existing)
+        let exerciseId = sut.exercises[0].id
+        XCTAssertFalse(sut.isDirty)
+
+        sut.addPlannedSet(exerciseId: exerciseId)
 
         XCTAssertTrue(sut.isDirty)
     }
