@@ -230,6 +230,19 @@ final class ActiveWorkoutViewModel {
         return formatter.date(from: value)
     }
 
+    // MARK: - Title editing
+
+    /// Public setter added in the `ActiveWorkoutView` assembly task -- `title`
+    /// is `private(set)` so all mutation is explicit/traceable, matching the
+    /// exact pattern `PlanEditorViewModel.setTitle` already established (see
+    /// that file). Needed for the inline tap-to-edit title field in
+    /// `ActiveWorkoutView`; without it there'd be no way for the view layer to
+    /// rename an in-progress session.
+    func setTitle(_ newTitle: String) {
+        title = newTitle
+        persistDraft()
+    }
+
     // MARK: - Elapsed timer
 
     func togglePause() {
@@ -304,6 +317,18 @@ final class ActiveWorkoutViewModel {
         restTimerTask = nil
         restSecondsLeft = nil
         restTimerSetId = nil
+    }
+
+    /// Public dismiss entry point added in the `ActiveWorkoutView` assembly
+    /// task, for the rest-timer bar's explicit X/close button. `stopRestTimer`
+    /// itself stayed `private` (it's an internal implementation detail invoked
+    /// automatically by `markSetDone`'s un-mark path) -- this thin wrapper is
+    /// the one deliberately public surface for a USER-initiated dismiss, so
+    /// the view model's `restSecondsLeft`/`restTimerSetId` state stays the
+    /// single source of truth (no view-local "hide but leave state stale"
+    /// workaround).
+    func dismissRestTimer() {
+        stopRestTimer()
     }
 
     // MARK: - Set CRUD

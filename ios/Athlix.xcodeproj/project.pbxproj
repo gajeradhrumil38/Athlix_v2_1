@@ -22,6 +22,7 @@
 		614813C1629A8CBA1751CDCF /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBDD3F03C7ADB93D4EB6A0F4 /* RootView.swift */; };
 		626525355A25D3AF31F66434 /* ExerciseDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A67C294CCE9C8788278326C /* ExerciseDetailView.swift */; };
 		67990839F25D2020F61201F7 /* TodayWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA002598AF0419801E25C79C /* TodayWorkoutView.swift */; };
+		6948AB60FD2C8A66F5E2B7E0 /* ActiveWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAB6ADCBBA3592911AE48913 /* ActiveWorkoutView.swift */; };
 		82571FE5C7267615F9EB7941 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6021C3981E6D1CA249DB96E4 /* MainTabView.swift */; };
 		83D6016D8A0B943B2375BBDD /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2BFD76425748A6EF8AB5A88 /* DashboardView.swift */; };
 		897BD2C398970F183167A27A /* PRBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1CAEC18DF10CC48F5C45609 /* PRBannerView.swift */; };
@@ -29,6 +30,7 @@
 		A09B348E34A8E4C015714458 /* PlaceholderProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 346AB6CA0D8084348CBA7F83 /* PlaceholderProgressView.swift */; };
 		A254FDFDCD96B9646F440CA1 /* TrainNextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0638A965E78081075D4391E5 /* TrainNextView.swift */; };
 		AE668C5D9CA9D3C9674C2DA7 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44A9BC67B49671EB5C6BC709 /* SignInView.swift */; };
+		B0BDFD0CED61BA5F23F20520 /* CalendarDatePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9248EA6E85D272FC40DBF93A /* CalendarDatePickerView.swift */; };
 		BD61A030655DA2DE1BA0A5EB /* MuscleRadarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5031DAE67DE7E8701DEEBC5 /* MuscleRadarView.swift */; };
 		C052014D36E355BD73E2C94B /* WeeklyGoalRingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 487CB6B085AB5EE8C0665A24 /* WeeklyGoalRingView.swift */; };
 		C8F4A9A4BB027A390B75E09E /* SetValuePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8241EC49C15BE6330B524632 /* SetValuePicker.swift */; };
@@ -74,6 +76,7 @@
 		83FEEFE3DAAC2B99DD2BC8CE /* AIWeeklySummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIWeeklySummaryView.swift; sourceTree = "<group>"; };
 		8BBEF6283EA033AF33A0668E /* MuscleMapWidgetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleMapWidgetView.swift; sourceTree = "<group>"; };
 		8E1512DFFA451559387C14FD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		9248EA6E85D272FC40DBF93A /* CalendarDatePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarDatePickerView.swift; sourceTree = "<group>"; };
 		AC5DBD019A634AEAB198BE51 /* MuscleBodyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleBodyView.swift; sourceTree = "<group>"; };
 		AC846B5B291516618F30C690 /* SignInWithAppleButtonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInWithAppleButtonView.swift; sourceTree = "<group>"; };
 		AF480F4B9249A4ED3D819E4F /* ActiveWorkoutViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveWorkoutViewModel.swift; sourceTree = "<group>"; };
@@ -81,6 +84,7 @@
 		B43061965F2D113F8241335A /* AthlixCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AthlixCore; path = AthlixCore; sourceTree = SOURCE_ROOT; };
 		B45BE7CFBA6C7B866052A5F9 /* AthlixApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AthlixApp.swift; sourceTree = "<group>"; };
 		C7965FEB300E3D6E913BD964 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
+		CAB6ADCBBA3592911AE48913 /* ActiveWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveWorkoutView.swift; sourceTree = "<group>"; };
 		D2BFD76425748A6EF8AB5A88 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		DA002598AF0419801E25C79C /* TodayWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayWorkoutView.swift; sourceTree = "<group>"; };
 		EBDD3F03C7ADB93D4EB6A0F4 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
@@ -190,7 +194,9 @@
 		C04F94BB918C86DC579A6361 /* Workout */ = {
 			isa = PBXGroup;
 			children = (
+				CAB6ADCBBA3592911AE48913 /* ActiveWorkoutView.swift */,
 				AF480F4B9249A4ED3D819E4F /* ActiveWorkoutViewModel.swift */,
+				9248EA6E85D272FC40DBF93A /* CalendarDatePickerView.swift */,
 				7A67C294CCE9C8788278326C /* ExerciseDetailView.swift */,
 				081560AE3DA529FA223035F2 /* PlaceholderLogView.swift */,
 				322B3E0D691BD317F530F8DD /* PlanEditorViewModel.swift */,
@@ -349,10 +355,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				CCA937E40E9A835A445A8ECA /* AIWeeklySummaryView.swift in Sources */,
+				6948AB60FD2C8A66F5E2B7E0 /* ActiveWorkoutView.swift in Sources */,
 				DC03328BCCBCF437B847AC78 /* ActiveWorkoutViewModel.swift in Sources */,
 				D3E05A8B25FE1AF18C6C5C52 /* AthlixApp.swift in Sources */,
 				9E9762CD2899932CA15A177B /* CachedPersonalRecord.swift in Sources */,
 				27F3DA640D807734B7720E70 /* CachedWorkout.swift in Sources */,
+				B0BDFD0CED61BA5F23F20520 /* CalendarDatePickerView.swift in Sources */,
 				83D6016D8A0B943B2375BBDD /* DashboardView.swift in Sources */,
 				2B70DDDDDD844BC3FF28E81E /* DashboardViewModel.swift in Sources */,
 				191B0D278CC46C96FF6490FA /* DateNavigatorView.swift in Sources */,
