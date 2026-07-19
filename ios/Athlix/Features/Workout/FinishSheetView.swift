@@ -35,7 +35,12 @@ struct FinishSheetView: View {
     private enum SaveState: Equatable {
         case editing
         case saving
-        case success(prCount: Int)
+        /// `prCount == nil` means the workout itself saved successfully but
+        /// the follow-up `countNewPRs` lookup threw -- genuinely unknown, NOT
+        /// zero. Conflating the two (e.g. via `try? ... ?? 0`) would silently
+        /// misrepresent an unknown count as a real zero-PR result, the exact
+        /// class of bug this fix exists to eliminate from web's version.
+        case success(prCount: Int?)
         case failure(String)
     }
 
@@ -211,13 +216,23 @@ struct FinishSheetView: View {
 
     // MARK: - Success / error banners
 
-    private func successBanner(prCount: Int) -> some View {
-        Text(prCount > 0 ? "\u{1F389} \(prCount) New PR\(prCount == 1 ? "" : "s")!" : "Workout saved!")
+    private func successBanner(prCount: Int?) -> some View {
+        let (text, color): (String, Color) = {
+            guard let prCount else {
+                return ("Workout saved! (Couldn't check for new PRs)", ColorTokens.textSecondary)
+            }
+            if prCount > 0 {
+                return ("\u{1F389} \(prCount) New PR\(prCount == 1 ? "" : "s")!", ColorTokens.prGold)
+            }
+            return ("Workout saved!", ColorTokens.green)
+        }()
+
+        return Text(text)
             .font(.subheadline.weight(.semibold))
-            .foregroundStyle(prCount > 0 ? ColorTokens.prGold : ColorTokens.green)
+            .foregroundStyle(color)
             .frame(maxWidth: .infinity)
             .padding(12)
-            .background((prCount > 0 ? ColorTokens.prGold : ColorTokens.green).opacity(0.12))
+            .background(color.opacity(0.12))
             .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
@@ -298,9 +313,19 @@ struct FinishSheetView: View {
         do {
             let names = touchedExerciseNames
             let workout = try await viewModel.save()
-            let prCount = (try? await personalRecordRepository.countNewPRs(
-                userId: userId, exerciseNames: names, achievedOn: workout.date
-            )) ?? 0
+            // The save already succeeded by this point -- a failure here is
+            // purely a failed PR-count lookup, not a failed save. It must
+            // NOT be folded into `.failure` (that would wrongly imply the
+            // workout wasn't saved) and must NOT be coerced to `0` (that
+            // would misrepresent "unknown" as a real zero-PR result).
+            let prCount: Int?
+            do {
+                prCount = try await personalRecordRepository.countNewPRs(
+                    userId: userId, exerciseNames: names, achievedOn: workout.date
+                )
+            } catch {
+                prCount = nil
+            }
             saveState = .success(prCount: prCount)
         } catch {
             saveState = .failure("Couldn't save workout. Please try again.")
