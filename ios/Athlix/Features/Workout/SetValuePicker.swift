@@ -9,17 +9,47 @@ struct SetValuePicker: View {
     let isRepsOnlyContext: Bool
     let isTimeOnlyContext: Bool
     let initialValue: Double
+    /// Unit suffix shown alongside the title, e.g. "kg", "mi". Populated by the caller via
+    /// `ExerciseTypeLabels.unitDisplay(for:weightUnit:distanceUnit:)`. Empty for kinds where
+    /// a unit doesn't apply (reps, height, calories).
+    let unitLabel: String
     let onConfirm: (Double) -> Void
 
     @Environment(\.dismiss) private var dismiss
 
-    @State private var wholeSelection: Int = 0
-    @State private var decimalSelection: Int = 0
+    @State private var wholeSelection: Int
+    @State private var decimalSelection: Int
 
     /// Values for the weight decimal column: tag 0 -> ".0", tag 5 -> ".5".
     private static let weightDecimalOptions = [0, 5]
 
-    private var wholeRange: [Int] {
+    init(
+        kind: DialFieldKind,
+        isRepsOnlyContext: Bool,
+        isTimeOnlyContext: Bool,
+        initialValue: Double,
+        unitLabel: String = "",
+        onConfirm: @escaping (Double) -> Void
+    ) {
+        self.kind = kind
+        self.isRepsOnlyContext = isRepsOnlyContext
+        self.isTimeOnlyContext = isTimeOnlyContext
+        self.initialValue = initialValue
+        self.unitLabel = unitLabel
+        self.onConfirm = onConfirm
+
+        // Seed wheel positions in `init` rather than `onAppear`: if a future caller presents
+        // this via `.sheet(item:)` with an `Identifiable` wrapper whose `id` doesn't change
+        // between two edits, SwiftUI treats it as the same view identity and `onAppear` won't
+        // re-fire, leaving stale wheel positions from the previous edit. Seeding `@State` in
+        // `init` makes correctness independent of presentation-lifecycle timing.
+        let range = Self.wholeRange(for: kind, isRepsOnlyContext: isRepsOnlyContext, isTimeOnlyContext: isTimeOnlyContext)
+        let (whole, decimal) = Self.initialSelections(for: kind, initialValue: initialValue, wholeRange: range)
+        _wholeSelection = State(initialValue: whole)
+        _decimalSelection = State(initialValue: decimal)
+    }
+
+    private static func wholeRange(for kind: DialFieldKind, isRepsOnlyContext: Bool, isTimeOnlyContext: Bool) -> [Int] {
         switch kind {
         case .weight: return Array(0...500)
         case .distance: return Array(0...200)
@@ -29,6 +59,45 @@ struct SetValuePicker: View {
         case .height: return Array(0...250)
         case .calories: return stride(from: 0, through: 300, by: 5).map { $0 }
         }
+    }
+
+    /// Computes the initial whole/decimal wheel selections for a given `initialValue`,
+    /// snapping to the nearest valid option per `DialFieldKind` rather than assuming the
+    /// value lands exactly on a valid tag.
+    private static func initialSelections(for kind: DialFieldKind, initialValue: Double, wholeRange: [Int]) -> (whole: Int, decimal: Int) {
+        var whole = min(max(Int(initialValue.rounded(.down)), wholeRange.first ?? 0), wholeRange.last ?? 0)
+        var decimal = 0
+
+        switch kind {
+        case .weight:
+            // Snap to the nearest valid option (.0 or .5).
+            let fraction = initialValue - initialValue.rounded(.down)
+            decimal = fraction < 0.25 ? 0 : 5
+            if fraction >= 0.75 {
+                // e.g. 72.9 rounds up to 73.0 rather than snapping to 72.5.
+                whole = min(whole + 1, wholeRange.last ?? whole)
+                decimal = 0
+            }
+        case .distance:
+            let fraction = initialValue - initialValue.rounded(.down)
+            decimal = Int((fraction * 10).rounded())
+            if decimal > 9 {
+                decimal = 0
+                whole = min(whole + 1, wholeRange.last ?? whole)
+            }
+        case .seconds, .calories:
+            // Round to the nearest multiple of 5 rather than flooring to it.
+            let nearest = Int((initialValue / 5).rounded()) * 5
+            whole = min(max(nearest, wholeRange.first ?? 0), wholeRange.last ?? 0)
+        case .minutes, .reps, .height:
+            break
+        }
+
+        return (whole, decimal)
+    }
+
+    private var wholeRange: [Int] {
+        Self.wholeRange(for: kind, isRepsOnlyContext: isRepsOnlyContext, isTimeOnlyContext: isTimeOnlyContext)
     }
 
     private var hasDecimalColumn: Bool { kind == .weight || kind == .distance }
@@ -49,19 +118,15 @@ struct SetValuePicker: View {
         kind == .weight ? "Weight, fraction" : "Distance, fraction"
     }
 
-    /// Composes the final value from the current wheel selections. Each `DialFieldKind`
-    /// has its own composition rule: `.seconds` and `.calories` selections already ARE
-    /// the value (stepped by 5), `.weight`/`.distance` combine a whole column with a
-    /// decimal column, and the remaining kinds are plain integers.
+    /// Composes the final value from the current wheel selections. `.weight`/`.distance`
+    /// combine a whole column with a decimal column; every other kind's whole-column
+    /// selection already IS the value (including `.seconds`/`.calories`, which are stepped
+    /// by 5 in `wholeRange`).
     private var composedValue: Double {
         switch kind {
-        case .weight:
+        case .weight, .distance:
             return Double(wholeSelection) + Double(decimalSelection) / 10
-        case .distance:
-            return Double(wholeSelection) + Double(decimalSelection) / 10
-        case .seconds, .calories:
-            return Double(wholeSelection)
-        case .minutes, .reps, .height:
+        case .minutes, .reps, .height, .seconds, .calories:
             return Double(wholeSelection)
         }
     }
@@ -109,43 +174,19 @@ struct SetValuePicker: View {
         }
         .padding()
         .background(ColorTokens.bgElevated)
-        .onAppear {
-            wholeSelection = min(max(Int(initialValue.rounded(.down)), wholeRange.first ?? 0), wholeRange.last ?? 0)
-            if kind == .weight {
-                // Snap to the nearest valid option (.0 or .5) rather than assuming the
-                // initial value lands exactly on a valid tag.
-                let fraction = initialValue - initialValue.rounded(.down)
-                decimalSelection = fraction < 0.25 ? 0 : 5
-                if fraction >= 0.75 {
-                    // e.g. 72.9 rounds up to 73.0 rather than snapping to 72.5.
-                    wholeSelection = min(wholeSelection + 1, wholeRange.last ?? wholeSelection)
-                    decimalSelection = 0
-                }
-            } else if kind == .distance {
-                let fraction = initialValue - initialValue.rounded(.down)
-                decimalSelection = Int((fraction * 10).rounded())
-                if decimalSelection > 9 {
-                    decimalSelection = 0
-                    wholeSelection = min(wholeSelection + 1, wholeRange.last ?? wholeSelection)
-                }
-            } else if kind == .seconds || kind == .calories {
-                // Snap to nearest valid 5-step value already covered by wholeRange clamp above,
-                // but round to the nearest multiple of 5 rather than flooring to it.
-                let nearest = Int((initialValue / 5).rounded()) * 5
-                wholeSelection = min(max(nearest, wholeRange.first ?? 0), wholeRange.last ?? 0)
-            }
-        }
     }
 
     private var title: String {
+        let base: String
         switch kind {
-        case .weight: return "Weight"
-        case .reps: return "Reps"
-        case .distance: return "Distance"
-        case .minutes: return "Minutes"
-        case .seconds: return "Seconds"
-        case .height: return "Height"
-        case .calories: return "Calories"
+        case .weight: base = "Weight"
+        case .reps: base = "Reps"
+        case .distance: base = "Distance"
+        case .minutes: base = "Minutes"
+        case .seconds: base = "Seconds"
+        case .height: base = "Height"
+        case .calories: base = "Calories"
         }
+        return unitLabel.isEmpty ? base : "\(base) (\(unitLabel))"
     }
 }
