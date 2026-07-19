@@ -102,12 +102,18 @@ struct ExerciseDetailView: View {
                 Spacer()
 
                 // No-op unit toggle -- see `displayUnitIsMetric` doc comment.
+                // Disabled (rather than fully interactive) so it reads as
+                // "not yet available" instead of a control that visibly
+                // responds to taps but never changes any displayed value --
+                // flagged in code review as misleading otherwise.
                 Picker("", selection: $displayUnitIsMetric) {
                     Text(inputType.isDistanceExerciseType ? "km" : "kg").tag(true)
                     Text(inputType.isDistanceExerciseType ? "mi" : "lbs").tag(false)
                 }
                 .pickerStyle(.segmented)
                 .frame(width: 110)
+                .disabled(true)
+                .opacity(0.5)
             }
 
             HStack(spacing: 14) {
