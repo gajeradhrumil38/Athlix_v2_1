@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		0312798C96D121EEC55B3EDE /* ActiveWorkoutViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D3BB466BBA5F17454FCDFB0 /* ActiveWorkoutViewModelTests.swift */; };
+		0D0D08B0AB0BB0D3BC233B07 /* SetRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4ED9E915FBB972CEFAFD2C9 /* SetRowView.swift */; };
 		0E7265B7FD95D0E8C2F85EEA /* PlaceholderLogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 081560AE3DA529FA223035F2 /* PlaceholderLogView.swift */; };
 		191B0D278CC46C96FF6490FA /* DateNavigatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFD0429FEF2ADD6441149E69 /* DateNavigatorView.swift */; };
 		23FF06595DF93C0E5551367B /* MuscleMapWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBEF6283EA033AF33A0668E /* MuscleMapWidgetView.swift */; };
@@ -19,6 +20,7 @@
 		4E8906A7A0BDAF7C0B51F90F /* SignInWithAppleButtonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC846B5B291516618F30C690 /* SignInWithAppleButtonView.swift */; };
 		5862D577D9A5BDAD7EB7AECE /* PlaceholderCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 12D09086A7BED0BAFFB00412 /* PlaceholderCalendarView.swift */; };
 		614813C1629A8CBA1751CDCF /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBDD3F03C7ADB93D4EB6A0F4 /* RootView.swift */; };
+		626525355A25D3AF31F66434 /* ExerciseDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A67C294CCE9C8788278326C /* ExerciseDetailView.swift */; };
 		67990839F25D2020F61201F7 /* TodayWorkoutView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA002598AF0419801E25C79C /* TodayWorkoutView.swift */; };
 		82571FE5C7267615F9EB7941 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6021C3981E6D1CA249DB96E4 /* MainTabView.swift */; };
 		83D6016D8A0B943B2375BBDD /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2BFD76425748A6EF8AB5A88 /* DashboardView.swift */; };
@@ -66,6 +68,7 @@
 		5D3BB466BBA5F17454FCDFB0 /* ActiveWorkoutViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveWorkoutViewModelTests.swift; sourceTree = "<group>"; };
 		6021C3981E6D1CA249DB96E4 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		61834EDDA3FF07A9F5474171 /* Athlix.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Athlix.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7A67C294CCE9C8788278326C /* ExerciseDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseDetailView.swift; sourceTree = "<group>"; };
 		7BD3C79225CF29A46176DE19 /* Athlix.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Athlix.entitlements; sourceTree = "<group>"; };
 		8241EC49C15BE6330B524632 /* SetValuePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetValuePicker.swift; sourceTree = "<group>"; };
 		83FEEFE3DAAC2B99DD2BC8CE /* AIWeeklySummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIWeeklySummaryView.swift; sourceTree = "<group>"; };
@@ -81,6 +84,7 @@
 		D2BFD76425748A6EF8AB5A88 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		DA002598AF0419801E25C79C /* TodayWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayWorkoutView.swift; sourceTree = "<group>"; };
 		EBDD3F03C7ADB93D4EB6A0F4 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		F4ED9E915FBB972CEFAFD2C9 /* SetRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetRowView.swift; sourceTree = "<group>"; };
 		F5031DAE67DE7E8701DEEBC5 /* MuscleRadarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MuscleRadarView.swift; sourceTree = "<group>"; };
 		F7C727D6D0ED1B1CF3A87E72 /* PlaceholderRunView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderRunView.swift; sourceTree = "<group>"; };
 		F92DC9819C92E2982FE06E3C /* PlanEditorViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanEditorViewModelTests.swift; sourceTree = "<group>"; };
@@ -187,8 +191,10 @@
 			isa = PBXGroup;
 			children = (
 				AF480F4B9249A4ED3D819E4F /* ActiveWorkoutViewModel.swift */,
+				7A67C294CCE9C8788278326C /* ExerciseDetailView.swift */,
 				081560AE3DA529FA223035F2 /* PlaceholderLogView.swift */,
 				322B3E0D691BD317F530F8DD /* PlanEditorViewModel.swift */,
+				F4ED9E915FBB972CEFAFD2C9 /* SetRowView.swift */,
 				8241EC49C15BE6330B524632 /* SetValuePicker.swift */,
 			);
 			path = Workout;
@@ -350,6 +356,7 @@
 				83D6016D8A0B943B2375BBDD /* DashboardView.swift in Sources */,
 				2B70DDDDDD844BC3FF28E81E /* DashboardViewModel.swift in Sources */,
 				191B0D278CC46C96FF6490FA /* DateNavigatorView.swift in Sources */,
+				626525355A25D3AF31F66434 /* ExerciseDetailView.swift in Sources */,
 				82571FE5C7267615F9EB7941 /* MainTabView.swift in Sources */,
 				D2044A859FA3C92C80F9C151 /* MuscleBodyView.swift in Sources */,
 				23FF06595DF93C0E5551367B /* MuscleMapWidgetView.swift in Sources */,
@@ -361,6 +368,7 @@
 				DFB61FF8F7FC4B83B29F6A89 /* PlaceholderRunView.swift in Sources */,
 				DF57FD4F1FF0A7AE58729344 /* PlanEditorViewModel.swift in Sources */,
 				614813C1629A8CBA1751CDCF /* RootView.swift in Sources */,
+				0D0D08B0AB0BB0D3BC233B07 /* SetRowView.swift in Sources */,
 				C8F4A9A4BB027A390B75E09E /* SetValuePicker.swift in Sources */,
 				AE668C5D9CA9D3C9674C2DA7 /* SignInView.swift in Sources */,
 				4E8906A7A0BDAF7C0B51F90F /* SignInWithAppleButtonView.swift in Sources */,
