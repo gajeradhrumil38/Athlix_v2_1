@@ -108,11 +108,14 @@ final class PlanEditorViewModelTests: XCTestCase {
 
         XCTAssertEqual(sut.exercises.count, 1)
         XCTAssertEqual(sut.exercises[0].sets.count, 3)
-        XCTAssertEqual(sut.exercises[0].sets, [
-            PlannedSet(weight: 135, reps: 8),
-            PlannedSet(weight: 135, reps: 8),
-            PlannedSet(weight: 135, reps: 8),
-        ])
+        // Each reconstituted PlannedSet gets its OWN minted id (so it's a
+        // valid ForEach/TextField binding target), so we can't compare the
+        // sets array directly via Equatable against fixed-id literals --
+        // instead assert weight/reps match on every set, and that the ids
+        // are distinct (proving 3 genuinely separate sets, not 3 references
+        // to the same one).
+        XCTAssertTrue(sut.exercises[0].sets.allSatisfy { $0.weight == 135 && $0.reps == 8 })
+        XCTAssertEqual(Set(sut.exercises[0].sets.map(\.id)).count, 3, "each reconstituted set should have a distinct id")
     }
 
     func testSetTitleMarksDirty() {
@@ -141,8 +144,9 @@ final class PlanEditorViewModelTests: XCTestCase {
         let existing = makeExistingTemplate(exercises: [makeTemplateExercise()])
         let sut = makeSUT(existing: existing)
         let exerciseId = sut.exercises[0].id
+        let setId = sut.exercises[0].sets[0].id
 
-        sut.updateSet(exerciseId: exerciseId, index: 0, weight: 200, reps: 5)
+        sut.updateSet(exerciseId: exerciseId, setId: setId, weight: 200, reps: 5)
 
         XCTAssertTrue(sut.isDirty)
     }
@@ -217,7 +221,8 @@ final class PlanEditorViewModelTests: XCTestCase {
         sut.setTitle("Leg Day")
         sut.addExercise(name: "Squat", muscleGroup: "Legs", exerciseDbId: "db-squat")
         let exerciseId = sut.exercises[0].id
-        sut.updateSet(exerciseId: exerciseId, index: 0, weight: 225, reps: 5)
+        let setId = sut.exercises[0].sets[0].id
+        sut.updateSet(exerciseId: exerciseId, setId: setId, weight: 225, reps: 5)
 
         try await sut.checkNameCollisionAndSave()
 
@@ -230,18 +235,40 @@ final class PlanEditorViewModelTests: XCTestCase {
         XCTAssertEqual(savedExercises?[0].exerciseDbId, "db-squat")
     }
 
+    func testSaveFailurePropagatesErrorAndLeavesStateIntact() async throws {
+        await repo.setShouldThrowOnSave(true)
+        let sut = makeSUT(existing: nil)
+        sut.setTitle("Leg Day")
+        sut.addExercise(name: "Squat", muscleGroup: "Legs", exerciseDbId: nil)
+        XCTAssertTrue(sut.isDirty)
+
+        do {
+            try await sut.checkNameCollisionAndSave()
+            XCTFail("Expected checkNameCollisionAndSave() to throw when saveTemplate throws")
+        } catch {
+            // expected
+        }
+
+        let saveCallCount = await repo.saveCallCount
+        XCTAssertEqual(saveCallCount, 1, "saveTemplate should have been attempted (no collision)")
+        XCTAssertTrue(sut.isDirty, "a failed save must NOT clear the dirty flag")
+        XCTAssertNil(sut.templateId, "a failed save must NOT adopt a saved id")
+        XCTAssertFalse(sut.nameCollisionDetected, "a save-time failure is not a name collision")
+    }
+
     // MARK: - buildTemplateExercises averaging
 
     func testBuildTemplateExercisesComputesSetsCountAndExactAverages() {
         let sut = makeSUT(existing: nil)
         sut.addExercise(name: "Bench Press", muscleGroup: "Chest", exerciseDbId: nil)
         let exerciseId = sut.exercises[0].id
-        sut.updateSet(exerciseId: exerciseId, index: 0, weight: 100, reps: 10)
+        sut.updateSet(exerciseId: exerciseId, setId: sut.exercises[0].sets[0].id, weight: 100, reps: 10)
         // seed 2 extra sets to make 3 total
         sut.addPlannedSet(exerciseId: exerciseId)
         sut.addPlannedSet(exerciseId: exerciseId)
-        sut.updateSet(exerciseId: exerciseId, index: 1, weight: 110, reps: 10)
-        sut.updateSet(exerciseId: exerciseId, index: 2, weight: 120, reps: 10)
+        let setIds = sut.exercises[0].sets.map(\.id)
+        sut.updateSet(exerciseId: exerciseId, setId: setIds[1], weight: 110, reps: 10)
+        sut.updateSet(exerciseId: exerciseId, setId: setIds[2], weight: 120, reps: 10)
 
         let result = sut.buildTemplateExercises()
 
@@ -260,9 +287,10 @@ final class PlanEditorViewModelTests: XCTestCase {
         let exerciseId = sut.exercises[0].id
         sut.addPlannedSet(exerciseId: exerciseId)
         sut.addPlannedSet(exerciseId: exerciseId)
-        sut.updateSet(exerciseId: exerciseId, index: 0, weight: 100, reps: 8)
-        sut.updateSet(exerciseId: exerciseId, index: 1, weight: 100, reps: 9)
-        sut.updateSet(exerciseId: exerciseId, index: 2, weight: 100, reps: 9)
+        let setIds = sut.exercises[0].sets.map(\.id)
+        sut.updateSet(exerciseId: exerciseId, setId: setIds[0], weight: 100, reps: 8)
+        sut.updateSet(exerciseId: exerciseId, setId: setIds[1], weight: 100, reps: 9)
+        sut.updateSet(exerciseId: exerciseId, setId: setIds[2], weight: 100, reps: 9)
 
         let result = sut.buildTemplateExercises()
 
@@ -277,10 +305,11 @@ final class PlanEditorViewModelTests: XCTestCase {
         sut.addExercise(name: "Squat", muscleGroup: "Legs", exerciseDbId: nil)
         let benchId = sut.exercises[0].id
         let squatId = sut.exercises[1].id
-        sut.updateSet(exerciseId: benchId, index: 0, weight: 135, reps: 8)
+        sut.updateSet(exerciseId: benchId, setId: sut.exercises[0].sets[0].id, weight: 135, reps: 8)
         sut.addPlannedSet(exerciseId: squatId)
-        sut.updateSet(exerciseId: squatId, index: 0, weight: 225, reps: 5)
-        sut.updateSet(exerciseId: squatId, index: 1, weight: 225, reps: 5)
+        let squatSetIds = sut.exercises[1].sets.map(\.id)
+        sut.updateSet(exerciseId: squatId, setId: squatSetIds[0], weight: 225, reps: 5)
+        sut.updateSet(exerciseId: squatId, setId: squatSetIds[1], weight: 225, reps: 5)
 
         let entries = sut.startSession()
 
@@ -307,26 +336,30 @@ final class PlanEditorViewModelTests: XCTestCase {
     func testHandleAddedExerciseWhilePlanLoadedSetsPendingDecision() {
         let sut = makeSUT(existing: nil)
 
-        sut.handleAddedExerciseWhilePlanLoaded(exerciseName: "Deadlift")
+        sut.handleAddedExerciseWhilePlanLoaded(exerciseName: "Deadlift", muscleGroup: "Back", exerciseDbId: "db-deadlift")
 
-        XCTAssertEqual(sut.pendingDecision, .awaitingUpdateOrSessionOnly(exerciseName: "Deadlift"))
+        XCTAssertEqual(
+            sut.pendingDecision,
+            .awaitingUpdateOrSessionOnly(exerciseName: "Deadlift", muscleGroup: "Back", exerciseDbId: "db-deadlift")
+        )
     }
 
     func testResolvePendingDecisionUpdatePlanAddsExerciseAndClearsPending() {
         let sut = makeSUT(existing: nil)
-        sut.handleAddedExerciseWhilePlanLoaded(exerciseName: "Deadlift")
+        sut.handleAddedExerciseWhilePlanLoaded(exerciseName: "Deadlift", muscleGroup: "Back", exerciseDbId: nil)
 
-        sut.resolvePendingDecision(.updatePlan, name: "Deadlift", muscleGroup: "Back", exerciseDbId: nil)
+        sut.resolvePendingDecision(.updatePlan)
 
         XCTAssertEqual(sut.pendingDecision, .none)
         XCTAssertEqual(sut.exercises.map(\.name), ["Deadlift"])
+        XCTAssertEqual(sut.exercises.map(\.muscleGroup), ["Back"], "muscleGroup should be read off the stored pending state, not re-supplied by the caller")
     }
 
     func testResolvePendingDecisionSessionOnlyClearsPendingWithoutAddingExercise() {
         let sut = makeSUT(existing: nil)
-        sut.handleAddedExerciseWhilePlanLoaded(exerciseName: "Deadlift")
+        sut.handleAddedExerciseWhilePlanLoaded(exerciseName: "Deadlift", muscleGroup: "Back", exerciseDbId: nil)
 
-        sut.resolvePendingDecision(.sessionOnly, name: "Deadlift", muscleGroup: "Back", exerciseDbId: nil)
+        sut.resolvePendingDecision(.sessionOnly)
 
         XCTAssertEqual(sut.pendingDecision, .none)
         XCTAssertTrue(sut.exercises.isEmpty)
@@ -334,9 +367,9 @@ final class PlanEditorViewModelTests: XCTestCase {
 
     func testResolvePendingDecisionCancelClearsPendingWithoutAddingExercise() {
         let sut = makeSUT(existing: nil)
-        sut.handleAddedExerciseWhilePlanLoaded(exerciseName: "Deadlift")
+        sut.handleAddedExerciseWhilePlanLoaded(exerciseName: "Deadlift", muscleGroup: "Back", exerciseDbId: nil)
 
-        sut.resolvePendingDecision(.cancel, name: "Deadlift", muscleGroup: "Back", exerciseDbId: nil)
+        sut.resolvePendingDecision(.cancel)
 
         XCTAssertEqual(sut.pendingDecision, .none)
         XCTAssertTrue(sut.exercises.isEmpty)

@@ -6,10 +6,15 @@ import AthlixCore
 /// target, no `done`/`id` the way `LoggedSet` has. Plan authoring only ever
 /// deals with targets, never with in-progress completion state, so this is
 /// deliberately a simpler shape than `LoggedSet`.
-public struct PlannedSet: Equatable, Sendable {
+public struct PlannedSet: Equatable, Sendable, Identifiable {
+    public let id: String
     public var weight: Double
     public var reps: Int
-    public init(weight: Double, reps: Int) { self.weight = weight; self.reps = reps }
+    public init(id: String, weight: Double, reps: Int) {
+        self.id = id
+        self.weight = weight
+        self.reps = reps
+    }
 }
 
 /// One exercise within a plan/template being authored, holding a list of
@@ -47,7 +52,7 @@ enum PlanDecisionChoice {
 /// state transition and its resolution).
 enum PlanPendingDecision: Equatable {
     case none
-    case awaitingUpdateOrSessionOnly(exerciseName: String)
+    case awaitingUpdateOrSessionOnly(exerciseName: String, muscleGroup: String, exerciseDbId: String?)
 }
 
 /// Shared editor for BOTH the standalone "Templates" editor screen and the
@@ -97,8 +102,9 @@ final class PlanEditorViewModel {
             self.templateId = existing.id
             self.title = existing.title
             self.exercises = existing.exercises.map { ex in
-                let set = PlannedSet(weight: ex.defaultWeight, reps: ex.defaultReps)
-                let sets = Array(repeating: set, count: max(ex.defaultSets, 0))
+                let sets = (0..<max(ex.defaultSets, 0)).map { _ in
+                    PlannedSet(id: UUID().uuidString.lowercased(), weight: ex.defaultWeight, reps: ex.defaultReps)
+                }
                 return PlannedExercise(
                     id: UUID().uuidString.lowercased(), name: ex.name,
                     muscleGroup: ex.muscleGroup ?? "", exerciseDbId: ex.exerciseDbId, sets: sets
@@ -126,7 +132,7 @@ final class PlanEditorViewModel {
     func addExercise(name: String, muscleGroup: String, exerciseDbId: String?) {
         let entry = PlannedExercise(
             id: UUID().uuidString.lowercased(), name: name, muscleGroup: muscleGroup,
-            exerciseDbId: exerciseDbId, sets: [PlannedSet(weight: 0, reps: 0)]
+            exerciseDbId: exerciseDbId, sets: [PlannedSet(id: UUID().uuidString.lowercased(), weight: 0, reps: 0)]
         )
         exercises.append(entry)
         isDirty = true
@@ -147,22 +153,24 @@ final class PlanEditorViewModel {
     /// ever have more than the one seeded set from `addExercise`.
     func addPlannedSet(exerciseId: String) {
         guard let idx = exercises.firstIndex(where: { $0.id == exerciseId }) else { return }
-        exercises[idx].sets.append(PlannedSet(weight: 0, reps: 0))
+        exercises[idx].sets.append(PlannedSet(id: UUID().uuidString.lowercased(), weight: 0, reps: 0))
         isDirty = true
     }
 
-    /// Index-based (unlike the id-based set methods on `ActiveWorkoutViewModel`):
-    /// `PlannedSet` has no independent identity of its own (no `id` field --
-    /// it's a plain weight/reps target with no lifecycle distinct from its
-    /// position in the array), so there's no stale-id problem to guard
-    /// against the way there is for `LoggedSet`, which carries UI-visible
-    /// state (`done`, `isPR`) that can be referenced asynchronously (e.g. a
-    /// rest timer keyed on a set's id) while the array mutates. Plan editing
-    /// is a synchronous, single-screen form with no such async references.
-    func updateSet(exerciseId: String, index: Int, weight: Double, reps: Int) {
+    /// Id-based, matching `ActiveWorkoutViewModel`'s exact convention (see
+    /// `updateSet`/`copySet`/`removeSet` there). REVISED from an earlier
+    /// index-based design: the risk this convention guards against is a
+    /// captured POSITION going stale at the VIEW layer before it's consumed
+    /// (e.g. a `ForEach(sets.enumerated(), id: \.offset)` row's `TextField`
+    /// capturing `index` by value), not whether the model itself has async
+    /// side effects -- that risk exists here too, especially once a
+    /// `removeSet`/reorder method lands and a `TextField` edit could race a
+    /// delete. Resolving `setId` to an index internally, same as
+    /// `ActiveWorkoutViewModel`.
+    func updateSet(exerciseId: String, setId: String, weight: Double, reps: Int) {
         guard let exIdx = exercises.firstIndex(where: { $0.id == exerciseId }) else { return }
-        guard exercises[exIdx].sets.indices.contains(index) else { return }
-        exercises[exIdx].sets[index] = PlannedSet(weight: weight, reps: reps)
+        guard let setIdx = exercises[exIdx].sets.firstIndex(where: { $0.id == setId }) else { return }
+        exercises[exIdx].sets[setIdx] = PlannedSet(id: setId, weight: weight, reps: reps)
         isDirty = true
     }
 
@@ -244,19 +252,32 @@ final class PlanEditorViewModel {
 
     /// Transitions into the "update the plan, or just this session?" prompt
     /// state when an exercise is added while a plan is loaded mid-session.
+    /// Stores the full `name`/`muscleGroup`/`exerciseDbId` triple (not just
+    /// the name) so `resolvePendingDecision` can act on it directly without
+    /// requiring the caller to re-stash/re-supply the same data a second
+    /// time -- and without risking a caller passing back a mismatched name.
     /// The actual UI trigger for this (from `ActiveWorkoutView`) is wired up
     /// in a later task; this only builds the state representation.
-    func handleAddedExerciseWhilePlanLoaded(exerciseName: String) {
-        pendingDecision = .awaitingUpdateOrSessionOnly(exerciseName: exerciseName)
+    func handleAddedExerciseWhilePlanLoaded(exerciseName: String, muscleGroup: String, exerciseDbId: String?) {
+        pendingDecision = .awaitingUpdateOrSessionOnly(
+            exerciseName: exerciseName, muscleGroup: muscleGroup, exerciseDbId: exerciseDbId
+        )
     }
 
     /// Resolves the pending 3-way decision, always clearing `pendingDecision`.
-    /// Only `.updatePlan` mutates this view model's own `exercises` (adding
-    /// the exercise to the plan for future sessions too). For `.sessionOnly`
-    /// and `.cancel`, the exercise deliberately does NOT get added here --
-    /// the actual "add to just this session" behavior lives in
-    /// `ActiveWorkoutViewModel`, out of scope for this view model.
-    func resolvePendingDecision(_ choice: PlanDecisionChoice, name: String, muscleGroup: String, exerciseDbId: String?) {
+    /// Reads the exercise's name/muscleGroup/exerciseDbId directly off the
+    /// stored `pendingDecision` rather than requiring the caller to re-supply
+    /// them. Only `.updatePlan` mutates this view model's own `exercises`
+    /// (adding the exercise to the plan for future sessions too). For
+    /// `.sessionOnly` and `.cancel`, the exercise deliberately does NOT get
+    /// added here -- the actual "add to just this session" behavior lives in
+    /// `ActiveWorkoutViewModel`, out of scope for this view model. A no-op if
+    /// there's no pending decision to resolve.
+    func resolvePendingDecision(_ choice: PlanDecisionChoice) {
+        guard case .awaitingUpdateOrSessionOnly(let name, let muscleGroup, let exerciseDbId) = pendingDecision else {
+            pendingDecision = .none
+            return
+        }
         pendingDecision = .none
         switch choice {
         case .updatePlan:
