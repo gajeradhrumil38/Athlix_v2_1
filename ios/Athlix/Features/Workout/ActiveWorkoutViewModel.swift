@@ -243,6 +243,23 @@ final class ActiveWorkoutViewModel {
         persistDraft()
     }
 
+    /// Commit-triggered persistence for `notes`, added during code review of
+    /// the `ActiveWorkoutView` assembly task. `notes` itself stays a plain
+    /// `var` (unlike `title`) so the view can bind directly for instant
+    /// per-keystroke display -- but nothing was calling `persistDraft()` as a
+    /// side effect of editing it, unlike every other mutation on this view
+    /// model. That gap is worse than a narrow race: `isPaused` defaults to
+    /// `true`, and `tick()` (the only thing driving the periodic 30-tick
+    /// autosave) is gated on `!isPaused`, so notes typed before the user ever
+    /// presses play -- a normal flow -- would never autosave at all. This
+    /// mirrors `setTitle`'s pattern; the view calls it on focus-loss/submit
+    /// (not per keystroke) to avoid disproportionate main-thread JSON-encode +
+    /// disk-write pressure from `WorkoutDraftStore.save()`.
+    func updateNotes(_ newNotes: String?) {
+        notes = newNotes
+        persistDraft()
+    }
+
     // MARK: - Elapsed timer
 
     func togglePause() {

@@ -27,6 +27,7 @@ struct ActiveWorkoutView: View {
     @State private var isEditingTitle = false
     @State private var draftTitle = ""
     @FocusState private var titleFieldFocused: Bool
+    @FocusState private var notesFieldFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
@@ -173,6 +174,13 @@ struct ActiveWorkoutView: View {
         isEditingTitle = false
     }
 
+    /// Binds directly to `viewModel.notes` for instant per-keystroke display
+    /// (kept a plain `var` on the view model for exactly this reason), but
+    /// commits to disk via `updateNotes(_:)` only on focus-loss/submit -- not
+    /// per keystroke, which would mean a synchronous full-draft JSON encode +
+    /// atomic disk write (`WorkoutDraftStore.save()`) on every character
+    /// typed. `.onChange(of: notesFieldFocused)` catches the common case
+    /// (tapping away); `.onSubmit` catches return-to-dismiss.
     private var notesField: some View {
         TextField(
             "Add notes...",
@@ -180,6 +188,15 @@ struct ActiveWorkoutView: View {
         )
         .font(.caption)
         .foregroundStyle(ColorTokens.textSecondary)
+        .focused($notesFieldFocused)
+        .onChange(of: notesFieldFocused) { _, isFocused in
+            if !isFocused {
+                viewModel.updateNotes(viewModel.notes)
+            }
+        }
+        .onSubmit {
+            viewModel.updateNotes(viewModel.notes)
+        }
     }
 
     private var elapsedTimeText: String {
@@ -299,8 +316,7 @@ struct ActiveWorkoutView: View {
     /// with a sheet presentation of the real picker once Task 16 lands.
     private var addExerciseStubButton: some View {
         Button {
-            let id = viewModel.addExercise(name: "Bench Press", muscleGroup: "Chest", exerciseDbId: nil)
-            viewMode = .detail(exerciseId: id)
+            addStubExercise()
         } label: {
             Label("Add Exercise", systemImage: "plus")
                 .font(.subheadline.weight(.semibold))
@@ -315,6 +331,19 @@ struct ActiveWorkoutView: View {
         }
     }
 
+    /// Single shared implementation for the "Add Exercise" stub action,
+    /// called from both `addExerciseStubButton` (populated list) and
+    /// `emptyState` (zero exercises) -- previously duplicated inline in both
+    /// places, risking Task 16's implementer replacing one call site with the
+    /// real `ExercisePickerView` and missing the other. The `#warning` (in
+    /// addition to the doc comment) surfaces in Xcode's issue navigator so
+    /// this can't be silently forgotten.
+#warning("Replace with ExercisePickerView -- Task 16")
+    private func addStubExercise() {
+        let id = viewModel.addExercise(name: "Bench Press", muscleGroup: "Chest", exerciseDbId: nil)
+        viewMode = .detail(exerciseId: id)
+    }
+
     private var emptyState: some View {
         VStack(spacing: 16) {
             Spacer()
@@ -325,11 +354,10 @@ struct ActiveWorkoutView: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(ColorTokens.textSecondary)
 
-            // TEMPORARY: same stub as `addExerciseStubButton` above -- real
-            // picker lands in Task 16.
+            // TEMPORARY: shares `addStubExercise()` with `addExerciseStubButton`
+            // above -- real picker lands in Task 16.
             Button {
-                let id = viewModel.addExercise(name: "Bench Press", muscleGroup: "Chest", exerciseDbId: nil)
-                viewMode = .detail(exerciseId: id)
+                addStubExercise()
             } label: {
                 Label("Add Exercise", systemImage: "plus")
                     .font(.subheadline.weight(.semibold))
