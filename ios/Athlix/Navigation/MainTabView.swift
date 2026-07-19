@@ -35,7 +35,7 @@ struct MainTabView: View {
             }
         }
         .fullScreenCover(isPresented: $showingLog) {
-            PlaceholderLogView()
+            LogEntryView(onDismiss: { showingLog = false })
         }
     }
 }
