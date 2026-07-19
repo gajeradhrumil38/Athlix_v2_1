@@ -503,6 +503,20 @@ final class ActiveWorkoutViewModel {
         exercises[idx].lastSession = summary
     }
 
+    /// Bulk-loads a plan's exercises into the current session (e.g. from
+    /// `PlanEditorViewModel.startSession()` via the Exercise Picker's "My
+    /// Plans" tab). Appends rather than replaces, so this composes with
+    /// exercises the user may have already added ad-hoc before loading a
+    /// plan. Persists once at the end, not per-exercise -- a bulk "Start
+    /// Plan" shouldn't run N separate `addExercise` dedup-checks against a
+    /// plan's own exercises (which are presumably already deduped within the
+    /// plan itself), and a single end-of-batch `persistDraft()` avoids N
+    /// redundant disk writes.
+    func loadExercises(_ newExercises: [ExerciseEntry]) {
+        exercises.append(contentsOf: newExercises)
+        persistDraft()
+    }
+
     /// Id-based for the same stale-index reason as `copySet`/`removeSet`.
     func removeExercise(exerciseId: String) {
         guard let idx = exercises.firstIndex(where: { $0.id == exerciseId }) else { return }

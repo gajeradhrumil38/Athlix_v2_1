@@ -11,6 +11,13 @@ import AthlixCore
 /// model's explicit methods.
 struct ActiveWorkoutView: View {
     let viewModel: ActiveWorkoutViewModel
+    /// Owning user id, needed separately from `viewModel` (which keeps its
+    /// own copy private) because `ExercisePickerView` -- and the
+    /// `PlanEditorViewModel` it constructs internally for "Start Plan" --
+    /// both need it directly.
+    let userId: String
+    let exerciseLibraryRepository: ExerciseLibraryRepository
+    let templateRepository: TemplateRepository
     /// Called when the user taps the close/dismiss affordance. The caller
     /// (a later task's `LogEntryView`) owns the actual `fullScreenCover`
     /// presentation state; this view just signals "I'm done."
@@ -24,6 +31,7 @@ struct ActiveWorkoutView: View {
     @State private var viewMode: ViewMode = .list
     @State private var showingCalendar = false
     @State private var showingUnloadConfirm = false
+    @State private var showingExercisePicker = false
     @State private var isEditingTitle = false
     @State private var draftTitle = ""
     @FocusState private var titleFieldFocused: Bool
@@ -52,6 +60,23 @@ struct ActiveWorkoutView: View {
             CalendarDatePickerView(selectedDate: viewModel.startAt) { newDate in
                 viewModel.changeDate(to: newDate)
             }
+        }
+        .sheet(isPresented: $showingExercisePicker) {
+            ExercisePickerView(
+                userId: userId,
+                exerciseLibraryRepository: exerciseLibraryRepository,
+                templateRepository: templateRepository,
+                isMultiSelect: false,
+                onSelectExercise: { selection in
+                    let id = viewModel.addExercise(
+                        name: selection.name, muscleGroup: selection.muscleGroup, exerciseDbId: selection.exerciseDbId
+                    )
+                    viewMode = .detail(exerciseId: id)
+                },
+                onStartPlan: { entries in
+                    viewModel.loadExercises(entries)
+                }
+            )
         }
         .confirmationDialog(
             "Remove all exercises from this workout?",
@@ -309,14 +334,9 @@ struct ActiveWorkoutView: View {
         .buttonStyle(.plain)
     }
 
-    /// TEMPORARY WIRING POINT: the real exercise picker (`ExercisePickerView`,
-    /// Task 16) doesn't exist yet. This stub adds a hardcoded test exercise
-    /// directly so the empty-state CTA and the rest of the list/detail flow
-    /// are exercisable end-to-end in this task. Replace this button's action
-    /// with a sheet presentation of the real picker once Task 16 lands.
     private var addExerciseStubButton: some View {
         Button {
-            addStubExercise()
+            showingExercisePicker = true
         } label: {
             Label("Add Exercise", systemImage: "plus")
                 .font(.subheadline.weight(.semibold))
@@ -331,19 +351,6 @@ struct ActiveWorkoutView: View {
         }
     }
 
-    /// Single shared implementation for the "Add Exercise" stub action,
-    /// called from both `addExerciseStubButton` (populated list) and
-    /// `emptyState` (zero exercises) -- previously duplicated inline in both
-    /// places, risking Task 16's implementer replacing one call site with the
-    /// real `ExercisePickerView` and missing the other. The `#warning` (in
-    /// addition to the doc comment) surfaces in Xcode's issue navigator so
-    /// this can't be silently forgotten.
-#warning("Replace with ExercisePickerView -- Task 16")
-    private func addStubExercise() {
-        let id = viewModel.addExercise(name: "Bench Press", muscleGroup: "Chest", exerciseDbId: nil)
-        viewMode = .detail(exerciseId: id)
-    }
-
     private var emptyState: some View {
         VStack(spacing: 16) {
             Spacer()
@@ -354,10 +361,8 @@ struct ActiveWorkoutView: View {
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(ColorTokens.textSecondary)
 
-            // TEMPORARY: shares `addStubExercise()` with `addExerciseStubButton`
-            // above -- real picker lands in Task 16.
             Button {
-                addStubExercise()
+                showingExercisePicker = true
             } label: {
                 Label("Add Exercise", systemImage: "plus")
                     .font(.subheadline.weight(.semibold))
