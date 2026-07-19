@@ -56,7 +56,7 @@ struct PlanEditorView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button("Cancel") { handleCancel() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button {
@@ -89,6 +89,27 @@ struct PlanEditorView: View {
             } message: {
                 Text("Another plan already uses this name. Choose a different title.")
             }
+            .confirmationDialog(
+                "Discard changes?",
+                isPresented: $showingDiscardConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Discard Changes", role: .destructive) { dismiss() }
+                Button("Keep Editing", role: .cancel) {}
+            }
+        }
+    }
+
+    /// Gated on `isDirty` so a no-op Cancel (nothing edited yet, or an
+    /// existing plan viewed but untouched) dismisses immediately -- the
+    /// prompt only matters once there's something a user could actually
+    /// lose, mirroring the "differs from what would currently be persisted"
+    /// definition of dirty documented on `PlanEditorViewModel.isDirty`.
+    private func handleCancel() {
+        if viewModel.isDirty {
+            showingDiscardConfirm = true
+        } else {
+            dismiss()
         }
     }
 
