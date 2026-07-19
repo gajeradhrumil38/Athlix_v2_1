@@ -61,16 +61,29 @@ struct ExercisePickerView: View {
     @State private var searchText = ""
     @State private var searchResults: [ExerciseLibraryItem] = []
     @State private var searchTask: Task<Void, Never>?
+    /// Each async path below gets its own error slot rather than sharing one
+    /// `errorMessage` -- a single shared property was only ever rendered in
+    /// `searchResultsList`, so a failed `loadHistory`/`selectMuscleGroup`/
+    /// `loadTemplates` silently produced an empty-state indistinguishable
+    /// from a genuine empty result, and (being written by four independent
+    /// async paths with no shared clearing point) could linger stale across
+    /// tab switches. Each one is cleared at the START of its owning fetch
+    /// (before the `await`), so a stale error never survives a subsequent
+    /// successful load.
+    @State private var searchErrorMessage: String?
 
     @State private var recentOptions: [RecentExerciseOption] = []
     @State private var isLoadingHistory = false
+    @State private var historyErrorMessage: String?
 
     @State private var selectedMuscleGroup: String?
     @State private var muscleGroupResults: [ExerciseLibraryItem] = []
     @State private var isLoadingMuscleGroup = false
+    @State private var muscleErrorMessage: String?
 
     @State private var templates: [Template] = []
     @State private var isLoadingTemplates = false
+    @State private var templatesErrorMessage: String?
 
     /// Keyed by `ExercisePickerSelection.id` (lowercased name) so the same
     /// exercise appearing on both a search result and, say, the history list
@@ -78,7 +91,6 @@ struct ExercisePickerView: View {
     @State private var multiSelection: [String: ExercisePickerSelection] = [:]
 
     @State private var showingCreateCustom = false
-    @State private var errorMessage: String?
 
     var body: some View {
         NavigationStack {
@@ -135,6 +147,7 @@ struct ExercisePickerView: View {
                 Button {
                     searchText = ""
                     searchResults = []
+                    searchErrorMessage = nil
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(ColorTokens.textMuted)
@@ -152,6 +165,7 @@ struct ExercisePickerView: View {
     /// new one.
     private func scheduleSearch(_ query: String) {
         searchTask?.cancel()
+        searchErrorMessage = nil
         let trimmed = query.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else {
             searchResults = []
@@ -166,15 +180,15 @@ struct ExercisePickerView: View {
                 searchResults = results
             } catch {
                 guard !Task.isCancelled else { return }
-                errorMessage = "Couldn't search exercises."
+                searchErrorMessage = "Couldn't search exercises."
             }
         }
     }
 
     private var searchResultsList: some View {
         List {
-            if let errorMessage {
-                Text(errorMessage)
+            if let searchErrorMessage {
+                Text(searchErrorMessage)
                     .font(.caption)
                     .foregroundStyle(ColorTokens.red)
                     .listRowBackground(ColorTokens.bgBase)
@@ -227,6 +241,8 @@ struct ExercisePickerView: View {
         Group {
             if isLoadingHistory {
                 ProgressView().tint(ColorTokens.accent).frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let historyErrorMessage {
+                emptyState(text: historyErrorMessage, isError: true)
             } else if recentOptions.isEmpty {
                 emptyState(text: "No exercise history yet.")
             } else {
@@ -252,11 +268,12 @@ struct ExercisePickerView: View {
 
     private func loadHistory() async {
         isLoadingHistory = true
+        historyErrorMessage = nil
         defer { isLoadingHistory = false }
         do {
             recentOptions = try await exerciseLibraryRepository.recentExerciseOptions(userId: userId)
         } catch {
-            errorMessage = "Couldn't load recent exercises."
+            historyErrorMessage = "Couldn't load recent exercises."
         }
     }
 
@@ -294,11 +311,12 @@ struct ExercisePickerView: View {
         selectedMuscleGroup = group
         Task {
             isLoadingMuscleGroup = true
+            muscleErrorMessage = nil
             defer { isLoadingMuscleGroup = false }
             do {
                 muscleGroupResults = try await exerciseLibraryRepository.libraryByGroup(userId: userId, muscleGroup: group)
             } catch {
-                errorMessage = "Couldn't load \(group) exercises."
+                muscleErrorMessage = "Couldn't load \(group) exercises."
             }
         }
     }
@@ -309,6 +327,7 @@ struct ExercisePickerView: View {
                 Button {
                     selectedMuscleGroup = nil
                     muscleGroupResults = []
+                    muscleErrorMessage = nil
                 } label: {
                     Label("Muscle Groups", systemImage: "chevron.left")
                         .font(.subheadline.weight(.semibold))
@@ -321,6 +340,8 @@ struct ExercisePickerView: View {
 
             if isLoadingMuscleGroup {
                 ProgressView().tint(ColorTokens.accent).frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let muscleErrorMessage {
+                emptyState(text: muscleErrorMessage, isError: true)
             } else if muscleGroupResults.isEmpty {
                 emptyState(text: "No \(group) exercises yet.")
             } else {
@@ -342,6 +363,8 @@ struct ExercisePickerView: View {
         Group {
             if isLoadingTemplates {
                 ProgressView().tint(ColorTokens.accent).frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else if let templatesErrorMessage {
+                emptyState(text: templatesErrorMessage, isError: true)
             } else if templates.isEmpty {
                 emptyState(text: "No saved plans yet.")
             } else {
@@ -420,19 +443,24 @@ struct ExercisePickerView: View {
             do {
                 try await templateRepository.deleteTemplate(userId: userId, templateId: template.id)
             } catch {
-                errorMessage = "Couldn't delete \(template.title)."
+                // Reload FIRST, then set the delete-failure message -- loadTemplates()
+                // clears `templatesErrorMessage` at its own start (before its await),
+                // so setting the message before reloading would have it wiped out
+                // before the user ever saw it.
                 await loadTemplates()
+                templatesErrorMessage = "Couldn't delete \(template.title)."
             }
         }
     }
 
     private func loadTemplates() async {
         isLoadingTemplates = true
+        templatesErrorMessage = nil
         defer { isLoadingTemplates = false }
         do {
             templates = try await templateRepository.fetchTemplates(userId: userId)
         } catch {
-            errorMessage = "Couldn't load plans."
+            templatesErrorMessage = "Couldn't load plans."
         }
     }
 
@@ -503,12 +531,12 @@ struct ExercisePickerView: View {
         }
     }
 
-    private func emptyState(text: String) -> some View {
+    private func emptyState(text: String, isError: Bool = false) -> some View {
         VStack {
             Spacer()
             Text(text)
                 .font(.subheadline)
-                .foregroundStyle(ColorTokens.textMuted)
+                .foregroundStyle(isError ? ColorTokens.red : ColorTokens.textMuted)
             Spacer()
         }
         .frame(maxWidth: .infinity)
