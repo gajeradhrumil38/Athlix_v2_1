@@ -18,6 +18,7 @@ struct ActiveWorkoutView: View {
     let userId: String
     let exerciseLibraryRepository: ExerciseLibraryRepository
     let templateRepository: TemplateRepository
+    let personalRecordRepository: PersonalRecordRepository
     /// Called when the user taps the close/dismiss affordance. The caller
     /// (a later task's `LogEntryView`) owns the actual `fullScreenCover`
     /// presentation state; this view just signals "I'm done."
@@ -32,6 +33,7 @@ struct ActiveWorkoutView: View {
     @State private var showingCalendar = false
     @State private var showingUnloadConfirm = false
     @State private var showingExercisePicker = false
+    @State private var showingFinishSheet = false
     @State private var isEditingTitle = false
     @State private var draftTitle = ""
     @FocusState private var titleFieldFocused: Bool
@@ -75,6 +77,20 @@ struct ActiveWorkoutView: View {
                 },
                 onStartPlan: { entries in
                     viewModel.loadExercises(entries)
+                }
+            )
+        }
+        .sheet(isPresented: $showingFinishSheet) {
+            FinishSheetView(
+                viewModel: viewModel,
+                userId: userId,
+                personalRecordRepository: personalRecordRepository,
+                onDone: {
+                    showingFinishSheet = false
+                    onDismiss()
+                },
+                onAddMoreExercise: {
+                    showingFinishSheet = false
                 }
             )
         }
@@ -128,6 +144,14 @@ struct ActiveWorkoutView: View {
                             .font(.headline)
                             .foregroundStyle(ColorTokens.red)
                             .frame(width: 32, height: 32)
+                    }
+
+                    Button {
+                        showingFinishSheet = true
+                    } label: {
+                        Text("Finish")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(ColorTokens.accent)
                     }
                 }
             }

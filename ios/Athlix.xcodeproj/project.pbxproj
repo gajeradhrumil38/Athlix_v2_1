@@ -34,6 +34,7 @@
 		AE668C5D9CA9D3C9674C2DA7 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44A9BC67B49671EB5C6BC709 /* SignInView.swift */; };
 		AF1B78A2A5B136955AAB8EF3 /* TemplatesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 593C5F94DC6C131D8F4972CE /* TemplatesListView.swift */; };
 		B0BDFD0CED61BA5F23F20520 /* CalendarDatePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9248EA6E85D272FC40DBF93A /* CalendarDatePickerView.swift */; };
+		B3AF2C45C16974282E963D65 /* FinishSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A28E789B87B35BD00112674 /* FinishSheetView.swift */; };
 		BD61A030655DA2DE1BA0A5EB /* MuscleRadarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5031DAE67DE7E8701DEEBC5 /* MuscleRadarView.swift */; };
 		C052014D36E355BD73E2C94B /* WeeklyGoalRingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 487CB6B085AB5EE8C0665A24 /* WeeklyGoalRingView.swift */; };
 		C8F4A9A4BB027A390B75E09E /* SetValuePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8241EC49C15BE6330B524632 /* SetValuePicker.swift */; };
@@ -65,6 +66,7 @@
 		0A34F556739ED2B90E42FE47 /* WorkoutDraftStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDraftStore.swift; sourceTree = "<group>"; };
 		10AA0B97EC05DB59C7761A0C /* WorkoutDraftStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDraftStoreTests.swift; sourceTree = "<group>"; };
 		12D09086A7BED0BAFFB00412 /* PlaceholderCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderCalendarView.swift; sourceTree = "<group>"; };
+		2A28E789B87B35BD00112674 /* FinishSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinishSheetView.swift; sourceTree = "<group>"; };
 		322B3E0D691BD317F530F8DD /* PlanEditorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanEditorViewModel.swift; sourceTree = "<group>"; };
 		346AB6CA0D8084348CBA7F83 /* PlaceholderProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderProgressView.swift; sourceTree = "<group>"; };
 		40EE776AC24E6DC77AE5BD9B /* PlanEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanEditorView.swift; sourceTree = "<group>"; };
@@ -205,6 +207,7 @@
 				9248EA6E85D272FC40DBF93A /* CalendarDatePickerView.swift */,
 				7A67C294CCE9C8788278326C /* ExerciseDetailView.swift */,
 				4B79168A3D80F19C3537A01E /* ExercisePickerView.swift */,
+				2A28E789B87B35BD00112674 /* FinishSheetView.swift */,
 				081560AE3DA529FA223035F2 /* PlaceholderLogView.swift */,
 				40EE776AC24E6DC77AE5BD9B /* PlanEditorView.swift */,
 				322B3E0D691BD317F530F8DD /* PlanEditorViewModel.swift */,
@@ -375,6 +378,7 @@
 				191B0D278CC46C96FF6490FA /* DateNavigatorView.swift in Sources */,
 				626525355A25D3AF31F66434 /* ExerciseDetailView.swift in Sources */,
 				4CC6D1EC257C5AD4CC46C253 /* ExercisePickerView.swift in Sources */,
+				B3AF2C45C16974282E963D65 /* FinishSheetView.swift in Sources */,
 				82571FE5C7267615F9EB7941 /* MainTabView.swift in Sources */,
 				D2044A859FA3C92C80F9C151 /* MuscleBodyView.swift in Sources */,
 				23FF06595DF93C0E5551367B /* MuscleMapWidgetView.swift in Sources */,
