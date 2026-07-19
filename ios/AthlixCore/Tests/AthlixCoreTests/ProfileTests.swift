@@ -53,6 +53,43 @@ final class ProfileTests: XCTestCase {
         XCTAssertNil(profile.heightInches)
     }
 
+    func testFallsBackToLbsWhenBodyWeightUnitIsNull() throws {
+        let json = """
+        {
+            "id": "b3f1c2d4-1111-2222-3333-444455556666",
+            "full_name": "Dhrumil Gajera",
+            "unit_preference": "kg",
+            "theme_preference": "dark",
+            "body_weight": 78.5,
+            "body_weight_unit": null,
+            "height_feet": 5,
+            "height_inches": 10
+        }
+        """.data(using: .utf8)!
+
+        let profile = try JSONDecoder().decode(Profile.self, from: json)
+
+        XCTAssertEqual(profile.bodyWeightUnit, .lbs)
+    }
+
+    func testFallsBackToLbsWhenBodyWeightUnitKeyIsMissing() throws {
+        let json = """
+        {
+            "id": "b3f1c2d4-1111-2222-3333-444455556666",
+            "full_name": "Dhrumil Gajera",
+            "unit_preference": "kg",
+            "theme_preference": "dark",
+            "body_weight": 78.5,
+            "height_feet": 5,
+            "height_inches": 10
+        }
+        """.data(using: .utf8)!
+
+        let profile = try JSONDecoder().decode(Profile.self, from: json)
+
+        XCTAssertEqual(profile.bodyWeightUnit, .lbs)
+    }
+
     func testExplicitInitConstructsProfileDirectly() {
         let profile = Profile(
             id: "b3f1c2d4-1111-2222-3333-444455556666",
