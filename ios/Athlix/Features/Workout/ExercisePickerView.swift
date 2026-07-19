@@ -91,6 +91,7 @@ struct ExercisePickerView: View {
     @State private var multiSelection: [String: ExercisePickerSelection] = [:]
 
     @State private var showingCreateCustom = false
+    @State private var editingTemplate: Template?
 
     var body: some View {
         NavigationStack {
@@ -124,6 +125,9 @@ struct ExercisePickerView: View {
                         handleTap(ExercisePickerSelection(name: item.name, muscleGroup: item.muscleGroup, exerciseDbId: item.exerciseDbId))
                     }
                 )
+            }
+            .sheet(item: $editingTemplate, onDismiss: { Task { await loadTemplates() } }) { template in
+                PlanEditorView(userId: userId, exerciseLibraryRepository: exerciseLibraryRepository, templateRepository: templateRepository, existing: template)
             }
         }
         .task {
@@ -393,12 +397,8 @@ struct ExercisePickerView: View {
 
             Spacer()
 
-            // STUB: real template editing is Task 17's `Templates.tsx`-equivalent
-            // editor screen, which doesn't exist yet in this app target. This
-            // button is a placeholder affordance only -- intentionally a no-op
-            // rather than presenting a half-built editor.
             Button {
-                // no-op: Task 17
+                editingTemplate = template
             } label: {
                 Image(systemName: "pencil")
                     .foregroundStyle(ColorTokens.textMuted)
