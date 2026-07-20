@@ -40,6 +40,7 @@ struct DashboardView: View {
             let vm = DashboardViewModel(
                 workoutRepository: LiveWorkoutRepository(),
                 personalRecordRepository: LivePersonalRecordRepository(),
+                profileRepository: LiveProfileRepository(),
                 userId: userId,
                 modelContext: modelContext
             )

@@ -50,6 +50,13 @@ actor MockWorkoutRepository: WorkoutRepository {
         if shouldThrowOnFetchExercises { throw RepositoryError.network }
         return stubbedExerciseRows
     }
+
+    // Stub added alongside WorkoutRepository.fetchExercisesForWorkouts (batched) -- this mock
+    // predates that protocol method and isn't exercised by any test in this file, so it just
+    // returns the same stubbed rows as fetchWorkoutExercises for conformance.
+    func fetchExercisesForWorkouts(userId: String, workoutIds: [String]) async throws -> [ExerciseSet] {
+        stubbedExerciseRows
+    }
 }
 
 actor MockExerciseLibraryRepository: ExerciseLibraryRepository {

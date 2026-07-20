@@ -13,21 +13,54 @@ final class DashboardViewModel {
     private(set) var workoutsErrorMessage: String?
     private(set) var recordsErrorMessage: String?
 
+    // Weekly-goal data is deliberately scoped to a fixed Monday-start week, independent of the
+    // Date Navigator's `viewMode` (day/week/month) that drives `workouts`/`loadWorkouts`. It is
+    // NOT cached in SwiftData like `workouts`/`personalRecords` -- a single week-scoped fetch is
+    // cheap, and (unlike the main dashboard range) is expected to change every time a set is
+    // logged, so an offline cache would mostly just serve stale goal-progress data. Judgment call
+    // per Task 6 spec: skip a dedicated cache model here.
+    private(set) var weeklyGoalWorkouts: [Workout] = []
+    private(set) var weeklyGoalReferenceDate: Date = Date()
+
+    private(set) var profile: Profile?
+    private(set) var exercisesInRange: [ExerciseSet] = []
+
+    // Stored, not computed: MuscleLoadCalculator.loadBySlug (via
+    // ExerciseMuscleMapper.profile(forExerciseName:)) recompiles several regexes per call with no
+    // internal caching. This @Observable class is read by SwiftUI, which may re-evaluate computed
+    // properties on every render pass -- so this is populated ONCE per data reload (in
+    // recomputeMuscleLoad(), called from loadExercisesInRange()) rather than a `var { ... }` block
+    // that would silently redo that expensive work on every access.
+    private(set) var muscleLoadBySlug: [String: Double] = [:]
+
+    private(set) var goalDays: Int
+
     private let workoutRepository: WorkoutRepository
     private let personalRecordRepository: PersonalRecordRepository
+    private let profileRepository: ProfileRepository
     private let userId: String
     private let modelContext: ModelContext
+
+    private static let goalDaysDefaultsKey = "athlix_weekly_goal_days"
+
+    private static func loadGoalDays() -> Int {
+        let stored = UserDefaults.standard.integer(forKey: goalDaysDefaultsKey)
+        return (1...7).contains(stored) ? stored : 4
+    }
 
     init(
         workoutRepository: WorkoutRepository,
         personalRecordRepository: PersonalRecordRepository,
+        profileRepository: ProfileRepository,
         userId: String,
         modelContext: ModelContext
     ) {
         self.workoutRepository = workoutRepository
         self.personalRecordRepository = personalRecordRepository
+        self.profileRepository = profileRepository
         self.userId = userId
         self.modelContext = modelContext
+        self.goalDays = Self.loadGoalDays()
     }
 
     /// Reads the SwiftData cache immediately (for instant display), then
@@ -156,17 +189,95 @@ final class DashboardViewModel {
     /// repository don't include nested exercise-level detail, so this uses
     /// each workout's coarser `muscle_groups` array as the fallback-group
     /// input to ExerciseMuscleMapper, weighted equally per group).
-    var muscleLoadBySlug: [String: Double] {
-        var totals: [String: Double] = [:]
-        for workout in workouts {
-            for group in workout.muscleGroups ?? [] {
-                let profile = ExerciseMuscleMapper.profile(forExerciseName: "", fallbackMuscleGroup: group)
-                for target in profile.targets {
-                    totals[target.slug, default: 0] += target.weight
-                }
-            }
+    // MARK: - Weekly goal data (Monday-start week, independent of viewMode)
+
+    func loadWeeklyGoalData(for date: Date) async {
+        weeklyGoalReferenceDate = date
+        var utcCalendar = Calendar(identifier: .gregorian)
+        utcCalendar.timeZone = TimeZone(identifier: "UTC")!
+
+        // Same Monday-start week boundary math as TrainedDaysCalculator.weekDays (that
+        // calculator's offset logic is private to its own file, so it's duplicated here --
+        // this MUST stay in sync, since weekDays/trainedDaysCount below combine
+        // TrainedDaysCalculator's day-labeling with the workouts fetched here; a mismatch
+        // between the two would fetch one week's workouts but label a different week's days.
+        let dateStart = utcCalendar.startOfDay(for: date)
+        let weekday = utcCalendar.component(.weekday, from: dateStart) // 1 = Sunday ... 7 = Saturday
+        let daysFromMonday = (weekday + 5) % 7
+        let weekStart = utcCalendar.date(byAdding: .day, value: -daysFromMonday, to: dateStart) ?? dateStart
+        let weekEnd = utcCalendar.date(byAdding: .day, value: 6, to: weekStart) ?? dateStart
+
+        do {
+            weeklyGoalWorkouts = try await workoutRepository.fetchWorkouts(userId: userId, from: weekStart, to: weekEnd)
+        } catch {
+            // Per-widget isolation: leave weeklyGoalWorkouts at its last-known value on failure,
+            // matching loadWorkouts'/loadPersonalRecords' don't-clear-on-error behavior.
         }
-        return totals
+    }
+
+    var weekDays: [WeekDayInfo] {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withFullDate]
+        formatter.timeZone = TimeZone(identifier: "UTC")!
+        let workoutDateStrings = Set(weeklyGoalWorkouts.map(\.date))
+        return TrainedDaysCalculator.weekDays(containing: weeklyGoalReferenceDate, workoutDates: workoutDateStrings)
+    }
+
+    var trainedDaysCount: Int { TrainedDaysCalculator.trainedDaysCount(weekDays) }
+
+    // MARK: - Profile
+
+    func loadProfile() async {
+        do {
+            profile = try await profileRepository.fetchProfile(userId: userId)
+        } catch {
+            // Per-widget isolation: leave `profile` at its last-known value (nil if never loaded).
+        }
+    }
+
+    // MARK: - Weekly goal days (UserDefaults-backed)
+
+    func setGoalDays(_ days: Int) {
+        let clamped = min(max(days, 1), 7)
+        goalDays = clamped
+        UserDefaults.standard.set(clamped, forKey: Self.goalDaysDefaultsKey)
+    }
+
+    // MARK: - Real per-exercise data / muscle load
+
+    // Call AFTER loadWorkouts has populated `workouts` (this reads workouts.map(\.id)). Ideally
+    // called after loadProfile too, since recomputeMuscleLoad() reads `profile` for unit
+    // conversion and body-weight-relative normalization -- if loadProfile hasn't finished yet,
+    // this falls back to displaying in .lbs and skipping relative-load normalization, which is a
+    // reasonable one-frame degradation rather than a bug.
+    func loadExercisesInRange() async {
+        do {
+            exercisesInRange = try await workoutRepository.fetchExercisesForWorkouts(userId: userId, workoutIds: workouts.map(\.id))
+        } catch {
+            exercisesInRange = []
+        }
+        recomputeMuscleLoad()
+    }
+
+    private func recomputeMuscleLoad() {
+        // Judgment call (documented per Task 6 spec): only "kg"/"lbs" rows represent an actual
+        // weight. A distance-type exercise (e.g. a run logged via the flat `exercises` table)
+        // stores its distance in the same `weight` column with unit "km"/"mi" -- feeding that into
+        // MuscleLoadCalculator.loadBySlug (weight * reps * sets) would produce a nonsensical
+        // "volume" number for muscles that did no resistance work. Such rows are excluded here.
+        let weightUnitExercises = exercisesInRange.compactMap { exercise -> MuscleLoadCalculator.ExerciseInput? in
+            guard let unit = WeightUnit(rawValue: exercise.unit) else { return nil }
+            return MuscleLoadCalculator.ExerciseInput(
+                name: exercise.name, muscleGroup: exercise.muscleGroup, weight: exercise.weight,
+                reps: exercise.reps, sets: exercise.sets, unit: unit
+            )
+        }
+        let displayUnit = profile?.unitPreference ?? .lbs
+        let rawLoad = MuscleLoadCalculator.loadBySlug(exercises: weightUnitExercises, displayUnit: displayUnit)
+        let bodyWeightKg: Double? = profile?.bodyWeight.map {
+            WeightUnit.convert($0, from: profile?.bodyWeightUnit ?? .lbs, to: .kg)
+        }
+        muscleLoadBySlug = MuscleLoadCalculator.relativeLoadBySlug(rawLoad: rawLoad, bodyWeightKg: bodyWeightKg)
     }
 
     var muscleIntensityBySlug: [String: Int] {
