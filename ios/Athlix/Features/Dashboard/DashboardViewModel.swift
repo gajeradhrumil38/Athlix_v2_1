@@ -183,12 +183,6 @@ final class DashboardViewModel {
         try? modelContext.save()
     }
 
-    /// Per-muscle-slug training load for the current `workouts`, using
-    /// ExerciseMuscleMapper to translate each workout's muscle_groups into
-    /// weighted per-slug contributions (workouts fetched via this milestone's
-    /// repository don't include nested exercise-level detail, so this uses
-    /// each workout's coarser `muscle_groups` array as the fallback-group
-    /// input to ExerciseMuscleMapper, weighted equally per group).
     // MARK: - Weekly goal data (Monday-start week, independent of viewMode)
 
     func loadWeeklyGoalData(for date: Date) async {
