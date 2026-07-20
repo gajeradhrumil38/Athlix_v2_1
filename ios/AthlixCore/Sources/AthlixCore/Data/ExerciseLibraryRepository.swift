@@ -130,9 +130,7 @@ public final class LiveExerciseLibraryRepository: ExerciseLibraryRepository, @un
                 perSetData: sessionRows.map { LastSessionSummary.PerSetDatum(weight: $0.weight, reps: $0.reps) }
             )
 
-            let muscleGroup = (row.muscleGroup?.isEmpty == false)
-                ? row.muscleGroup!
-                : inferMuscleGroupFromName(row.name)
+            let muscleGroup = row.muscleGroup.flatMap { $0.isEmpty ? nil : $0 } ?? inferMuscleGroupFromName(row.name)
             options.append(RecentExerciseOption(
                 name: row.name, muscleGroup: muscleGroup, exerciseDbId: row.exerciseDbId, lastSession: session
             ))
