@@ -73,13 +73,14 @@ public final class LiveExerciseLibraryRepository: ExerciseLibraryRepository, @un
     }
 
     /// Ports web's inferMuscleGroupFromName (`getExerciseMuscleProfile(name).primary[0] || 'Core'`,
-    /// src/lib/supabaseData.ts:559-560) -- reuses the SAME muscle-pattern-matching system already
-    /// used for load calculations (ExerciseMuscleMapper), taking the highest-weight target's
-    /// region, rather than a separate name-substring heuristic table.
+    /// src/lib/supabaseData.ts:559-560) verbatim -- reuses `profile.primary`, NOT a
+    /// reconstruction from the top-weighted target's slug. `primary` is not simply "the region of
+    /// the highest-weight target": it can be a region-weight-sum across multiple slugs, or an
+    /// explicit `primaryRegions` override (e.g. Cardio/Yoga/Mobility/Arms) that isn't reachable
+    /// via `slugRegionMap` at all -- most cardio/yoga/mobility patterns in ExerciseMuscleMapper
+    /// only resolve to their correct region through this field.
     static func inferMuscleGroupFromName(_ name: String) -> String {
-        let profile = ExerciseMuscleMapper.profile(forExerciseName: name, fallbackMuscleGroup: nil)
-        guard let topTarget = profile.targets.max(by: { $0.weight < $1.weight }) else { return "Core" }
-        return ExerciseMuscleMapper.slugRegionMap[topTarget.slug] ?? "Core"
+        ExerciseMuscleMapper.profile(forExerciseName: name, fallbackMuscleGroup: nil).primary.first ?? "Core"
     }
 
     // Mirrors web's getRecentExerciseOptions (~L2410-2460): sort all rows desc by

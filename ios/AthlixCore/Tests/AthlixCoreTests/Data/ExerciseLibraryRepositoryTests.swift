@@ -250,6 +250,22 @@ final class ExerciseLibraryRepositoryTests: XCTestCase {
         XCTAssertEqual(result.first?.muscleGroup, "Chest", "Blank muscle_group should be inferred from the exercise name via the muscle-pattern matcher, not left empty")
     }
 
+    func testGetRecentExerciseOptionsUsesProfilePrimaryNotTopWeightedTargetRegion() async throws {
+        // "Running" matches ExerciseMuscleMapper's treadmill/run pattern, whose explicit
+        // primaryRegions override is ["Cardio", "Legs"] -- "Cardio" isn't reachable via
+        // slugRegionMap (no slug maps to it), so a version of inferMuscleGroupFromName that
+        // reconstructs a region from the top-weighted target's slug (quadriceps -> "Legs")
+        // instead of reading profile.primary directly would wrongly return "Legs" here.
+        let mock = InMemoryExerciseLibraryRepository()
+        await mock.setExerciseRows([
+            row(workoutId: "w1", date: "2026-07-01", name: "Running", group: nil),
+        ])
+
+        let result = try await mock.recentExerciseOptions(userId: "u1")
+
+        XCTAssertEqual(result.first?.muscleGroup, "Cardio", "Must use profile.primary (web's exact field), not a slugRegionMap lookup on the top-weighted target")
+    }
+
     func testGetRecentExerciseOptionsFallsBackToCoreWhenNoMuscleMatch() async throws {
         let mock = InMemoryExerciseLibraryRepository()
         await mock.setExerciseRows([
