@@ -24,6 +24,27 @@ struct WeeklyGoalRingView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+            // Title + Edit button row, matching Home.tsx:605-612 — only the Edit
+            // button (not the whole card) triggers the goal-edit sheet.
+            HStack {
+                Text("WEEKLY GOAL")
+                    .font(.system(size: 9, weight: .bold))
+                    .tracking(1.5)
+                    .foregroundStyle(ColorTokens.textSecondary)
+                Spacer()
+                Button {
+                    onEditGoal()
+                } label: {
+                    Text("Edit")
+                        .font(.system(size: 9, weight: .semibold))
+                        .tracking(0.5)
+                        .textCase(.uppercase)
+                        .foregroundStyle(ColorTokens.accent)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.bottom, 8)
+
             // Header: trained/goal count + percentage, matching WeeklyRing.tsx lines 15-21.
             HStack(alignment: .lastTextBaseline) {
                 HStack(alignment: .lastTextBaseline, spacing: 4) {
@@ -91,9 +112,6 @@ struct WeeklyGoalRingView: View {
         .padding(14)
         .background(ColorTokens.bgSurface)
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        .onTapGesture {
-            onEditGoal()
-        }
         .onAppear {
             withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
                 pulse = true
