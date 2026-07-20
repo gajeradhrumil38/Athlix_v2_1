@@ -6,6 +6,18 @@ struct MuscleBodyView: View {
     /// Maps muscle slug -> training intensity tier (0 = untrained, 1-4 = intensity).
     let intensityBySlug: [String: Int]
     @Binding var view: MuscleBodyViewSide
+    /// nil (the Dashboard's usage) = tapping does nothing, no selection overlay.
+    /// non-nil (custom-exercise creation's usage) = each tap on a region invokes
+    /// this with that region's slug; the CALLER owns the selection state and
+    /// passes it back in via `selectionBySlug` -- this view has no memory of
+    /// its own selection, it's a pure display + tap-reporter.
+    var onTapSlug: ((String) -> Void)? = nil
+    /// nil = pure intensity-heatmap coloring (existing Dashboard behavior,
+    /// via `intensityBySlug`). non-nil = selection-state coloring takes
+    /// priority over intensity for any slug present in this dictionary --
+    /// the two colorings are mutually exclusive per-slug, not blended,
+    /// since the two callers never need both simultaneously.
+    var selectionBySlug: [String: MuscleSelectionState]? = nil
 
     // Cached once per process -- SVG path strings are static data, so their
     // parsed Path never changes and doesn't need re-computing on every
@@ -37,6 +49,12 @@ struct MuscleBodyView: View {
     private static let intensityAlpha: [Double] = [0.45, 0.65, 0.85, 1.0]
 
     private func color(forSlug slug: String) -> Color {
+        if let selection = selectionBySlug?[slug] {
+            switch selection {
+            case .primary: return ColorTokens.accent
+            case .secondary: return ColorTokens.accent.opacity(0.45)
+            }
+        }
         let intensity = intensityBySlug[slug] ?? 0
         guard intensity > 0 else {
             return Color(hex: slug == "head" ? "bebebe" : "3f3f3f")
@@ -52,10 +70,14 @@ struct MuscleBodyView: View {
         GeometryReader { geometry in
             ZStack {
                 ForEach(entries, id: \.slug) { entry in
-                    ForEach(entry.pathStrings, id: \.self) { pathString in
-                        (cache[pathString] ?? Path())
-                            .fill(color(forSlug: entry.slug))
+                    ZStack {
+                        ForEach(entry.pathStrings, id: \.self) { pathString in
+                            (cache[pathString] ?? Path())
+                                .fill(color(forSlug: entry.slug))
+                        }
                     }
+                    .contentShape(pathsUnion(for: entry, cache: cache))
+                    .onTapGesture { onTapSlug?(entry.slug) }
                 }
             }
             .scaleEffect(
@@ -69,9 +91,25 @@ struct MuscleBodyView: View {
         // against the source library, not assumed.
         .aspectRatio(724.0 / 1448.0, contentMode: .fit)
     }
+
+    /// Unions a region's (possibly multiple) path strings into one hit-testable
+    /// shape -- a region like "biceps" may be drawn from two separate SVG path
+    /// strings (left+right arm), both of which must be tappable as one region.
+    private func pathsUnion(for entry: MuscleBodyPathEntry, cache: [String: Path]) -> Path {
+        var union = Path()
+        for pathString in entry.pathStrings {
+            union.addPath(cache[pathString] ?? Path())
+        }
+        return union
+    }
 }
 
 enum MuscleBodyViewSide {
     case front
     case back
+}
+
+enum MuscleSelectionState {
+    case primary
+    case secondary
 }
