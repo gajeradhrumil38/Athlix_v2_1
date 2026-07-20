@@ -76,7 +76,11 @@ struct FinishSheetView: View {
     /// extraction used both for what actually got saved and for the
     /// `countNewPRs` lookup post-save.
     private var touchedExerciseNames: [String] {
-        viewModel.exercises.filter { $0.sets.contains { $0.done } }.map(\.name)
+        var seen = Set<String>()
+        return viewModel.exercises
+            .filter { $0.sets.contains { $0.done } }
+            .map(\.name)
+            .filter { seen.insert($0).inserted }
     }
 
     var body: some View {
