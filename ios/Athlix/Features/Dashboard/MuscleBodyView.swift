@@ -25,12 +25,30 @@ struct MuscleBodyView: View {
     private static let parsedFrontPaths: [String: Path] = cachedPaths(for: MuscleBodyPaths.front)
     private static let parsedBackPaths: [String: Path] = cachedPaths(for: MuscleBodyPaths.back)
 
+    // Same rationale as parsedFrontPaths/parsedBackPaths above -- a region's
+    // tap-hit-shape (the union of its path strings) is also static geometry,
+    // so it's cached once per process rather than recomputed on every render.
+    private static let unionedFrontPaths: [String: Path] = unionedPaths(for: MuscleBodyPaths.front, cache: parsedFrontPaths)
+    private static let unionedBackPaths: [String: Path] = unionedPaths(for: MuscleBodyPaths.back, cache: parsedBackPaths)
+
     private static func cachedPaths(for entries: [MuscleBodyPathEntry]) -> [String: Path] {
         var result: [String: Path] = [:]
         for entry in entries {
             for pathString in entry.pathStrings {
                 result[pathString] = SVGPathParser.parse(pathString)
             }
+        }
+        return result
+    }
+
+    private static func unionedPaths(for entries: [MuscleBodyPathEntry], cache: [String: Path]) -> [String: Path] {
+        var result: [String: Path] = [:]
+        for entry in entries {
+            var union = Path()
+            for pathString in entry.pathStrings {
+                union.addPath(cache[pathString] ?? Path())
+            }
+            result[entry.slug] = union
         }
         return result
     }
@@ -76,7 +94,9 @@ struct MuscleBodyView: View {
                                 .fill(color(forSlug: entry.slug))
                         }
                     }
-                    .contentShape(pathsUnion(for: entry, cache: cache))
+                    .contentShape(
+                        (view == .front ? Self.unionedFrontPaths[entry.slug] : Self.unionedBackPaths[entry.slug]) ?? Path()
+                    )
                     .onTapGesture { onTapSlug?(entry.slug) }
                 }
             }
@@ -90,17 +110,6 @@ struct MuscleBodyView: View {
         // ("0 0 724 1448" front, "724 0 724 1448" back) -- verified directly
         // against the source library, not assumed.
         .aspectRatio(724.0 / 1448.0, contentMode: .fit)
-    }
-
-    /// Unions a region's (possibly multiple) path strings into one hit-testable
-    /// shape -- a region like "biceps" may be drawn from two separate SVG path
-    /// strings (left+right arm), both of which must be tappable as one region.
-    private func pathsUnion(for entry: MuscleBodyPathEntry, cache: [String: Path]) -> Path {
-        var union = Path()
-        for pathString in entry.pathStrings {
-            union.addPath(cache[pathString] ?? Path())
-        }
-        return union
     }
 }
 
