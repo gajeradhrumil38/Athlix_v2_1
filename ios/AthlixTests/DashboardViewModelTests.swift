@@ -372,6 +372,63 @@ final class DashboardViewModelTests: XCTestCase {
         XCTAssertTrue(sut.muscleLoadBySlug.isEmpty)
     }
 
+    // MARK: - reload generation gating (Task 9 code review regression)
+
+    // Reproduces the exact race from the code review finding: Date Navigator reload A starts
+    // (older generation), reload B starts before A resolves (newer generation), B's fetch
+    // resolves and applies first (correctly reflecting the current UI state), and only THEN
+    // does A's slower fetch resolve. Before the fix, `loadWorkouts` wrote `workouts = fresh`
+    // unconditionally, so A's stale write would clobber B's already-applied, correct data. The
+    // fix gates that write on `generation != reloadGeneration`, checked immediately after the
+    // await and immediately before the assignment -- so A's late write is skipped instead.
+    //
+    // Real concurrency isn't needed to prove this: `beginReload()` is what defines "generation,"
+    // so calling it for A, then B, then fully awaiting B's `loadWorkouts(generation:)` to
+    // completion BEFORE awaiting A's, faithfully reproduces "B resolved before A" even with
+    // fully sequential/awaited test code.
+    func testStaleGenerationLoadWorkoutsDoesNotOverwriteNewerGenerationResult() async {
+        let sut = makeSUT()
+        let workoutA = makeWorkout(id: "stale-a", date: "2026-07-13")
+        let workoutB = makeWorkout(id: "fresh-b", date: "2026-07-15")
+
+        // A starts first -- reserves the older generation token.
+        let genA = sut.beginReload()
+        // B starts before A resolves -- reserves the newer generation token.
+        let genB = sut.beginReload()
+        XCTAssertNotEqual(genA, genB)
+
+        // B's fetch resolves first and is current (genB == reloadGeneration), so it applies.
+        await workoutRepo.setStubbedWorkouts([workoutB])
+        await sut.loadWorkouts(from: Date(), to: Date(), generation: genB)
+        XCTAssertEqual(sut.workouts.map(\.id), ["fresh-b"], "B's fetch should apply -- it's the current generation")
+
+        // A's fetch finally resolves, but genA is now stale (reloadGeneration has moved to
+        // genB). Before the fix this write was unconditional and would clobber B's data with
+        // A's -- asserting it does NOT is exactly what the code review flagged as broken.
+        await workoutRepo.setStubbedWorkouts([workoutA])
+        await sut.loadWorkouts(from: Date(), to: Date(), generation: genA)
+        XCTAssertEqual(
+            sut.workouts.map(\.id), ["fresh-b"],
+            "stale generation A's late write must NOT overwrite the newer generation B's already-applied result"
+        )
+    }
+
+    // Same race, but proving the ViewModel-owned `reloadGeneration` genuinely gates each load
+    // method's OWN mutation point (not just inter-step progression in the View) -- this is what
+    // distinguishes the fix from the original (broken) View-level-only guard.
+    func testBeginReloadIncrementsGenerationAndDefaultGenerationParameterAlwaysApplies() async {
+        let sut = makeSUT()
+        XCTAssertEqual(sut.beginReload(), 1)
+        XCTAssertEqual(sut.beginReload(), 2)
+        XCTAssertEqual(sut.beginReload(), 3)
+
+        // Existing call sites (this test file's other 15+ tests) omit `generation` entirely --
+        // that must keep behaving as "always apply," regardless of reloadGeneration's value.
+        await workoutRepo.setStubbedWorkouts([makeWorkout(id: "w1", date: "2026-07-14")])
+        await sut.loadWorkouts(from: Date(), to: Date())
+        XCTAssertEqual(sut.workouts.map(\.id), ["w1"], "omitting `generation` must always apply, ignoring reloadGeneration")
+    }
+
     // MARK: - km/mi distance-unit filtering
 
     // Judgment call (documented per Task 6 spec): a row whose `unit` is "km"/"mi" holds a

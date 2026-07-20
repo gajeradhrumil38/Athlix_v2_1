@@ -8,7 +8,6 @@ struct DashboardView: View {
     @State private var currentDate = Date()
     @State private var viewMode: DashboardViewMode = .week
     @State private var showingGoalEdit = false
-    @State private var reloadGeneration = 0
 
     var body: some View {
         ScrollView {
@@ -67,35 +66,37 @@ struct DashboardView: View {
         }
     }
 
-    /// Guards each mutating step with a generation-token check so that if a newer reload
-    /// (e.g. from a rapid second Date Navigator tap) starts before this one finishes, this
-    /// reload's later steps stop applying further state -- preventing an out-of-order, stale
-    /// response from landing last and overwriting fresher data. Steps already completed before
-    /// going stale may leave transient stale data visible for one frame; that's an accepted
-    /// approximation, not true cancellation (see Task 9 plan notes).
+    /// Obtains a generation token from the ViewModel (`vm.beginReload()`) and threads it into
+    /// every load call so each load method gates ITS OWN mutation against the CURRENT
+    /// generation the instant its own network await resolves (see DashboardViewModel's
+    /// `reloadGeneration`/`beginReload()` doc comments). That is the fix for the Task 9 code
+    /// review finding: a View-level check run only BETWEEN awaited steps can't stop a slower,
+    /// superseded call from unconditionally overwriting state the moment its own await
+    /// resolves, because that overwrite happens inside the very step being awaited, not between
+    /// steps. The `guard vm.reloadGeneration == myGeneration` lines below are kept only as an
+    /// optimization to skip starting further already-stale awaited work early -- they are not
+    /// what makes this correct; the per-load-method gate inside the ViewModel is.
     private func reloadData(_ vm: DashboardViewModel) async {
-        reloadGeneration += 1
-        let myGeneration = reloadGeneration
+        let myGeneration = vm.beginReload()
 
         let range = DashboardViewModel.rangeUTC(for: currentDate, viewMode: viewMode)
 
-        await vm.loadWorkouts(from: range.from, to: range.to)
-        guard reloadGeneration == myGeneration else { return }
+        await vm.loadWorkouts(from: range.from, to: range.to, generation: myGeneration)
+        guard vm.reloadGeneration == myGeneration else { return }
 
         // loadProfile before loadExercisesInRange: recomputeMuscleLoad() reads `profile` for
         // unit conversion / body-weight-relative normalization, so this ordering avoids the
         // (harmless but avoidable) one-frame lbs-only fallback noted in DashboardViewModel.
-        await vm.loadProfile()
-        guard reloadGeneration == myGeneration else { return }
+        await vm.loadProfile(generation: myGeneration)
+        guard vm.reloadGeneration == myGeneration else { return }
 
-        await vm.loadExercisesInRange()
-        guard reloadGeneration == myGeneration else { return }
+        await vm.loadExercisesInRange(generation: myGeneration)
+        guard vm.reloadGeneration == myGeneration else { return }
 
-        await vm.loadPersonalRecords()
-        guard reloadGeneration == myGeneration else { return }
+        await vm.loadPersonalRecords(generation: myGeneration)
+        guard vm.reloadGeneration == myGeneration else { return }
 
-        await vm.loadWeeklyGoalData(for: currentDate)
-        guard reloadGeneration == myGeneration else { return }
+        await vm.loadWeeklyGoalData(for: currentDate, generation: myGeneration)
     }
 
     private func todaysWorkout(from workouts: [Workout]) -> Workout? {

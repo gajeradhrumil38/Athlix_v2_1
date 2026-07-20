@@ -35,6 +35,14 @@ final class DashboardViewModel {
 
     private(set) var goalDays: Int
 
+    // Generation token for Date Navigator reload cancellation-safety (Task 9 code review fix).
+    // Owned HERE, not by the View, because the race this guards against is a mutation race
+    // INSIDE each load method (see beginReload() doc comment) -- a View-level generation check
+    // run only between awaited steps cannot stop a slower, superseded call from unconditionally
+    // overwriting state the instant its own await resolves, since that overwrite happens inside
+    // the very step the View is waiting on, not between steps.
+    private(set) var reloadGeneration = 0
+
     private let workoutRepository: WorkoutRepository
     private let personalRecordRepository: PersonalRecordRepository
     private let profileRepository: ProfileRepository
@@ -63,12 +71,27 @@ final class DashboardViewModel {
         self.goalDays = Self.loadGoalDays()
     }
 
+    /// Call once at the start of a reload chain (e.g. `DashboardView.reloadData`) to obtain a
+    /// token for that chain. Increments the generation so any PRIOR chain's still-in-flight
+    /// `load...(generation:)` calls will find their captured token stale the next time they
+    /// check it (immediately after their own await, right before their mutation).
+    func beginReload() -> Int {
+        reloadGeneration += 1
+        return reloadGeneration
+    }
+
     /// Reads the SwiftData cache immediately (for instant display), then
     /// fetches fresh data from the network and writes it through to the
     /// cache. Errors are only surfaced if BOTH the cache read produced
     /// nothing AND the network fetch failed -- a stale cache hit is always
     /// preferable to an error state while a background refresh is pending.
-    func loadWorkouts(from: Date, to: Date) async {
+    ///
+    /// `generation`, when non-nil, must match `reloadGeneration` at the instant the network
+    /// fetch resolves, checked immediately before the `workouts =` write below -- that is the
+    /// actual race window (see Task 9 code review). `nil` (the default) skips the check
+    /// entirely, so direct test/call-site usage that doesn't care about reload cancellation is
+    /// unaffected.
+    func loadWorkouts(from: Date, to: Date, generation: Int? = nil) async {
         let cachedUserId = userId
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withFullDate]
@@ -88,9 +111,11 @@ final class DashboardViewModel {
         workoutsErrorMessage = nil
         do {
             let fresh = try await workoutRepository.fetchWorkouts(userId: userId, from: from, to: to)
+            if let generation, generation != reloadGeneration { return }
             workouts = fresh
             writeThroughWorkoutsCache(fresh, fromString: fromString, toString: toString)
         } catch {
+            if let generation, generation != reloadGeneration { return }
             if workouts.isEmpty {
                 workoutsErrorMessage = "Couldn't load workouts."
             }
@@ -98,7 +123,8 @@ final class DashboardViewModel {
         isLoadingWorkouts = false
     }
 
-    func loadPersonalRecords() async {
+    /// See `loadWorkouts`'s doc comment for the `generation` contract.
+    func loadPersonalRecords(generation: Int? = nil) async {
         let cachedUserId = userId
         let cached = (try? modelContext.fetch(
             FetchDescriptor<CachedPersonalRecord>(predicate: #Predicate { $0.userId == cachedUserId })
@@ -111,9 +137,11 @@ final class DashboardViewModel {
         recordsErrorMessage = nil
         do {
             let fresh = try await personalRecordRepository.fetchPersonalRecords(userId: userId)
+            if let generation, generation != reloadGeneration { return }
             personalRecords = fresh
             writeThroughPersonalRecordsCache(fresh)
         } catch {
+            if let generation, generation != reloadGeneration { return }
             if personalRecords.isEmpty {
                 recordsErrorMessage = "Couldn't load personal records."
             }
@@ -185,8 +213,13 @@ final class DashboardViewModel {
 
     // MARK: - Weekly goal data (Monday-start week, independent of viewMode)
 
-    func loadWeeklyGoalData(for date: Date) async {
-        weeklyGoalReferenceDate = date
+    /// See `loadWorkouts`'s doc comment for the `generation` contract. `weeklyGoalReferenceDate`
+    /// is written alongside `weeklyGoalWorkouts` (both gated together) rather than unconditionally
+    /// up front, since the boundary math below reads the `date` parameter directly, not the
+    /// stored property -- so deferring the property write doesn't affect this call's own
+    /// correctness, and avoids a superseded chain clobbering the reference date a newer chain
+    /// already moved past.
+    func loadWeeklyGoalData(for date: Date, generation: Int? = nil) async {
         var utcCalendar = Calendar(identifier: .gregorian)
         utcCalendar.timeZone = TimeZone(identifier: "UTC")!
 
@@ -202,10 +235,16 @@ final class DashboardViewModel {
         let weekEnd = utcCalendar.date(byAdding: .day, value: 6, to: weekStart) ?? dateStart
 
         do {
-            weeklyGoalWorkouts = try await workoutRepository.fetchWorkouts(userId: userId, from: weekStart, to: weekEnd)
+            let fresh = try await workoutRepository.fetchWorkouts(userId: userId, from: weekStart, to: weekEnd)
+            if let generation, generation != reloadGeneration { return }
+            weeklyGoalReferenceDate = date
+            weeklyGoalWorkouts = fresh
         } catch {
+            if let generation, generation != reloadGeneration { return }
             // Per-widget isolation: leave weeklyGoalWorkouts at its last-known value on failure,
-            // matching loadWorkouts'/loadPersonalRecords' don't-clear-on-error behavior.
+            // matching loadWorkouts'/loadPersonalRecords' don't-clear-on-error behavior. The
+            // reference date still advances on failure (matching prior unconditional behavior).
+            weeklyGoalReferenceDate = date
         }
     }
 
@@ -221,11 +260,15 @@ final class DashboardViewModel {
 
     // MARK: - Profile
 
-    func loadProfile() async {
+    /// See `loadWorkouts`'s doc comment for the `generation` contract.
+    func loadProfile(generation: Int? = nil) async {
         do {
-            profile = try await profileRepository.fetchProfile(userId: userId)
+            let fresh = try await profileRepository.fetchProfile(userId: userId)
+            if let generation, generation != reloadGeneration { return }
+            profile = fresh
         } catch {
             // Per-widget isolation: leave `profile` at its last-known value (nil if never loaded).
+            // No mutation on this path, so no generation check is needed here.
         }
     }
 
@@ -244,10 +287,17 @@ final class DashboardViewModel {
     // conversion and body-weight-relative normalization -- if loadProfile hasn't finished yet,
     // this falls back to displaying in .lbs and skipping relative-load normalization, which is a
     // reasonable one-frame degradation rather than a bug.
-    func loadExercisesInRange() async {
+    /// See `loadWorkouts`'s doc comment for the `generation` contract. `recomputeMuscleLoad()` is
+    /// itself gated by extension -- it's only reached at all when this call's write to
+    /// `exercisesInRange` wasn't skipped as stale, so a superseded chain can't recompute
+    /// `muscleLoadBySlug` off of workouts/exercises a newer chain has already moved past either.
+    func loadExercisesInRange(generation: Int? = nil) async {
         do {
-            exercisesInRange = try await workoutRepository.fetchExercisesForWorkouts(userId: userId, workoutIds: workouts.map(\.id))
+            let fresh = try await workoutRepository.fetchExercisesForWorkouts(userId: userId, workoutIds: workouts.map(\.id))
+            if let generation, generation != reloadGeneration { return }
+            exercisesInRange = fresh
         } catch {
+            if let generation, generation != reloadGeneration { return }
             exercisesInRange = []
         }
         recomputeMuscleLoad()
