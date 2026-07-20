@@ -14,7 +14,14 @@ struct DashboardView: View {
                 DateNavigatorView(currentDate: $currentDate, viewMode: $viewMode)
 
                 if let viewModel {
-                    WeeklyGoalRingView(completedSets: viewModel.workouts.count * 4, goalSets: 20)
+                    // Minimal Task 7 shim: real trainedDays/goalDays/weekDays data is wired up,
+                    // but the goal-edit-sheet presentation is Task 9's job (placeholder closure here).
+                    WeeklyGoalRingView(
+                        trainedDays: viewModel.trainedDaysCount,
+                        goalDays: viewModel.goalDays,
+                        weekDays: viewModel.weekDays,
+                        onEditGoal: {}
+                    )
                     MuscleMapWidgetView(intensityBySlug: viewModel.muscleIntensityBySlug)
                     TrainNextView(muscleIntensityBySlug: viewModel.muscleIntensityBySlug)
                     PRBannerView(personalRecords: viewModel.personalRecords)
