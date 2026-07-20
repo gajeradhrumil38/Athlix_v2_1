@@ -14,6 +14,12 @@ public protocol WorkoutRepository: Sendable {
     /// column -- see `supabase/schema.sql`), throwing `RepositoryError.unknown("Workout
     /// not found.")` if not owned, mirroring `updateWorkoutSets`'s ownership check.
     func fetchWorkoutExercises(userId: String, workoutId: String) async throws -> [ExerciseSet]
+    /// Batched read-only fetch of `exercises` table rows across MANY workout ids at once, used
+    /// by the Dashboard's per-exercise muscle-load computation to avoid one query per workout in
+    /// the visible date range. Unlike `fetchWorkoutExercises`, there is no per-id ownership check
+    /// -- `workoutIds` are expected to already come from an authenticated, userId-scoped
+    /// `fetchWorkouts()` call. Returns `[]` without any network call when `workoutIds` is empty.
+    func fetchExercisesForWorkouts(userId: String, workoutIds: [String]) async throws -> [ExerciseSet]
 }
 
 // A named struct rather than a bare tuple: a tuple's positional literal args (e.g.
@@ -451,6 +457,37 @@ public final class LiveWorkoutRepository: WorkoutRepository, @unchecked Sendable
             return rows
         } catch let error as RepositoryError {
             throw error
+        } catch {
+            throw RepositoryError.unknown("\(error)")
+        }
+    }
+
+    // MARK: - fetchExercisesForWorkouts
+
+    // Batched IN-query fetch for exercise rows across many workouts at once -- used by the
+    // Dashboard's real per-exercise muscle-load computation, where fetching each workout's
+    // exercises individually (fetchWorkoutExercises, one workout at a time) would mean one query
+    // per workout in the visible range. No per-id ownership check here (unlike
+    // fetchWorkoutExercises): workoutIds are expected to already come from an authenticated,
+    // userId-scoped fetchWorkouts() call, so this trusts the caller rather than re-verifying
+    // ownership per id -- the `userId` parameter is kept for API symmetry with this repository's
+    // other methods and as a hook for a future stricter check, but isn't currently used to filter
+    // the query (RLS on the `exercises` table, scoped via its workout_id's parent workout
+    // ownership, is the real server-side enforcement boundary regardless).
+    public func fetchExercisesForWorkouts(userId: String, workoutIds: [String]) async throws -> [ExerciseSet] {
+        guard !workoutIds.isEmpty else { return [] }
+        do {
+            var all: [ExerciseSet] = []
+            for batch in workoutIds.chunked(400) {
+                let rows: [ExerciseSet] = try await client
+                    .from("exercises")
+                    .select()
+                    .in("workout_id", values: batch)
+                    .execute()
+                    .value
+                all.append(contentsOf: rows)
+            }
+            return all
         } catch {
             throw RepositoryError.unknown("\(error)")
         }

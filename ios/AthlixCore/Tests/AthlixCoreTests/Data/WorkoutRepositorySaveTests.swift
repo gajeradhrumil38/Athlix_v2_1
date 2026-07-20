@@ -18,6 +18,7 @@ actor InMemoryWorkoutRepository: WorkoutRepository {
     var renameCalls: [(workoutId: String, userId: String, title: String)] = []
     var networkCallCount = 0
     var directPathCallCount = 0 // tracks how many times saveWorkoutDirect's insert path ran
+    var fetchExercisesForWorkoutsCallCount = 0
 
     func fetchWorkouts(userId: String, from: Date, to: Date) async throws -> [Workout] {
         workouts.values.filter { $0.userId == userId }
@@ -168,6 +169,18 @@ actor InMemoryWorkoutRepository: WorkoutRepository {
             throw RepositoryError.unknown("Workout not found.")
         }
         return (exerciseRows[workoutId] ?? []).sorted { $0.orderIndex < $1.orderIndex }
+    }
+
+    // Batched read across many workout ids at once, mirroring LiveWorkoutRepository's
+    // fetchExercisesForWorkouts: no per-id ownership check (workoutIds are expected to already
+    // come from an authenticated, userId-scoped fetchWorkouts() call), and a genuine
+    // no-call-at-all short-circuit on an empty workoutIds array (tracked via the call counter
+    // above, not just the returned value), matching the empty-array guard convention used
+    // elsewhere in this file (see testSaveWorkoutThrowsBeforeNetworkCallWhenNoValidSets).
+    func fetchExercisesForWorkouts(userId: String, workoutIds: [String]) async throws -> [ExerciseSet] {
+        guard !workoutIds.isEmpty else { return [] }
+        fetchExercisesForWorkoutsCallCount += 1
+        return workoutIds.flatMap { exerciseRows[$0] ?? [] }
     }
 }
 
@@ -552,5 +565,35 @@ final class WorkoutRepositorySaveTests: XCTestCase {
         let result = try await mock.fetchWorkoutExercises(userId: "u1", workoutId: "w1")
 
         XCTAssertEqual(result, [])
+    }
+
+    // MARK: - fetchExercisesForWorkouts
+
+    func testFetchExercisesForWorkoutsReturnsRowsAcrossMultipleWorkoutIds() async throws {
+        let mock = InMemoryWorkoutRepository()
+        let w1Rows = [
+            ExerciseSet(id: "e1", workoutId: "w1", name: "Bench Press", muscleGroup: "Chest", sets: 1, reps: 8, weight: 135, unit: "lbs", orderIndex: 0, exerciseDbId: nil),
+        ]
+        let w2Rows = [
+            ExerciseSet(id: "e2", workoutId: "w2", name: "Squat", muscleGroup: "Legs", sets: 1, reps: 5, weight: 225, unit: "lbs", orderIndex: 0, exerciseDbId: nil),
+        ]
+        await mock.seedExerciseRows(w1Rows, forWorkoutId: "w1")
+        await mock.seedExerciseRows(w2Rows, forWorkoutId: "w2")
+
+        let result = try await mock.fetchExercisesForWorkouts(userId: "u1", workoutIds: ["w1", "w2"])
+
+        XCTAssertEqual(Set(result.map(\.id)), Set(["e1", "e2"]))
+        let callCount = await mock.fetchExercisesForWorkoutsCallCount
+        XCTAssertEqual(callCount, 1)
+    }
+
+    func testFetchExercisesForWorkoutsReturnsEmptyWithoutCallWhenWorkoutIdsIsEmpty() async throws {
+        let mock = InMemoryWorkoutRepository()
+
+        let result = try await mock.fetchExercisesForWorkouts(userId: "u1", workoutIds: [])
+
+        XCTAssertEqual(result, [])
+        let callCount = await mock.fetchExercisesForWorkoutsCallCount
+        XCTAssertEqual(callCount, 0, "An empty workoutIds array must short-circuit before any mock/network call")
     }
 }

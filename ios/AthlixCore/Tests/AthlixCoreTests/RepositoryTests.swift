@@ -37,6 +37,13 @@ actor MockWorkoutRepository: WorkoutRepository {
         if shouldThrow { throw RepositoryError.network }
         return []
     }
+
+    // Unused by this file's tests -- present only to satisfy the WorkoutRepository protocol.
+    // See WorkoutRepositorySaveTests.swift for meaningful coverage of this method.
+    func fetchExercisesForWorkouts(userId: String, workoutIds: [String]) async throws -> [ExerciseSet] {
+        if shouldThrow { throw RepositoryError.network }
+        return []
+    }
 }
 
 extension MockWorkoutRepository {
