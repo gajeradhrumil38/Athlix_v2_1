@@ -7,6 +7,8 @@ struct DashboardView: View {
     @State private var viewModel: DashboardViewModel?
     @State private var currentDate = Date()
     @State private var viewMode: DashboardViewMode = .week
+    @State private var showingGoalEdit = false
+    @State private var reloadGeneration = 0
 
     var body: some View {
         ScrollView {
@@ -14,13 +16,11 @@ struct DashboardView: View {
                 DateNavigatorView(currentDate: $currentDate, viewMode: $viewMode)
 
                 if let viewModel {
-                    // Minimal Task 7 shim: real trainedDays/goalDays/weekDays data is wired up,
-                    // but the goal-edit-sheet presentation is Task 9's job (placeholder closure here).
                     WeeklyGoalRingView(
                         trainedDays: viewModel.trainedDaysCount,
                         goalDays: viewModel.goalDays,
                         weekDays: viewModel.weekDays,
-                        onEditGoal: {}
+                        onEditGoal: { showingGoalEdit = true }
                     )
                     MuscleMapWidgetView(intensityBySlug: viewModel.muscleIntensityBySlug)
                     TrainNextView(muscleIntensityBySlug: viewModel.muscleIntensityBySlug)
@@ -35,6 +35,11 @@ struct DashboardView: View {
             .padding(10)
         }
         .background(ColorTokens.bgBase.ignoresSafeArea())
+        .sheet(isPresented: $showingGoalEdit) {
+            if let viewModel {
+                GoalEditSheetView(current: viewModel.goalDays, onConfirm: { viewModel.setGoalDays($0) })
+            }
+        }
         .task {
             guard viewModel == nil, let userId = authManager.user?.id else { return }
             // LiveWorkoutRepository/LivePersonalRecordRepository each default-construct
@@ -62,10 +67,35 @@ struct DashboardView: View {
         }
     }
 
+    /// Guards each mutating step with a generation-token check so that if a newer reload
+    /// (e.g. from a rapid second Date Navigator tap) starts before this one finishes, this
+    /// reload's later steps stop applying further state -- preventing an out-of-order, stale
+    /// response from landing last and overwriting fresher data. Steps already completed before
+    /// going stale may leave transient stale data visible for one frame; that's an accepted
+    /// approximation, not true cancellation (see Task 9 plan notes).
     private func reloadData(_ vm: DashboardViewModel) async {
+        reloadGeneration += 1
+        let myGeneration = reloadGeneration
+
         let range = DashboardViewModel.rangeUTC(for: currentDate, viewMode: viewMode)
+
         await vm.loadWorkouts(from: range.from, to: range.to)
+        guard reloadGeneration == myGeneration else { return }
+
+        // loadProfile before loadExercisesInRange: recomputeMuscleLoad() reads `profile` for
+        // unit conversion / body-weight-relative normalization, so this ordering avoids the
+        // (harmless but avoidable) one-frame lbs-only fallback noted in DashboardViewModel.
+        await vm.loadProfile()
+        guard reloadGeneration == myGeneration else { return }
+
+        await vm.loadExercisesInRange()
+        guard reloadGeneration == myGeneration else { return }
+
         await vm.loadPersonalRecords()
+        guard reloadGeneration == myGeneration else { return }
+
+        await vm.loadWeeklyGoalData(for: currentDate)
+        guard reloadGeneration == myGeneration else { return }
     }
 
     private func todaysWorkout(from workouts: [Workout]) -> Workout? {
