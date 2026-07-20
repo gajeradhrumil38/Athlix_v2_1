@@ -320,16 +320,44 @@ final class DashboardViewModelTests: XCTestCase {
         )
         XCTAssertEqual(sut.muscleLoadBySlug["chest"], expected["chest"])
         XCTAssertGreaterThan(sut.muscleLoadBySlug["chest"] ?? 0, 0)
+        let beforeProfile = sut.muscleLoadBySlug
 
-        // Repeated access must return the exact same cached value -- it's a
-        // stored property populated once by loadExercisesInRange, not a
-        // computed `var { ... }` that recomputes ExerciseMuscleMapper regex
-        // matching (an expensive, cache-less call) on every access.
-        let first = sut.muscleLoadBySlug
-        let second = sut.muscleLoadBySlug
-        let third = sut.muscleLoadBySlug
-        XCTAssertEqual(first, second)
-        XCTAssertEqual(second, third)
+        // A test that only re-reads muscleLoadBySlug several times in a row (with nothing else
+        // happening in between) would pass equally well against a reverted `var { ... }` computed
+        // property, since no mutation occurs between those reads either way -- it wouldn't
+        // actually discriminate stored-once-per-reload from recomputed-on-every-access.
+        //
+        // The genuinely discriminating sequence: load a NEW profile that changes what
+        // recomputeMuscleLoad() would produce (switching on body-weight-relative normalization),
+        // WITHOUT calling loadExercisesInRange() again. If muscleLoadBySlug were a computed
+        // property, it would immediately reflect the new profile on the very next access. If it's
+        // the stored property it's supposed to be, it must stay exactly as it was until
+        // loadExercisesInRange() is explicitly called again.
+        let profileWithBodyWeight = Profile(
+            id: "user-1", fullName: "B", unitPreference: .lbs, themePreference: "dark",
+            bodyWeight: 180, bodyWeightUnit: .lbs, heightFeet: nil, heightInches: nil
+        )
+        await profileRepo.setStubbedProfile(profileWithBodyWeight)
+        await sut.loadProfile()
+        XCTAssertEqual(sut.profile, profileWithBodyWeight)
+
+        XCTAssertEqual(
+            sut.muscleLoadBySlug, beforeProfile,
+            "loading a new profile alone must NOT retroactively change muscleLoadBySlug -- it's only recomputed inside loadExercisesInRange()"
+        )
+
+        // Now explicitly ask for a recompute -- this time it must actually change, since the
+        // now-loaded profile's body weight feeds relativeLoadBySlug's normalization.
+        await sut.loadExercisesInRange()
+
+        XCTAssertNotEqual(
+            sut.muscleLoadBySlug, beforeProfile,
+            "loadExercisesInRange() must recompute using the newly-loaded profile's body weight"
+        )
+        let expectedAfter = MuscleLoadCalculator.relativeLoadBySlug(
+            rawLoad: expected, bodyWeightKg: WeightUnit.convert(180, from: .lbs, to: .kg)
+        )
+        XCTAssertEqual(sut.muscleLoadBySlug["chest"], expectedAfter["chest"])
     }
 
     func testLoadExercisesInRangeFailureResetsToEmptyWithoutCrashing() async {
