@@ -33,6 +33,12 @@ final class DashboardViewModel {
     // that would silently redo that expensive work on every access.
     private(set) var muscleLoadBySlug: [String: Double] = [:]
 
+    // Same caching rationale as `muscleLoadBySlug` above: populated once per data reload (in
+    // recomputeMuscleLoad()) rather than recomputed on every SwiftUI render. Raw weighted SET
+    // COUNTS (not volume) -- feeds the Muscle Radar's fixed MAX_SETS/TARGET_SETS scale, matching
+    // web's `MuscleRadar.tsx` semantics (see MuscleLoadCalculator.setCountsBySlug doc comment).
+    private(set) var muscleSetCountsBySlug: [String: Double] = [:]
+
     private(set) var goalDays: Int
 
     // Generation token for Date Navigator reload cancellation-safety (Task 9 code review fix).
@@ -322,12 +328,27 @@ final class DashboardViewModel {
             WeightUnit.convert($0, from: profile?.bodyWeightUnit ?? .lbs, to: .kg)
         }
         muscleLoadBySlug = MuscleLoadCalculator.relativeLoadBySlug(rawLoad: rawLoad, bodyWeightKg: bodyWeightKg)
+        muscleSetCountsBySlug = MuscleLoadCalculator.setCountsBySlug(exercises: weightUnitExercises)
     }
 
     var muscleIntensityBySlug: [String: Int] {
         let loads = muscleLoadBySlug
         let maxLoad = loads.values.max() ?? 0
         return loads.mapValues { MuscleIntensity.tier(load: $0, maxLoad: maxLoad) }
+    }
+
+    /// Rolls `muscleSetCountsBySlug` up to region (spoke) granularity for the Muscle Radar --
+    /// same rollup pattern as web's Home.tsx and the previous `DashboardView.regionLoads(from:)`
+    /// helper, but summing RAW weighted set counts, not normalizing to 0...1. Normalization
+    /// against the fixed MAX_SETS constant is the view's job (matching web's `MuscleRadar.tsx`,
+    /// which receives raw `sets` and does `sets / MAX_SETS` itself).
+    var regionSetCounts: [String: Double] {
+        var byRegion: [String: Double] = [:]
+        for (slug, count) in muscleSetCountsBySlug {
+            guard let region = ExerciseMuscleMapper.slugRegionMap[slug] else { continue }
+            byRegion[region, default: 0] += count
+        }
+        return byRegion
     }
 
     var currentStreak: Int {

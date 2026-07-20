@@ -54,6 +54,25 @@ final class MuscleLoadCalculatorTests: XCTestCase {
         XCTAssertNotEqual(result["quadriceps"] ?? 0, 100.0 * 5 * 4 * 0.88, accuracy: 0.001)
     }
 
+    // MARK: - setCountsBySlug
+
+    // "Bench Press" -> chest:1, triceps:0.55, deltoids:0.42 (same fractional weights as
+    // loadBySlug's accumulation test above). 3 sets * weight per target, NOT weight*reps*sets --
+    // proves setCountsBySlug accumulates raw sets (fractionally split across muscles), not
+    // volume.
+    func testSetCountsBySlugWeightsRawSetsBySlugFraction() {
+        let benchPress = MuscleLoadCalculator.ExerciseInput(
+            name: "Bench Press", muscleGroup: nil,
+            weight: 100, reps: 10, sets: 3, unit: .kg
+        )
+
+        let result = MuscleLoadCalculator.setCountsBySlug(exercises: [benchPress])
+
+        XCTAssertEqual(result["chest"] ?? 0, 3.0, accuracy: 0.001)
+        XCTAssertEqual(result["triceps"] ?? 0, 1.65, accuracy: 0.001)
+        XCTAssertEqual(result["deltoids"] ?? 0, 1.26, accuracy: 0.001)
+    }
+
     // MARK: - relativeLoadBySlug
 
     func testRelativeLoadBySlugReturnsRawLoadWhenBodyWeightIsNil() {

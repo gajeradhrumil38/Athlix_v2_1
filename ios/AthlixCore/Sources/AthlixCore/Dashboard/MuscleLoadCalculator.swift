@@ -45,6 +45,23 @@ public enum MuscleLoadCalculator {
         return totals
     }
 
+    /// Real per-exercise weighted SET COUNT (not volume) aggregated per muscle slug via
+    /// `ExerciseMuscleMapper`'s real name-based targeting. Mirrors `loadBySlug`'s structure
+    /// exactly, but accumulates `sets * target.weight` instead of `exerciseLoad * target.weight`
+    /// -- this is what feeds the Muscle Radar's fixed MAX_SETS/TARGET_SETS scale (web's
+    /// `src/components/home/MuscleRadar.tsx`), which is intentionally NOT normalized against the
+    /// current data's own max (unlike `loadBySlug`/`muscleLoadBySlug`).
+    public static func setCountsBySlug(exercises: [ExerciseInput]) -> [String: Double] {
+        var totals: [String: Double] = [:]
+        for exercise in exercises {
+            let profile = ExerciseMuscleMapper.profile(forExerciseName: exercise.name, fallbackMuscleGroup: exercise.muscleGroup)
+            for target in profile.targets {
+                totals[target.slug, default: 0] += Double(exercise.sets) * target.weight
+            }
+        }
+        return totals
+    }
+
     /// Converts raw per-slug load into body-weight-relative load when
     /// `bodyWeightKg` is present and strictly positive -- unconditionally,
     /// matching web's `if (bodyWeightKg && bodyWeightKg > 0)` branch.

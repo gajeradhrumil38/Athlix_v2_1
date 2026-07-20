@@ -25,7 +25,7 @@ struct DashboardView: View {
                     TrainNextView(muscleIntensityBySlug: viewModel.muscleIntensityBySlug)
                     PRBannerView(personalRecords: viewModel.personalRecords)
                     TodayWorkoutView(todaysWorkout: todaysWorkout(from: viewModel.workouts))
-                    MuscleRadarView(regionLoads: regionLoads(from: viewModel))
+                    MuscleRadarView(regionSetCounts: viewModel.regionSetCounts)
                     AIWeeklySummaryView(trainedMuscleGroups: uniqueOrdered(viewModel.workouts.flatMap { $0.muscleGroups ?? [] }))
                 } else {
                     ProgressView().tint(ColorTokens.accent)
@@ -106,17 +106,6 @@ struct DashboardView: View {
             guard let date = formatter.date(from: workout.date) else { return false }
             return Calendar.current.isDateInToday(date)
         }
-    }
-
-    private func regionLoads(from viewModel: DashboardViewModel) -> [String: Double] {
-        var byRegion: [String: Double] = [:]
-        for (slug, load) in viewModel.muscleLoadBySlug {
-            guard let region = ExerciseMuscleMapper.slugRegionMap[slug] else { continue }
-            byRegion[region, default: 0] += load
-        }
-        let maxLoad = byRegion.values.max() ?? 1
-        guard maxLoad > 0 else { return byRegion }
-        return byRegion.mapValues { $0 / maxLoad }
     }
 
     private func uniqueOrdered(_ items: [String]) -> [String] {
