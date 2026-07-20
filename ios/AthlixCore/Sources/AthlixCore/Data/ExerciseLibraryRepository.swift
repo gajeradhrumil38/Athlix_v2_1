@@ -72,6 +72,16 @@ public final class LiveExerciseLibraryRepository: ExerciseLibraryRepository, @un
         )
     }
 
+    /// Ports web's inferMuscleGroupFromName (`getExerciseMuscleProfile(name).primary[0] || 'Core'`,
+    /// src/lib/supabaseData.ts:559-560) -- reuses the SAME muscle-pattern-matching system already
+    /// used for load calculations (ExerciseMuscleMapper), taking the highest-weight target's
+    /// region, rather than a separate name-substring heuristic table.
+    static func inferMuscleGroupFromName(_ name: String) -> String {
+        let profile = ExerciseMuscleMapper.profile(forExerciseName: name, fallbackMuscleGroup: nil)
+        guard let topTarget = profile.targets.max(by: { $0.weight < $1.weight }) else { return "Core" }
+        return ExerciseMuscleMapper.slugRegionMap[topTarget.slug] ?? "Core"
+    }
+
     // Mirrors web's getRecentExerciseOptions (~L2410-2460): sort all rows desc by
     // (date, order_index), then walk that order taking the first occurrence of each
     // lowercased exercise name (i.e. most-recent-first, deduped). Each option's session is
@@ -119,10 +129,11 @@ public final class LiveExerciseLibraryRepository: ExerciseLibraryRepository, @un
                 perSetData: sessionRows.map { LastSessionSummary.PerSetDatum(weight: $0.weight, reps: $0.reps) }
             )
 
-            // web falls back to inferMuscleGroupFromName() when muscle_group is blank; that
-            // heuristic port is out of scope for this task, so an empty string is used instead.
+            let muscleGroup = (row.muscleGroup?.isEmpty == false)
+                ? row.muscleGroup!
+                : inferMuscleGroupFromName(row.name)
             options.append(RecentExerciseOption(
-                name: row.name, muscleGroup: row.muscleGroup ?? "", exerciseDbId: row.exerciseDbId, lastSession: session
+                name: row.name, muscleGroup: muscleGroup, exerciseDbId: row.exerciseDbId, lastSession: session
             ))
         }
 

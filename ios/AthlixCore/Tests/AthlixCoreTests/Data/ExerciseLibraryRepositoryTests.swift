@@ -239,6 +239,28 @@ final class ExerciseLibraryRepositoryTests: XCTestCase {
         XCTAssertEqual(bench?.lastSession.weight, 135)
     }
 
+    func testGetRecentExerciseOptionsInfersMuscleGroupWhenBlank() async throws {
+        let mock = InMemoryExerciseLibraryRepository()
+        await mock.setExerciseRows([
+            row(workoutId: "w1", date: "2026-07-01", name: "Bench Press", group: nil),
+        ])
+
+        let result = try await mock.recentExerciseOptions(userId: "u1")
+
+        XCTAssertEqual(result.first?.muscleGroup, "Chest", "Blank muscle_group should be inferred from the exercise name via the muscle-pattern matcher, not left empty")
+    }
+
+    func testGetRecentExerciseOptionsFallsBackToCoreWhenNoMuscleMatch() async throws {
+        let mock = InMemoryExerciseLibraryRepository()
+        await mock.setExerciseRows([
+            row(workoutId: "w1", date: "2026-07-01", name: "Zzyzx Wobble Frobnicate", group: nil),
+        ])
+
+        let result = try await mock.recentExerciseOptions(userId: "u1")
+
+        XCTAssertEqual(result.first?.muscleGroup, "Core", "An unrecognizable exercise name with no muscle-group match must ultimately fall back to Core")
+    }
+
     // MARK: - renameExerciseEverywhere
 
     func testRenameExerciseEverywhereNoOpsOnBlankName() async throws {
