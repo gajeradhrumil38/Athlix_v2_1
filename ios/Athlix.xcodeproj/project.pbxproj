@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		02965B59D0B510AFC945C7F4 /* LogEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F44B3D2AA4132912B529D2C /* LogEntryView.swift */; };
 		0312798C96D121EEC55B3EDE /* ActiveWorkoutViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D3BB466BBA5F17454FCDFB0 /* ActiveWorkoutViewModelTests.swift */; };
+		043E9229538B2756BA3544A9 /* GoalEditSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE12FCDE152BC6267E356857 /* GoalEditSheetView.swift */; };
 		0D0D08B0AB0BB0D3BC233B07 /* SetRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4ED9E915FBB972CEFAFD2C9 /* SetRowView.swift */; };
 		191B0D278CC46C96FF6490FA /* DateNavigatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFD0429FEF2ADD6441149E69 /* DateNavigatorView.swift */; };
 		23FF06595DF93C0E5551367B /* MuscleMapWidgetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BBEF6283EA033AF33A0668E /* MuscleMapWidgetView.swift */; };
@@ -93,6 +94,7 @@
 		B1CAEC18DF10CC48F5C45609 /* PRBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PRBannerView.swift; sourceTree = "<group>"; };
 		B43061965F2D113F8241335A /* AthlixCore */ = {isa = PBXFileReference; lastKnownFileType = folder; name = AthlixCore; path = AthlixCore; sourceTree = SOURCE_ROOT; };
 		B45BE7CFBA6C7B866052A5F9 /* AthlixApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AthlixApp.swift; sourceTree = "<group>"; };
+		BE12FCDE152BC6267E356857 /* GoalEditSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoalEditSheetView.swift; sourceTree = "<group>"; };
 		C7965FEB300E3D6E913BD964 /* SignUpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignUpView.swift; sourceTree = "<group>"; };
 		CAB6ADCBBA3592911AE48913 /* ActiveWorkoutView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveWorkoutView.swift; sourceTree = "<group>"; };
 		D2BFD76425748A6EF8AB5A88 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
@@ -243,6 +245,7 @@
 			children = (
 				83FEEFE3DAAC2B99DD2BC8CE /* AIWeeklySummaryView.swift */,
 				FFD0429FEF2ADD6441149E69 /* DateNavigatorView.swift */,
+				BE12FCDE152BC6267E356857 /* GoalEditSheetView.swift */,
 				8BBEF6283EA033AF33A0668E /* MuscleMapWidgetView.swift */,
 				F5031DAE67DE7E8701DEEBC5 /* MuscleRadarView.swift */,
 				B1CAEC18DF10CC48F5C45609 /* PRBannerView.swift */,
@@ -383,6 +386,7 @@
 				626525355A25D3AF31F66434 /* ExerciseDetailView.swift in Sources */,
 				4CC6D1EC257C5AD4CC46C253 /* ExercisePickerView.swift in Sources */,
 				B3AF2C45C16974282E963D65 /* FinishSheetView.swift in Sources */,
+				043E9229538B2756BA3544A9 /* GoalEditSheetView.swift in Sources */,
 				02965B59D0B510AFC945C7F4 /* LogEntryView.swift in Sources */,
 				82571FE5C7267615F9EB7941 /* MainTabView.swift in Sources */,
 				D2044A859FA3C92C80F9C151 /* MuscleBodyView.swift in Sources */,
