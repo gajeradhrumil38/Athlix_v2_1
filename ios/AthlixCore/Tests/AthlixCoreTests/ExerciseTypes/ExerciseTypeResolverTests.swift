@@ -135,6 +135,29 @@ final class ExerciseTypeResolverTests: XCTestCase {
         XCTAssertEqual(ExerciseTypeResolver.resolve("Swimmer"), .distanceOnly)
     }
 
+    // MARK: - Whitespace normalization (all runs, not just repeated ASCII spaces)
+
+    func testNormalizeKeyCollapsesAllWhitespaceNotJustAsciiSpaces() {
+        // Web's TS source: name.replace(/\s+/g, ' ') -- collapses ANY whitespace
+        // run (tabs, newlines, multiple spaces) into one space, not just repeated
+        // ASCII spaces. "Elliptical\tTrainer" and "Elliptical Trainer" must
+        // resolve identically. "elliptical trainer" is an EXACT_TYPE_MAP key
+        // (-> distanceTime) that is NOT independently caught by any pattern
+        // group (the ported "elliptical" pattern is a mistranslated
+        // \brilliant?ical\b regex), so a tab that fails to normalize to a
+        // single space breaks the exact-match lookup and falls through to the
+        // weightReps default -- a genuinely different result, not a
+        // coincidental match via regex \s.
+        let spaceResult = ExerciseTypeResolver.resolve("Elliptical Trainer")
+        XCTAssertEqual(spaceResult, .distanceTime)
+
+        let tabResult = ExerciseTypeResolver.resolve("Elliptical\tTrainer")
+        XCTAssertEqual(tabResult, spaceResult)
+
+        let newlineResult = ExerciseTypeResolver.resolve("Elliptical\n\nTrainer")
+        XCTAssertEqual(newlineResult, spaceResult)
+    }
+
     func testPatternMatch_walkingGuard_notFollowedByLunge() {
         // "walking outdoors" is not an EXACT_TYPE_MAP key. The pattern
         // /\bwalking\b(?!\s+lunge)/i should match since "walking" here is NOT

@@ -25,9 +25,9 @@ public enum ExerciseTypeResolver {
         var result = value.lowercased()
         result = result.replacingOccurrences(of: "(", with: "")
         result = result.replacingOccurrences(of: ")", with: "")
-        while result.contains("  ") {
-            result = result.replacingOccurrences(of: "  ", with: " ")
-        }
+        result = result.replacingOccurrences(
+            of: "\\s+", with: " ", options: .regularExpression
+        )
         return result.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
