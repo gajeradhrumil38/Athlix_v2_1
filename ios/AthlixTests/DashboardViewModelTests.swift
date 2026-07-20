@@ -65,12 +65,20 @@ actor MockProfileRepository: ProfileRepository {
     var stubbedProfile: Profile?
     var shouldThrow = false
     private(set) var fetchCount = 0
+    private(set) var lastUpdate: ProfileUpdate?
 
     func setStubbedProfile(_ profile: Profile?) { stubbedProfile = profile }
     func setShouldThrow(_ value: Bool) { shouldThrow = value }
 
     func fetchProfile(userId: String) async throws -> Profile {
         fetchCount += 1
+        if shouldThrow { throw RepositoryError.network }
+        guard let stubbedProfile else { throw RepositoryError.unknown("no profile stubbed") }
+        return stubbedProfile
+    }
+
+    func updateProfile(userId: String, updates: ProfileUpdate) async throws -> Profile {
+        lastUpdate = updates
         if shouldThrow { throw RepositoryError.network }
         guard let stubbedProfile else { throw RepositoryError.unknown("no profile stubbed") }
         return stubbedProfile

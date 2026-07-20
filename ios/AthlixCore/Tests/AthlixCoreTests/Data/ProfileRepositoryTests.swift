@@ -4,8 +4,18 @@ import XCTest
 actor MockProfileRepository: ProfileRepository {
     var stubbedProfile: Profile?
     var shouldThrow = false
+    private(set) var lastUpdate: ProfileUpdate?
 
     func fetchProfile(userId: String) async throws -> Profile {
+        if shouldThrow { throw RepositoryError.network }
+        guard let stubbedProfile else {
+            throw RepositoryError.unknown("no stubbed profile")
+        }
+        return stubbedProfile
+    }
+
+    func updateProfile(userId: String, updates: ProfileUpdate) async throws -> Profile {
+        lastUpdate = updates
         if shouldThrow { throw RepositoryError.network }
         guard let stubbedProfile else {
             throw RepositoryError.unknown("no stubbed profile")
@@ -46,5 +56,19 @@ final class ProfileRepositoryTests: XCTestCase {
         } catch {
             XCTAssertEqual(error as? RepositoryError, .network)
         }
+    }
+
+    func testUpdateProfilePayloadOnlyIncludesNonNilFields() {
+        let onlyUnit = ProfileUpdate(unitPreference: .kg)
+        XCTAssertEqual(onlyUnit.encodablePayload().count, 1)
+        XCTAssertEqual(onlyUnit.encodablePayload()["unit_preference"], .string("kg"))
+
+        let both = ProfileUpdate(unitPreference: .lbs, showStartSheet: false)
+        XCTAssertEqual(both.encodablePayload().count, 2)
+        XCTAssertEqual(both.encodablePayload()["unit_preference"], .string("lbs"))
+        XCTAssertEqual(both.encodablePayload()["show_start_sheet"], .bool(false))
+
+        let empty = ProfileUpdate()
+        XCTAssertEqual(empty.encodablePayload().count, 0)
     }
 }
