@@ -163,12 +163,16 @@ final class ActiveWorkoutViewModelTests: XCTestCase {
         XCTAssertEqual(sut.exercises.map(\.name), ["Squat"])
     }
 
-    func testResolveEntryIgnoresDraftFromADifferentDay() async {
+    /// The store's TTL is measured from `savedAt` (see `WorkoutDraft.isExpired`),
+    /// so a draft last saved over 8hrs ago is correctly ignored regardless of
+    /// calendar day -- this is the real (TTL-only) resumability boundary now
+    /// that the extra same-day restriction is gone.
+    func testResolveEntryIgnoresExpiredDraft() async {
         let store = WorkoutDraftStore(directory: tempDir)
-        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+        let longAgo = Date().addingTimeInterval(-(8 * 3600 + 60))
         let draft = WorkoutDraft(
-            id: nil, title: "Old Workout", startAt: yesterday, elapsedSeconds: 300,
-            exercises: [makeExerciseEntry(name: "Squat")], notes: nil, savedAt: Date()
+            id: nil, title: "Old Workout", startAt: longAgo, elapsedSeconds: 300,
+            exercises: [makeExerciseEntry(name: "Squat")], notes: nil, savedAt: longAgo
         )
         store.save(draft)
 
@@ -177,6 +181,41 @@ final class ActiveWorkoutViewModelTests: XCTestCase {
 
         XCTAssertEqual(sut.entryMode, .blank)
         XCTAssertTrue(sut.exercises.isEmpty)
+    }
+
+    /// Regression guard for the fix that removes `isDraftResumable`'s extra
+    /// same-calendar-day restriction, matching web's behavior of relying on
+    /// the draft store's 8hr TTL alone with no day-boundary check. Replaces
+    /// (and inverts the assertion of) the old `testResolveEntryIgnoresDraftFromADifferentDay`,
+    /// which directly encoded the over-restrictive behavior now removed.
+    ///
+    /// `WorkoutDraftStore.load()` calls `Date()` directly with no injectable
+    /// clock, so this can't literally wait for/straddle a real wall-clock
+    /// midnight. Instead it forces a day-boundary crossing deterministically:
+    /// `startAt` is set a full calendar day back via `Calendar` day-granularity
+    /// arithmetic (guaranteed to land on a different calendar date than "now",
+    /// regardless of what time of day the test happens to run), while
+    /// `savedAt: Date()` keeps the draft within the store's 8hr TTL (the TTL
+    /// is measured from `savedAt`, not `startAt` -- see `WorkoutDraft.isExpired`).
+    /// This genuinely discriminates the fix from the old code: the OLD
+    /// same-day check would reject this (different calendar day) regardless
+    /// of the TTL being satisfied; only the fix (TTL alone, no day check)
+    /// resumes it. Verified empirically -- see task report -- by running this
+    /// exact assertion against the pre-fix code and confirming it failed.
+    func testDraftResumableAcrossMidnightWithinEightHourTTL() async {
+        let store = WorkoutDraftStore(directory: tempDir)
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+        let draft = WorkoutDraft(
+            id: nil, title: "Late Night Workout", startAt: yesterday, elapsedSeconds: 120,
+            exercises: [makeExerciseEntry(name: "Deadlift")], notes: nil, savedAt: Date()
+        )
+        store.save(draft)
+
+        let sut = makeSUT()
+        await sut.resolveEntry(deepLink: nil)
+
+        XCTAssertEqual(sut.entryMode, .resumedDraft)
+        XCTAssertEqual(sut.title, "Late Night Workout")
     }
 
     func testResolveEntryAddExerciseDeepLinkWithNoDraft() async {

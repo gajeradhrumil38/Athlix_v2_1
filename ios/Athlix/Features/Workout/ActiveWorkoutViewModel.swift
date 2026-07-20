@@ -113,16 +113,15 @@ final class ActiveWorkoutViewModel {
     // MARK: - Entry resolution
 
     /// Resolves how this session should start, in priority order:
-    /// 1. A valid (non-expired, `WorkoutDraftStore.load()` already enforces
-    ///    the 8hr TTL) local draft whose `startAt` falls on today -- resumed.
-    ///    (DECISION: "still relevant" is interpreted as same-calendar-day as
-    ///    now, in the user's current calendar/timezone. The web equivalent
-    ///    keys entirely off the 8hr sessionStorage TTL with no separate date
-    ///    check; iOS additionally requires same-day so that a draft started
-    ///    late one night and resumed just after midnight doesn't silently
-    ///    resume into a workout dated "yesterday" without the user noticing --
-    ///    a same-day check is a reasonable, conservative tightening given the
-    ///    underlying TTL is already fairly generous at 8 hours.)
+    /// 1. A valid (non-expired -- `WorkoutDraftStore.load()` enforces the
+    ///    8hr TTL) local draft -- resumed. (DECISION: matches web exactly,
+    ///    which keys resumability entirely off its 8hr sessionStorage TTL
+    ///    with no separate calendar-day check. iOS previously added an extra
+    ///    same-calendar-day restriction on top of the store's TTL, which was
+    ///    over-restrictive versus web -- e.g. a draft started at 11pm became
+    ///    unresumable at midnight even though it was still well within the
+    ///    8hr window. Removed; the TTL alone is the resumability contract on
+    ///    both platforms.)
     /// 2. `.addExercise` deep link -> blank session, `.blankAddExercise`.
     /// 3. `.planToday` deep link -> blank session, `.planToday`.
     /// 4. `.pastDate(date)` deep link -> fetch that date's saved workout and
@@ -130,7 +129,7 @@ final class ActiveWorkoutViewModel {
     /// 5. Otherwise -> blank session, `.blank` (see `DeepLinkIntent` doc for
     ///    the quick-start-sheet scope decision).
     func resolveEntry(deepLink: DeepLinkIntent?) async {
-        if let draft = draftStore.load(), isDraftResumable(draft) {
+        if let draft = draftStore.load() {
             applyDraft(draft)
             entryMode = .resumedDraft
             return
@@ -146,10 +145,6 @@ final class ActiveWorkoutViewModel {
         case nil:
             entryMode = .blank
         }
-    }
-
-    private func isDraftResumable(_ draft: WorkoutDraft) -> Bool {
-        Calendar.current.isDate(draft.startAt, inSameDayAs: Date())
     }
 
     private func applyDraft(_ draft: WorkoutDraft) {
