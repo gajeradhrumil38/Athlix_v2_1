@@ -766,6 +766,85 @@ final class ActiveWorkoutViewModelTests: XCTestCase {
         XCTAssertTrue(sut.exercises[0].sets.first(where: { $0.id == setAId })!.done, "A should still be marked done")
     }
 
+    // MARK: - Regression: markSetDone persistence
+
+    /// Regression test for a real bug: `markSetDone` previously mutated
+    /// in-memory state without calling `persistDraft()`, so toggling a set's
+    /// done status silently reverted after navigating away and back (the
+    /// on-disk draft never reflected the change). Verifies directly against
+    /// a real `WorkoutDraftStore` backed by a temp directory that marking a
+    /// set done actually writes through to disk, not just updates
+    /// `sut.exercises`.
+    ///
+    /// Baseline correctness: `addExercise` persists a draft with the new
+    /// set's `done` seeded `false` (see `SetCRUDEngine.addSet`), and
+    /// `updateSet` -- called next to make the set "ready" -- does NOT persist
+    /// (it only mutates weight/reps in memory). So the on-disk draft is
+    /// guaranteed to still show `done == false` right up until `markSetDone`
+    /// is called, regardless of the bug -- discriminating this test from one
+    /// that could pass by coincidence on stale disk state.
+    func testMarkSetDonePersistsToDraftStore() {
+        let sut = makeSUT()
+        sut.addExercise(name: "Bench Press", muscleGroup: "Chest", exerciseDbId: nil)
+        let exerciseId = sut.exercises[0].id
+        let setId = sut.exercises[0].sets[0].id
+        sut.updateSet(exerciseId: exerciseId, setId: setId, weight: 135, reps: 8)
+
+        sut.markSetDone(exerciseId: exerciseId, setId: setId)
+        XCTAssertTrue(sut.exercises[0].sets[0].done, "sanity: in-memory state toggled to done")
+
+        // Genuinely separate read: a FRESH WorkoutDraftStore instance backed
+        // by the same temp directory, not sut's own draftStore reference.
+        let freshStore = WorkoutDraftStore(directory: tempDir)
+        let loaded = freshStore.load()
+        XCTAssertNotNil(loaded, "markSetDone must persist a draft to disk")
+        let persistedSet = loaded?.exercises.first(where: { $0.id == exerciseId })?.sets.first(where: { $0.id == setId })
+        XCTAssertEqual(persistedSet?.done, true, "the on-disk draft must reflect the set being marked done, not just sut.exercises in memory")
+    }
+
+    /// Companion to the above for the un-mark branch, which had the
+    /// identical bug (missing `persistDraft()` right before its early
+    /// `return`). To genuinely isolate the un-mark branch -- rather than
+    /// accidentally passing because the disk state happened to already be
+    /// stale/false from before -- this forces a KNOWN on-disk baseline of
+    /// `done == true` directly through the store (bypassing whether the
+    /// mark-done call above persisted correctly), then asserts the
+    /// un-mark call flips it to `false` on disk.
+    func testUnmarkSetDonePersistsToDraftStore() {
+        let store = WorkoutDraftStore(directory: tempDir)
+        let sut = ActiveWorkoutViewModel(
+            userId: "user-1", workoutRepository: workoutRepo, exerciseLibraryRepository: libraryRepo,
+            draftStore: store, title: "Push Day", startAt: Date()
+        )
+        sut.addExercise(name: "Bench Press", muscleGroup: "Chest", exerciseDbId: nil)
+        let exerciseId = sut.exercises[0].id
+        let setId = sut.exercises[0].sets[0].id
+        sut.updateSet(exerciseId: exerciseId, setId: setId, weight: 135, reps: 8)
+        sut.markSetDone(exerciseId: exerciseId, setId: setId)
+        XCTAssertTrue(sut.exercises[0].sets[0].done, "sanity: marked done in memory")
+
+        // Force a known on-disk baseline of done == true, independent of
+        // whether the mark-done call above happened to persist.
+        let doneDraft = WorkoutDraft(
+            id: nil, title: sut.title, startAt: sut.startAt, elapsedSeconds: sut.elapsedSeconds,
+            exercises: sut.exercises, notes: sut.notes, savedAt: Date()
+        )
+        store.save(doneDraft)
+        XCTAssertEqual(
+            WorkoutDraftStore(directory: tempDir).load()?.exercises.first?.sets.first?.done, true,
+            "sanity: on-disk baseline seeded as done before the un-mark call under test"
+        )
+
+        sut.markSetDone(exerciseId: exerciseId, setId: setId) // un-mark
+        XCTAssertFalse(sut.exercises[0].sets[0].done, "sanity: in-memory state toggled back to not-done")
+
+        let freshStore = WorkoutDraftStore(directory: tempDir)
+        let loaded = freshStore.load()
+        XCTAssertNotNil(loaded)
+        let persistedSet = loaded?.exercises.first(where: { $0.id == exerciseId })?.sets.first(where: { $0.id == setId })
+        XCTAssertEqual(persistedSet?.done, false, "the on-disk draft must reflect the set being un-marked, not stay stuck at done=true")
+    }
+
     // MARK: - Regression: 30-tick periodic autosave
 
     func testThirtyTicksTriggersPeriodicAutosave() {

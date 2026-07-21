@@ -425,6 +425,7 @@ final class ActiveWorkoutViewModel {
             if restTimerSetId == setId {
                 stopRestTimer()
             }
+            persistDraft()
             return
         }
 
@@ -435,6 +436,7 @@ final class ActiveWorkoutViewModel {
         set.done = true
         exercises[exIdx].sets[setIdx] = set
         startRestTimer(forSetId: setId)
+        persistDraft()
     }
 
     // MARK: - Exercise CRUD
