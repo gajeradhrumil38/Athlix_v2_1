@@ -81,11 +81,25 @@ struct ActiveWorkoutView: View {
                 templateRepository: templateRepository,
                 isMultiSelect: false,
                 onSelectExercise: { selection in
+                    let countBefore = viewModel.exercises.count
                     let id = viewModel.addExercise(
                         name: selection.name, muscleGroup: selection.muscleGroup, exerciseDbId: selection.exerciseDbId
                     )
                     viewMode = .detail(exerciseId: id)
-                    if viewModel.loadedPlan != nil {
+                    // addExercise DEDUPES case-insensitively against the current session's
+                    // exercises (see its own doc comment) -- a selection matching an
+                    // already-present exercise returns the EXISTING entry's id without adding
+                    // anything new. Mirrors web's handleAddExercise, which early-returns on a
+                    // dedup match BEFORE ever reaching the pending-plan-exercise trigger (web
+                    // never shows this prompt for a dedup, only a genuine addition). Without this
+                    // guard, re-selecting an already-present exercise while a plan is loaded would
+                    // incorrectly surface the prompt, and tapping "Cancel (Remove it)" would then
+                    // delete a PRE-EXISTING exercise that predates this interaction -- real
+                    // data loss, not cosmetic. Comparing counts is a guaranteed-correct signal
+                    // regardless of addExercise's internal implementation (unlike relying on
+                    // focusedExerciseId, which is set on BOTH the new-entry and dedup paths).
+                    let wasNewlyAdded = viewModel.exercises.count > countBefore
+                    if wasNewlyAdded, viewModel.loadedPlan != nil {
                         pendingDecisionExerciseId = id
                         planEditorViewModel?.handleAddedExerciseWhilePlanLoaded(
                             exerciseName: selection.name, muscleGroup: selection.muscleGroup, exerciseDbId: selection.exerciseDbId
