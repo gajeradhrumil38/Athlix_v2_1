@@ -35,10 +35,24 @@ struct ExercisePickerSelection: Identifiable, Equatable {
 /// `isMultiSelect` -- it is never routed through `onSelectExercise`/
 /// `onSelectMultiple`, which only ever carry single already-existing-library
 /// exercises.
+///
+/// CONTENT SWAP (known gap #7): tapping "Edit" on a My Plans template used to
+/// stack a second `PlanEditorView` sheet on top of this already-presented
+/// one. Instead, `pickerContent` swaps this view's own body in place between
+/// the normal browsing UI and an embedded `PlanEditorView` -- still a single
+/// sheet presentation throughout. See `PickerContent` below and
+/// `PlanEditorView`'s `onFinished`/`cancelLabel` parameters, which exist
+/// specifically to let this embedded case return to browsing instead of
+/// dismissing the whole sheet.
 struct ExercisePickerView: View {
     let userId: String
     let exerciseLibraryRepository: ExerciseLibraryRepository
     let templateRepository: TemplateRepository
+    /// Required, not defaulted -- this drives real weight-unit display
+    /// correctness (see `lastSessionSubtitle`), so every call site must pass
+    /// its actual user/session preference rather than silently getting a
+    /// possibly-wrong default.
+    let weightUnit: WeightUnit
     var isMultiSelect: Bool = false
     var onSelectExercise: (ExercisePickerSelection) -> Void = { _ in }
     var onSelectMultiple: ([ExercisePickerSelection]) -> Void = { _ in }
@@ -55,7 +69,16 @@ struct ExercisePickerView: View {
         "Chest", "Back", "Shoulders", "Biceps", "Triceps", "Legs", "Core", "Cardio", "Yoga"
     ]
 
+    /// Which content this single sheet is currently showing. See the type
+    /// doc comment above for why this replaced a second stacked `.sheet`.
+    private enum PickerContent: Equatable {
+        case browsing
+        case editingTemplate(Template)
+    }
+
     @Environment(\.dismiss) private var dismiss
+
+    @State private var pickerContent: PickerContent = .browsing
 
     @State private var tab: Tab = .history
     @State private var searchText = ""
@@ -75,6 +98,11 @@ struct ExercisePickerView: View {
     @State private var recentOptions: [RecentExerciseOption] = []
     @State private var isLoadingHistory = false
     @State private var historyErrorMessage: String?
+    /// Muscle-group filter for the History tab's chip row (nil == "All").
+    /// Reset whenever the user switches tabs, matching web's tab-switch
+    /// handler which explicitly clears `filterMuscle` alongside `search`/
+    /// `selectedMuscle` (`ExercisePicker.tsx` line ~450).
+    @State private var historyMuscleFilter: String?
 
     @State private var selectedMuscleGroup: String?
     @State private var muscleGroupResults: [ExerciseLibraryItem] = []
@@ -91,19 +119,63 @@ struct ExercisePickerView: View {
     @State private var multiSelection: [String: ExercisePickerSelection] = [:]
 
     @State private var showingCreateCustom = false
-    @State private var editingTemplate: Template?
 
     var body: some View {
+        // `.task` is attached out here (not inside either switch branch) so
+        // switching `pickerContent` back and forth doesn't re-trigger these
+        // loads -- only the sheet's very first appearance does.
+        pickerContentView
+            .task {
+                await loadHistory()
+                await loadTemplates()
+            }
+    }
+
+    /// Deliberately its own `@ViewBuilder` property (matching `tabContent`
+    /// below) rather than inlined as `Group { switch ... }` in `body` --
+    /// wrapping a bare `switch` directly in `Group` there hits a real Swift
+    /// compiler ambiguity between `Group`'s ViewBuilder and TableColumnBuilder
+    /// initializer overloads ("generic parameter 'R'/'C' could not be
+    /// inferred"). A `@ViewBuilder`-attributed property sidesteps that
+    /// entirely, same as this file already does for `tabContent`.
+    @ViewBuilder
+    private var pickerContentView: some View {
+        switch pickerContent {
+        case .browsing:
+            browsingView
+        case .editingTemplate(let template):
+            PlanEditorView(
+                userId: userId,
+                exerciseLibraryRepository: exerciseLibraryRepository,
+                templateRepository: templateRepository,
+                existing: template,
+                cancelLabel: "Back",
+                onFinished: {
+                    pickerContent = .browsing
+                    Task { await loadTemplates() }
+                }
+            )
+        }
+    }
+
+    private var browsingView: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 searchField
 
                 if searchText.trimmingCharacters(in: .whitespaces).isEmpty {
                     tabPicker
+                    if tab == .history {
+                        muscleFilterChips
+                    }
                     tabContent
                 } else {
                     searchResultsList
                 }
+
+                // Persistent, always-visible -- see `createCustomButton`'s
+                // doc comment for why this replaced three per-tab rows.
+                createCustomButton
 
                 if isMultiSelect && !multiSelection.isEmpty {
                     addSelectedFooter
@@ -126,13 +198,6 @@ struct ExercisePickerView: View {
                     }
                 )
             }
-            .sheet(item: $editingTemplate, onDismiss: { Task { await loadTemplates() } }) { template in
-                PlanEditorView(userId: userId, exerciseLibraryRepository: exerciseLibraryRepository, templateRepository: templateRepository, existing: template)
-            }
-        }
-        .task {
-            await loadHistory()
-            await loadTemplates()
         }
     }
 
@@ -207,7 +272,6 @@ struct ExercisePickerView: View {
                     row(for: ExercisePickerSelection(name: item.name, muscleGroup: item.muscleGroup, exerciseDbId: item.exerciseDbId))
                 }
             }
-            createCustomRow
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -225,6 +289,9 @@ struct ExercisePickerView: View {
         .pickerStyle(.segmented)
         .padding(.horizontal, 16)
         .padding(.bottom, 8)
+        .onChange(of: tab) { _, _ in
+            historyMuscleFilter = nil
+        }
     }
 
     @ViewBuilder
@@ -239,7 +306,90 @@ struct ExercisePickerView: View {
         }
     }
 
+    // MARK: - Muscle filter chips
+
+    /// Muscle filter chip row, shown only on the History tab -- mirrors
+    /// web's `(search || activeTab === 'recent') && !selectedMuscle`
+    /// condition (`ExercisePicker.tsx` line ~415), simplified to "History
+    /// tab and not searching" since this file's search state swaps in
+    /// `searchResultsList` entirely rather than overlaying chips on top of
+    /// search results the way web's single-surface layout does.
+    ///
+    /// COLOR CHOICE: web tints each selected chip with that muscle's own CSS
+    /// accent color (`--chest`, `--back`, etc. via `MUSCLE_CSS_VAR`). This
+    /// app's only existing per-muscle color table,
+    /// `MuscleSpokeColors.byRegion` (built for the Dashboard's Muscle
+    /// Radar), doesn't cover two of these nine groups (Cardio, Yoga) and
+    /// carries an irrelevant one (Glutes) -- reusing it here would mean
+    /// seven chips get their own tint and two silently fall back to
+    /// something else, which reads as an inconsistency bug rather than a
+    /// fidelity win. Using one flat accent tint for every selected chip
+    /// instead -- exactly what web already does for its own "All" chip
+    /// (`cssVar` is null there) -- keeps every chip visually consistent.
+    private var muscleFilterChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                muscleChip(title: "All", isSelected: historyMuscleFilter == nil) {
+                    historyMuscleFilter = nil
+                }
+                ForEach(Self.muscleGroups, id: \.self) { group in
+                    muscleChip(title: group, isSelected: historyMuscleFilter == group) {
+                        historyMuscleFilter = (historyMuscleFilter == group) ? nil : group
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+        .padding(.bottom, 8)
+    }
+
+    private func muscleChip(title: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(isSelected ? ColorTokens.accent : ColorTokens.textMuted)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(isSelected ? ColorTokens.accentDim : ColorTokens.bgElevated)
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule().stroke(isSelected ? ColorTokens.accent.opacity(0.35) : .clear, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - History tab
+
+    /// One bucket of `recentOptions` sharing a `muscleGroup`, in first-seen
+    /// order -- backs the grouped (no filter active) rendering below.
+    private struct MuscleGroupBucket: Identifiable {
+        let group: String
+        let options: [RecentExerciseOption]
+        var id: String { group }
+    }
+
+    /// Groups `recentOptions` by `muscleGroup`, preserving first-seen order
+    /// -- matches web's `Map`-based grouping (`ExercisePicker.tsx` lines
+    /// ~500-505), which likewise groups in the order muscle groups are first
+    /// encountered in the already-most-recent-first list, not alphabetically.
+    private var groupedRecentOptions: [MuscleGroupBucket] {
+        var order: [String] = []
+        var buckets: [String: [RecentExerciseOption]] = [:]
+        for option in recentOptions {
+            if buckets[option.muscleGroup] == nil {
+                buckets[option.muscleGroup] = []
+                order.append(option.muscleGroup)
+            }
+            buckets[option.muscleGroup]?.append(option)
+        }
+        return order.map { MuscleGroupBucket(group: $0, options: buckets[$0] ?? []) }
+    }
+
+    private var filteredRecentOptions: [RecentExerciseOption] {
+        guard let historyMuscleFilter else { return recentOptions }
+        return recentOptions.filter { $0.muscleGroup == historyMuscleFilter }
+    }
 
     private var historyTab: some View {
         Group {
@@ -249,15 +399,45 @@ struct ExercisePickerView: View {
                 emptyState(text: historyErrorMessage, isError: true)
             } else if recentOptions.isEmpty {
                 emptyState(text: "No exercise history yet.")
-            } else {
-                List {
-                    ForEach(recentOptions) { option in
-                        row(
-                            for: ExercisePickerSelection(name: option.name, muscleGroup: option.muscleGroup, exerciseDbId: option.exerciseDbId),
-                            subtitle: lastSessionSubtitle(option.lastSession)
-                        )
+            } else if let historyMuscleFilter {
+                // A specific muscle chip is active: flat (ungrouped) list of
+                // just that muscle's exercises -- matches web's early-return
+                // `if (filterMuscle) { return list.map(...) }` (line ~495),
+                // which skips the group-header rendering entirely since
+                // there's only one group left to show.
+                if filteredRecentOptions.isEmpty {
+                    muscleEmptyState(historyMuscleFilter)
+                } else {
+                    List {
+                        ForEach(filteredRecentOptions) { option in
+                            row(
+                                for: ExercisePickerSelection(name: option.name, muscleGroup: option.muscleGroup, exerciseDbId: option.exerciseDbId),
+                                subtitle: lastSessionSubtitle(option.lastSession)
+                            )
+                        }
                     }
-                    createCustomRow
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                }
+            } else {
+                // "All" selected: grouped-by-muscle rendering with section
+                // headers, matching web's grouped-by-muscle branch.
+                List {
+                    ForEach(groupedRecentOptions) { bucket in
+                        Section {
+                            ForEach(bucket.options) { option in
+                                row(
+                                    for: ExercisePickerSelection(name: option.name, muscleGroup: option.muscleGroup, exerciseDbId: option.exerciseDbId),
+                                    subtitle: lastSessionSubtitle(option.lastSession)
+                                )
+                            }
+                        } header: {
+                            Text(bucket.group.uppercased())
+                                .font(.caption2.weight(.bold))
+                                .tracking(1.2)
+                                .foregroundStyle(ColorTokens.textMuted)
+                        }
+                    }
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
@@ -267,7 +447,21 @@ struct ExercisePickerView: View {
     }
 
     private func lastSessionSubtitle(_ summary: LastSessionSummary) -> String {
-        "\(summary.sets) sets \u{00B7} \(WeightUnit.format(summary.weight, unit: .lbs))"
+        "\(summary.sets) sets \u{00B7} \(WeightUnit.format(summary.weight, unit: weightUnit))"
+    }
+
+    private func muscleEmptyState(_ group: String) -> some View {
+        VStack(spacing: 4) {
+            Spacer()
+            Text("No \(group) exercises logged yet")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(ColorTokens.textPrimary)
+            Text("Log a \(group) workout and it will show up here")
+                .font(.caption)
+                .foregroundStyle(ColorTokens.textMuted)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
     }
 
     private func loadHistory() async {
@@ -353,7 +547,6 @@ struct ExercisePickerView: View {
                     ForEach(muscleGroupResults) { item in
                         row(for: ExercisePickerSelection(name: item.name, muscleGroup: item.muscleGroup, exerciseDbId: item.exerciseDbId))
                     }
-                    createCustomRow
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
@@ -398,7 +591,7 @@ struct ExercisePickerView: View {
             Spacer()
 
             Button {
-                editingTemplate = template
+                pickerContent = .editingTemplate(template)
             } label: {
                 Image(systemName: "pencil")
                     .foregroundStyle(ColorTokens.textMuted)
@@ -506,15 +699,31 @@ struct ExercisePickerView: View {
         .listRowBackground(ColorTokens.bgBase)
     }
 
-    private var createCustomRow: some View {
+    /// Persistent, always-visible footer button -- mirrors web's sticky
+    /// "Create Custom Exercise" footer (`ExercisePicker.tsx` lines ~702-720),
+    /// a single fixed element sitting below the tab content rather than a
+    /// row duplicated inside every tab's list. The prior Swift version
+    /// embedded this as a trailing `List` row inside History/Search/Muscle
+    /// drilldown separately, which left it duplicated three times over AND
+    /// still missing from My Plans and the top-level muscle grid. Rendering
+    /// it once here, outside any tab's content, fixes both problems at once.
+    private var createCustomButton: some View {
         Button {
             showingCreateCustom = true
         } label: {
             Label("Create Custom Exercise", systemImage: "plus.circle")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(ColorTokens.accent)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
         }
-        .listRowBackground(ColorTokens.bgBase)
+        .buttonStyle(.plain)
+        .background(ColorTokens.accentDim)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
+        .background(ColorTokens.bgBase)
     }
 
     /// No icon registry exists in this app target (per CLAUDE.md that

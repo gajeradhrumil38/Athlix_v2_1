@@ -79,6 +79,7 @@ struct ActiveWorkoutView: View {
                 userId: userId,
                 exerciseLibraryRepository: exerciseLibraryRepository,
                 templateRepository: templateRepository,
+                weightUnit: viewModel.unitPreference,
                 isMultiSelect: false,
                 onSelectExercise: { selection in
                     let countBefore = viewModel.exercises.count

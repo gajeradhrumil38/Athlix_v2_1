@@ -25,6 +25,22 @@ struct PlanEditorView: View {
     let userId: String
     let exerciseLibraryRepository: ExerciseLibraryRepository
     let templateRepository: TemplateRepository
+    /// Toolbar label for the leading cancel/back action. Defaults to
+    /// "Cancel" for this view's standalone uses (pushed as its own `.sheet`
+    /// from `TemplatesListView`). `ExercisePickerView`'s embedded "My Plans →
+    /// Edit" flow passes "Back" instead, since there this isn't a separate
+    /// sheet to cancel out of -- it's an in-place content swap back to the
+    /// picker's own browsing view (see `onFinished` below).
+    var cancelLabel: String = "Cancel"
+    /// When set, called instead of `dismiss()` on cancel/discard-confirm/
+    /// successful save. `TemplatesListView` presents this view as its own
+    /// `.sheet`, so leaving this `nil` there lets `dismiss()` correctly close
+    /// just that sheet. `ExercisePickerView` instead embeds this view
+    /// IN-PLACE within its own already-presented sheet (no second sheet
+    /// layer, closing known gap #7's stacked-sheet-over-sheet) -- `dismiss()`
+    /// there would incorrectly close the picker's entire sheet, so it passes
+    /// this closure to swap back to browsing and refresh templates instead.
+    var onFinished: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: PlanEditorViewModel
@@ -56,7 +72,7 @@ struct PlanEditorView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { handleCancel() }
+                    Button(cancelLabel) { handleCancel() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button {
@@ -76,6 +92,12 @@ struct PlanEditorView: View {
                     userId: userId,
                     exerciseLibraryRepository: exerciseLibraryRepository,
                     templateRepository: templateRepository,
+                    // PlanEditorView doesn't track a live user unit
+                    // preference anywhere (its own `plannedSetRow` already
+                    // hardcodes a "lb" label below) -- passing `.lbs`
+                    // explicitly here keeps that same, pre-existing
+                    // limitation rather than silently regressing it further.
+                    weightUnit: .lbs,
                     isMultiSelect: true,
                     onSelectMultiple: { selections in
                         for selection in selections {
@@ -94,7 +116,7 @@ struct PlanEditorView: View {
                 isPresented: $showingDiscardConfirm,
                 titleVisibility: .visible
             ) {
-                Button("Discard Changes", role: .destructive) { dismiss() }
+                Button("Discard Changes", role: .destructive) { finish() }
                 Button("Keep Editing", role: .cancel) {}
             }
         }
@@ -108,6 +130,16 @@ struct PlanEditorView: View {
     private func handleCancel() {
         if viewModel.isDirty {
             showingDiscardConfirm = true
+        } else {
+            finish()
+        }
+    }
+
+    /// Routes to `onFinished` when embedded (see its doc comment), or the
+    /// environment's `dismiss()` for this view's standalone sheet uses.
+    private func finish() {
+        if let onFinished {
+            onFinished()
         } else {
             dismiss()
         }
@@ -251,7 +283,7 @@ struct PlanEditorView: View {
                     showingCollisionAlert = true
                     return
                 }
-                dismiss()
+                finish()
             } catch {
                 saveErrorMessage = "Couldn't save plan. Try again."
             }
