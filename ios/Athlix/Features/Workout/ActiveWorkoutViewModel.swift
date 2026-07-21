@@ -556,6 +556,36 @@ final class ActiveWorkoutViewModel {
         loadedPlan = LoadedPlanInfo(id: id, title: title)
     }
 
+    /// Exercise ids for which the "Last session · ..." prefill banner
+    /// (`ExerciseDetailView`) has been permanently dismissed via `clearPrefill`
+    /// for the rest of this session, mirroring web's `hiddenPrefillExerciseIds`
+    /// state in `ActiveWorkout.tsx`. Deliberately lives here (not as
+    /// view-local `@State`) so the dismissal survives navigating away from and
+    /// back to this exercise's detail view within the same session.
+    private(set) var hiddenPrefillExerciseIds: Set<String> = []
+
+    /// Resets this exercise's sets to its resolved input type's default
+    /// values (per `ExerciseInputType.defaultSetValues`, NOT zero/nil), marks
+    /// them all undone, and permanently hides the "Last session" prefill
+    /// banner for this exercise for the rest of the session -- mirrors web's
+    /// `handleClearPrefill` (`ActiveWorkout.tsx`) exactly, including its
+    /// asymmetry with `cycleInputType`: unlike that method, this one does NOT
+    /// change `inputTypeOverride` -- only the sets' values/done state reset.
+    func clearPrefill(exerciseId: String) {
+        guard let index = exercises.firstIndex(where: { $0.id == exerciseId }) else { return }
+        let inputType = exercises[index].inputTypeOverride ?? ExerciseTypeResolver.resolve(exercises[index].name)
+        let defaults = inputType.defaultSetValues
+        exercises[index].sets = exercises[index].sets.map { set in
+            var updated = set
+            updated.weight = defaults.primary
+            updated.reps = defaults.secondary
+            updated.done = false
+            return updated
+        }
+        hiddenPrefillExerciseIds.insert(exerciseId)
+        persistDraft()
+    }
+
     /// Id-based for the same stale-index reason as `copySet`/`removeSet`.
     func removeExercise(exerciseId: String) {
         guard let idx = exercises.firstIndex(where: { $0.id == exerciseId }) else { return }

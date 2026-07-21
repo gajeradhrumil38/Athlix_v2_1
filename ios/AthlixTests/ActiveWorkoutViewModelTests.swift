@@ -578,6 +578,53 @@ final class ActiveWorkoutViewModelTests: XCTestCase {
         XCTAssertEqual(sut.exercises[0].inputTypeOverride, .timeOnly)
     }
 
+    // MARK: - clearPrefill
+
+    /// Mirrors web's `handleClearPrefill`: resets ALL of the exercise's sets'
+    /// weight/reps back to the resolved input type's `defaultSetValues`
+    /// (not zero/nil), marks them all not-done, and permanently records the
+    /// exercise's id in `hiddenPrefillExerciseIds` -- the parent-level state
+    /// that lets the "Last session" banner stay hidden even if the user
+    /// navigates away from and back to this exercise within the same session.
+    func testClearPrefillResetsSetsToDefaultsMarksUndoneAndHidesBanner() {
+        let sut = makeSUT()
+        let exercise = makeExerciseEntry(
+            name: "Deadlift", // resolves to .weightReps (no exact/pattern match, falls to default)
+            sets: [
+                makeSet(weight: 225, reps: 5, done: true),
+                makeSet(weight: 245, reps: 3, done: true),
+            ]
+        )
+        sut.loadExercises([exercise])
+        let exerciseId = exercise.id
+        XCTAssertFalse(sut.hiddenPrefillExerciseIds.contains(exerciseId))
+
+        sut.clearPrefill(exerciseId: exerciseId)
+
+        let updated = sut.exercises[0]
+        let defaults = ExerciseInputType.weightReps.defaultSetValues
+        for set in updated.sets {
+            XCTAssertEqual(set.weight, defaults.primary)
+            XCTAssertEqual(set.reps, defaults.secondary)
+            XCTAssertFalse(set.done)
+        }
+        XCTAssertTrue(sut.hiddenPrefillExerciseIds.contains(exerciseId))
+    }
+
+    /// Guards against a stale-id no-op silently corrupting unrelated state --
+    /// same defensive shape as the other id-based mutators in this suite.
+    func testClearPrefillWithUnknownExerciseIdIsNoOp() {
+        let sut = makeSUT()
+        let exercise = makeExerciseEntry(name: "Squat", sets: [makeSet(weight: 100, reps: 5, done: true)])
+        sut.loadExercises([exercise])
+
+        sut.clearPrefill(exerciseId: "does-not-exist")
+
+        XCTAssertEqual(sut.exercises[0].sets[0].weight, 100)
+        XCTAssertTrue(sut.exercises[0].sets[0].done)
+        XCTAssertTrue(sut.hiddenPrefillExerciseIds.isEmpty)
+    }
+
     // MARK: - setOptionalWeight
 
     func testSetOptionalWeightUpdatesExerciseEntryFlag() {
