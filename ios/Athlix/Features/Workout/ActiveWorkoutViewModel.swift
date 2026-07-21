@@ -124,8 +124,8 @@ final class ActiveWorkoutViewModel {
     ///    both platforms.)
     /// 2. `.addExercise` deep link -> blank session, `.blankAddExercise`.
     /// 3. `.planToday` deep link -> blank session, `.planToday`.
-    /// 4. `.pastDate(date)` deep link -> fetch that date's saved workout and
-    ///    reconstruct exercises (see caveat in `loadPastDate`).
+    /// 4. `.pastDate(date)` deep link -> fetch ALL of that date's saved
+    ///    workouts and merge their exercises (see `loadPastDate`).
     /// 5. Otherwise -> blank session, `.blank` (see `DeepLinkIntent` doc for
     ///    the quick-start-sheet scope decision).
     func resolveEntry(deepLink: DeepLinkIntent?) async {
@@ -156,15 +156,19 @@ final class ActiveWorkoutViewModel {
         isPaused = true
     }
 
-    /// Fetches the given date's saved workout (via `fetchWorkouts` scoped to
-    /// that single day) and, if one exists, its flat `exercises` table rows
-    /// (via `fetchWorkoutExercises`), then reconstructs `[ExerciseEntry]` by
+    /// Fetches ALL of the given date's saved workouts (via `fetchWorkouts`
+    /// scoped to that single day -- someone can save more than one workout on
+    /// the same calendar date, e.g. a morning and evening session) and merges
+    /// their flat `exercises` table rows (via `fetchWorkoutExercises`) across
+    /// every workout found, before reconstructing `[ExerciseEntry]` by
     /// grouping same-named rows in their existing `order_index` order -- one
     /// `LoggedSet` per row, `done: true` since these are already-completed
     /// sets from a saved workout. Each group's `ExerciseEntry` takes its
     /// `muscleGroup`/`exerciseDbId` from its first row (rows for the same
     /// exercise name are expected to share the same muscle group/db id,
-    /// matching how `saveWorkout` originally wrote them).
+    /// matching how `saveWorkout` originally wrote them). Matches web's
+    /// `Log.tsx` `forcedWorkoutDate` path, which merges exercises via
+    /// `allSaved.flatMap` rather than taking only the first workout.
     private func loadPastDate(_ dateString: String) async {
         entryMode = .pastDateEdit(date: dateString)
         exercises = []
@@ -173,21 +177,26 @@ final class ActiveWorkoutViewModel {
 
         do {
             let workouts = try await workoutRepository.fetchWorkouts(userId: userId, from: date, to: date)
-            guard let workout = workouts.first else { return }
-            title = workout.title
-            notes = workout.notes
+            guard let firstWorkout = workouts.first else { return }
+            // Title/notes/startAt/elapsed still come from the FIRST workout only
+            // (mirroring web, which also only surfaces one workout's metadata
+            // fields even while merging all workouts' exercise rows) -- this
+            // asymmetry is web's actual behavior, not an oversight to "fix"
+            // into full symmetry.
+            title = firstWorkout.title
+            notes = firstWorkout.notes
             startAt = date
-            elapsedSeconds = (workout.durationMinutes ?? 0) * 60
+            elapsedSeconds = (firstWorkout.durationMinutes ?? 0) * 60
             isPaused = true
 
-            let rows = try await workoutRepository.fetchWorkoutExercises(userId: userId, workoutId: workout.id)
-            exercises = Self.groupExerciseRows(rows)
+            var allRows: [ExerciseSet] = []
+            for workout in workouts {
+                let rows = try await workoutRepository.fetchWorkoutExercises(userId: userId, workoutId: workout.id)
+                allRows.append(contentsOf: rows)
+            }
+            exercises = Self.groupExerciseRows(allRows)
         } catch {
-            // Fetch failure: leave the blank pastDateEdit state in place
-            // rather than propagating -- per-action isolation, matching the
-            // design spec's "Error Handling" stance (a failed lookup here
-            // shouldn't crash session entry; the user can still log fresh
-            // sets for the date).
+            // Per-action isolation, matching design spec's Error Handling stance.
         }
     }
 

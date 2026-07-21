@@ -8,6 +8,12 @@ actor MockWorkoutRepository: WorkoutRepository {
     var stubbedWorkouts: [Workout] = []
     var stubbedSaveResult: Workout?
     var stubbedExerciseRows: [ExerciseSet] = []
+    // Keyed override for tests that need DIFFERENT rows returned per workoutId (e.g. verifying
+    // loadPastDate merges exercises across multiple same-date workouts) -- `stubbedExerciseRows`
+    // alone can't distinguish calls, since it's a single flat list returned regardless of which
+    // workoutId was requested. Falls back to `stubbedExerciseRows` when a given workoutId has no
+    // keyed entry, so existing single-workout tests are unaffected.
+    var stubbedExerciseRowsByWorkoutId: [String: [ExerciseSet]] = [:]
     var shouldThrowOnFetch = false
     var shouldThrowOnSave = false
     var shouldThrowOnFetchExercises = false
@@ -18,6 +24,9 @@ actor MockWorkoutRepository: WorkoutRepository {
     func setStubbedWorkouts(_ workouts: [Workout]) { stubbedWorkouts = workouts }
     func setStubbedSaveResult(_ workout: Workout) { stubbedSaveResult = workout }
     func setStubbedExerciseRows(_ rows: [ExerciseSet]) { stubbedExerciseRows = rows }
+    func setStubbedExerciseRows(_ rows: [ExerciseSet], forWorkoutId workoutId: String) {
+        stubbedExerciseRowsByWorkoutId[workoutId] = rows
+    }
     func setShouldThrowOnFetch(_ value: Bool) { shouldThrowOnFetch = value }
     func setShouldThrowOnSave(_ value: Bool) { shouldThrowOnSave = value }
     func setShouldThrowOnFetchExercises(_ value: Bool) { shouldThrowOnFetchExercises = value }
@@ -48,7 +57,7 @@ actor MockWorkoutRepository: WorkoutRepository {
     func fetchWorkoutExercises(userId: String, workoutId: String) async throws -> [ExerciseSet] {
         lastFetchExercisesWorkoutId = workoutId
         if shouldThrowOnFetchExercises { throw RepositoryError.network }
-        return stubbedExerciseRows
+        return stubbedExerciseRowsByWorkoutId[workoutId] ?? stubbedExerciseRows
     }
 
     // Stub added alongside WorkoutRepository.fetchExercisesForWorkouts (batched) -- this mock
@@ -286,6 +295,41 @@ final class ActiveWorkoutViewModelTests: XCTestCase {
 
         XCTAssertEqual(sut.entryMode, .pastDateEdit(date: "2026-07-01"))
         XCTAssertTrue(sut.exercises.isEmpty)
+    }
+
+    /// Web's `Log.tsx` `forcedWorkoutDate` path merges exercises from EVERY workout saved on
+    /// the target date (`allSaved.flatMap`), not just the first -- someone can save more than
+    /// one workout on the same calendar date (e.g. a morning and evening session). Regression
+    /// guard for `loadPastDate`'s prior `workouts.first` shortcut, which silently dropped any
+    /// additional same-date workouts' exercises.
+    func testLoadPastDateMergesExercisesFromAllWorkoutsSavedThatDate() async {
+        let morningWorkout = Workout(
+            id: "wA", userId: "user-1", title: "Morning Session", date: "2026-07-01",
+            durationMinutes: 30, notes: nil, muscleGroups: ["Legs"],
+            createdAt: "2026-07-01T08:00:00Z"
+        )
+        let eveningWorkout = Workout(
+            id: "wB", userId: "user-1", title: "Evening Session", date: "2026-07-01",
+            durationMinutes: 20, notes: nil, muscleGroups: ["Chest"],
+            createdAt: "2026-07-01T18:00:00Z"
+        )
+        await workoutRepo.setStubbedWorkouts([morningWorkout, eveningWorkout])
+        await workoutRepo.setStubbedExerciseRows(
+            [makeExerciseSetRow(id: "r1", workoutId: "wA", name: "Squat", muscleGroup: "Legs", reps: 8, weight: 225, orderIndex: 0, exerciseDbId: "db-squat")],
+            forWorkoutId: "wA"
+        )
+        await workoutRepo.setStubbedExerciseRows(
+            [makeExerciseSetRow(id: "r2", workoutId: "wB", name: "Bench Press", muscleGroup: "Chest", reps: 10, weight: 135, orderIndex: 0, exerciseDbId: "db-bench")],
+            forWorkoutId: "wB"
+        )
+
+        let sut = makeSUT()
+        await sut.resolveEntry(deepLink: .pastDate("2026-07-01"))
+
+        XCTAssertEqual(sut.entryMode, .pastDateEdit(date: "2026-07-01"))
+        XCTAssertEqual(Set(sut.exercises.map(\.name)), Set(["Squat", "Bench Press"]), "exercises from BOTH workouts saved on the date should be present, not just the first")
+        XCTAssertTrue(sut.exercises.contains(where: { $0.name == "Squat" && $0.sets.first?.weight == 225 }))
+        XCTAssertTrue(sut.exercises.contains(where: { $0.name == "Bench Press" && $0.sets.first?.weight == 135 }))
     }
 
     func testResolveEntryNothingFallsBackToBlank() async {
