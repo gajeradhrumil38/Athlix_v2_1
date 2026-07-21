@@ -592,6 +592,17 @@ final class ActiveWorkoutViewModelTests: XCTestCase {
         XCTAssertEqual(sut.exercises.first(where: { $0.id == exerciseId })?.optionalWeight, true)
     }
 
+    // MARK: - setLoadedPlan
+
+    func testSetLoadedPlanUpdatesLoadedPlanState() {
+        let sut = makeSUT()
+        XCTAssertNil(sut.loadedPlan)
+
+        sut.setLoadedPlan(id: "plan-1", title: "Push Day")
+
+        XCTAssertEqual(sut.loadedPlan, LoadedPlanInfo(id: "plan-1", title: "Push Day"))
+    }
+
     // MARK: - setUnitPreference
 
     func testSetUnitPreferenceUpdatesLocalStateAndPersistsViaProfileRepository() async {

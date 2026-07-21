@@ -15,6 +15,14 @@ enum WorkoutEntryMode: Equatable {
     case blank
 }
 
+/// Which plan (if any) the current session was started from, mirroring web's
+/// `loadedPlan` state in `ActiveWorkout.tsx`. `nil` means the session is
+/// unaffiliated with any saved plan (a blank/ad-hoc session).
+struct LoadedPlanInfo: Equatable {
+    let id: String
+    let title: String
+}
+
 /// The deep-link-equivalent intents that can drive entry resolution, mirroring
 /// web's `?add=1` / `?plan=1` / `?date=YYYY-MM-DD` query params on `/log`.
 ///
@@ -67,6 +75,10 @@ final class ActiveWorkoutViewModel {
     /// highlight the relevant exercise without this view model owning any
     /// navigation logic itself.
     private(set) var focusedExerciseId: String?
+    /// Which plan (if any) this session was started from -- set by the view
+    /// layer via `setLoadedPlan` when `ExercisePickerView.onStartPlan` fires.
+    /// `nil` for a blank/ad-hoc session or one resumed from a draft/past date.
+    private(set) var loadedPlan: LoadedPlanInfo?
 
     private let workoutRepository: WorkoutRepository
     private let exerciseLibraryRepository: ExerciseLibraryRepository
@@ -533,6 +545,15 @@ final class ActiveWorkoutViewModel {
     func loadExercises(_ newExercises: [ExerciseEntry]) {
         exercises.append(contentsOf: newExercises)
         persistDraft()
+    }
+
+    /// Records which plan (if any) this session was started from, mirroring
+    /// web's `loadedPlan` state in ActiveWorkout.tsx. Once set, adding an
+    /// exercise mid-session should trigger the "update the plan too?" prompt
+    /// (wired at the ActiveWorkoutView layer, which owns the PlanEditorViewModel
+    /// instance this state's identity corresponds to).
+    func setLoadedPlan(id: String, title: String) {
+        loadedPlan = LoadedPlanInfo(id: id, title: title)
     }
 
     /// Id-based for the same stale-index reason as `copySet`/`removeSet`.

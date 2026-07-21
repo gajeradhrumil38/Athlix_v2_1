@@ -38,6 +38,17 @@ struct ActiveWorkoutView: View {
     @State private var draftTitle = ""
     @FocusState private var titleFieldFocused: Bool
     @FocusState private var notesFieldFocused: Bool
+    /// Live editor for the plan this session was started from (if any) --
+    /// constructed when `onStartPlan` fires, and the sole owner of the
+    /// "update the plan too?" pending-decision state. `nil` for a session with
+    /// no loaded plan.
+    @State private var planEditorViewModel: PlanEditorViewModel?
+    /// The session-side id of the exercise a pending plan-decision prompt is
+    /// about -- needed so "Cancel" can remove exactly that entry from the
+    /// session (PlanPendingDecision only stores name/muscleGroup/exerciseDbId,
+    /// not the ExerciseEntry's own id, since PlanEditorViewModel has no concept
+    /// of session-side entry ids).
+    @State private var pendingDecisionExerciseId: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -74,9 +85,17 @@ struct ActiveWorkoutView: View {
                         name: selection.name, muscleGroup: selection.muscleGroup, exerciseDbId: selection.exerciseDbId
                     )
                     viewMode = .detail(exerciseId: id)
+                    if viewModel.loadedPlan != nil {
+                        pendingDecisionExerciseId = id
+                        planEditorViewModel?.handleAddedExerciseWhilePlanLoaded(
+                            exerciseName: selection.name, muscleGroup: selection.muscleGroup, exerciseDbId: selection.exerciseDbId
+                        )
+                    }
                 },
-                onStartPlan: { entries in
+                onStartPlan: { template, entries in
                     viewModel.loadExercises(entries)
+                    viewModel.setLoadedPlan(id: template.id, title: template.title)
+                    planEditorViewModel = PlanEditorViewModel(userId: userId, templateRepository: templateRepository, existing: template)
                 }
             )
         }
@@ -107,6 +126,44 @@ struct ActiveWorkoutView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
+        .confirmationDialog(
+            planDialogTitle,
+            isPresented: Binding(
+                get: { planEditorViewModel?.pendingDecision != .none },
+                set: { if !$0 { planEditorViewModel?.resolvePendingDecision(.cancel) } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Update Plan") {
+                planEditorViewModel?.resolvePendingDecision(.updatePlan)
+                pendingDecisionExerciseId = nil
+                Task {
+                    try? await planEditorViewModel?.checkNameCollisionAndSave()
+                }
+            }
+            Button("This Workout Only") {
+                planEditorViewModel?.resolvePendingDecision(.sessionOnly)
+                pendingDecisionExerciseId = nil
+            }
+            Button("Cancel (Remove it)", role: .destructive) {
+                planEditorViewModel?.resolvePendingDecision(.cancel)
+                if let pendingDecisionExerciseId {
+                    viewModel.removeExercise(exerciseId: pendingDecisionExerciseId)
+                }
+                pendingDecisionExerciseId = nil
+            }
+        }
+    }
+
+    /// "Added to workout" / exercise name / "Save it to plan permanently?"
+    /// collapsed into a single title string -- `confirmationDialog` doesn't
+    /// support web's richer multi-line bottom-sheet layout, so this is the
+    /// pragmatic native equivalent of that copy, not a full custom bottom sheet.
+    private var planDialogTitle: String {
+        guard case .awaitingUpdateOrSessionOnly(let name, _, _) = planEditorViewModel?.pendingDecision ?? .none else {
+            return ""
+        }
+        return "Added \"\(name)\" to workout. Save it to \"\(viewModel.loadedPlan?.title ?? "plan")\" permanently?"
     }
 
     // MARK: - Header

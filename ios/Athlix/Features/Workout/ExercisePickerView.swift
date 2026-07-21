@@ -42,7 +42,7 @@ struct ExercisePickerView: View {
     var isMultiSelect: Bool = false
     var onSelectExercise: (ExercisePickerSelection) -> Void = { _ in }
     var onSelectMultiple: ([ExercisePickerSelection]) -> Void = { _ in }
-    var onStartPlan: ([ExerciseEntry]) -> Void = { _ in }
+    var onStartPlan: (Template, [ExerciseEntry]) -> Void = { _, _ in }
 
     private enum Tab: String, CaseIterable {
         case history = "History"
@@ -433,7 +433,7 @@ struct ExercisePickerView: View {
     private func startPlan(_ template: Template) {
         let editor = PlanEditorViewModel(userId: userId, templateRepository: templateRepository, existing: template)
         let entries = editor.startSession()
-        onStartPlan(entries)
+        onStartPlan(template, entries)
         dismiss()
     }
 
