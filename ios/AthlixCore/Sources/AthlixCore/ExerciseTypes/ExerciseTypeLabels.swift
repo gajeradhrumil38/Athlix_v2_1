@@ -20,7 +20,7 @@ public enum ExerciseTypeLabels {
     public static func inputLabels(
         for type: ExerciseInputType,
         weightUnit: WeightUnit = .lbs,
-        distanceUnit: String = "km"
+        distanceUnit: String = "mi"
     ) -> (primary: String, secondary: String?) {
         let base = baseLabels(for: type)
         if type == .weightReps { return (weightUnit.rawValue.uppercased(), base.secondary) }
@@ -31,7 +31,7 @@ public enum ExerciseTypeLabels {
     public static func unitDisplay(
         for type: ExerciseInputType,
         weightUnit: WeightUnit = .lbs,
-        distanceUnit: String = "km"
+        distanceUnit: String = "mi"
     ) -> String {
         switch type {
         case .weightReps: return weightUnit.rawValue.uppercased()

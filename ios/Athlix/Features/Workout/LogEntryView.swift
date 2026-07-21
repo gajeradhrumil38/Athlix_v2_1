@@ -59,6 +59,7 @@ struct LogEntryView: View {
                 userId: userId,
                 workoutRepository: LiveWorkoutRepository(),
                 exerciseLibraryRepository: LiveExerciseLibraryRepository(),
+                profileRepository: LiveProfileRepository(),
                 draftStore: WorkoutDraftStore()
             )
             await vm.resolveEntry(deepLink: deepLink)

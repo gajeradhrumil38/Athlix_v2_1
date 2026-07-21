@@ -14,14 +14,19 @@ import AthlixCore
 struct ExerciseDetailView: View {
     let viewModel: ActiveWorkoutViewModel
     let exerciseId: String
-    var weightUnit: WeightUnit = .lbs
-    var distanceUnit: String = "km"
+    var distanceUnit: String = "mi"
     /// Body weight for the "xBW" relative-load hint. No source is wired up yet
     /// in this milestone (no `ProfileRepository`/settings fetch built) -- the
     /// hint is structured to show whenever this is non-nil, but every current
     /// caller passes `nil`. FOLLOW-UP: wire this from the user's profile once
     /// a settings/profile repository exists.
     var bodyWeight: Double? = nil
+
+    /// Live display unit for weight-bearing set rows/stats, sourced directly
+    /// from `viewModel.unitPreference` (rather than a static prop default)
+    /// so toggling the picker below via `setUnitPreference` is immediately
+    /// reflected here -- see that method's doc comment.
+    private var weightUnit: WeightUnit { viewModel.unitPreference }
 
     /// Re-resolved from the view model's live `exercises` array on every
     /// render rather than captured once, so edits made via child `SetRowView`s
@@ -36,11 +41,14 @@ struct ExerciseDetailView: View {
         return exercise.inputTypeOverride ?? ExerciseTypeResolver.resolve(exercise.name)
     }
 
-    /// SCOPE LIMITATION: this toggle is visually present but a no-op --
-    /// there's no unit-switching plumbing wired into `ActiveWorkoutViewModel`
-    /// yet (it takes a single `unitPreference` at init and doesn't expose a
-    /// live setter). A future settings-integration task should replace this
-    /// with a real binding that also converts already-entered values.
+    /// SCOPE LIMITATION (distance half only): this toggle is visually present
+    /// but a no-op for distance-type exercises -- there's no distance-unit
+    /// equivalent of `ActiveWorkoutViewModel.setUnitPreference`/`unitPreference`
+    /// wired up (no `distanceUnitPreference` was added). The WEIGHT half of
+    /// this toggle (kg/lbs) is fully live -- see `weightUnitPicker` -- this
+    /// `@State` only backs the still-inert km/mi picker. A future
+    /// settings-integration task should replace this with a real binding that
+    /// also converts already-entered distance values.
     @State private var displayUnitIsMetric = true
 
     private var doneCount: Int { exercise?.sets.filter(\.done).count ?? 0 }
@@ -102,19 +110,11 @@ struct ExerciseDetailView: View {
 
                 Spacer()
 
-                // No-op unit toggle -- see `displayUnitIsMetric` doc comment.
-                // Disabled (rather than fully interactive) so it reads as
-                // "not yet available" instead of a control that visibly
-                // responds to taps but never changes any displayed value --
-                // flagged in code review as misleading otherwise.
-                Picker("", selection: $displayUnitIsMetric) {
-                    Text(inputType.isDistanceExerciseType ? "km" : "kg").tag(true)
-                    Text(inputType.isDistanceExerciseType ? "mi" : "lbs").tag(false)
+                if inputType.isWeightExerciseType {
+                    weightUnitPicker
+                } else if inputType.isDistanceExerciseType {
+                    distanceUnitPicker
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 110)
-                .disabled(true)
-                .opacity(0.5)
             }
 
             if inputType == .repsOnly {
@@ -151,6 +151,41 @@ struct ExerciseDetailView: View {
         .padding(12)
         .background(ColorTokens.bgElevated)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    /// Live kg/lbs toggle: reads/writes straight through
+    /// `viewModel.unitPreference` via `setUnitPreference`, so it both updates
+    /// this session's display immediately and persists to the profile in the
+    /// background (see that method's doc comment for the fire-and-forget
+    /// persistence rationale). Unlike the distance picker below, this one is
+    /// fully interactive.
+    private var weightUnitPicker: some View {
+        Picker("", selection: Binding(
+            get: { weightUnit == .kg },
+            set: { isMetric in
+                Task { await viewModel.setUnitPreference(isMetric ? .kg : .lbs) }
+            }
+        )) {
+            Text("kg").tag(true)
+            Text("lbs").tag(false)
+        }
+        .pickerStyle(.segmented)
+        .frame(width: 110)
+    }
+
+    /// No-op unit toggle -- see `displayUnitIsMetric` doc comment. Disabled
+    /// (rather than fully interactive) so it reads as "not yet available"
+    /// instead of a control that visibly responds to taps but never changes
+    /// any displayed value -- flagged in code review as misleading otherwise.
+    private var distanceUnitPicker: some View {
+        Picker("", selection: $displayUnitIsMetric) {
+            Text("km").tag(true)
+            Text("mi").tag(false)
+        }
+        .pickerStyle(.segmented)
+        .frame(width: 110)
+        .disabled(true)
+        .opacity(0.5)
     }
 
     private var addSetButton: some View {

@@ -70,9 +70,13 @@ final class ActiveWorkoutViewModel {
 
     private let workoutRepository: WorkoutRepository
     private let exerciseLibraryRepository: ExerciseLibraryRepository
+    private let profileRepository: ProfileRepository
     private let draftStore: WorkoutDraftStore
     private let userId: String
-    private let unitPreference: WeightUnit
+    /// Mutable (not `let`) so `setUnitPreference` can update the in-session
+    /// display unit live; `private(set)` since only this view model may
+    /// change it (through `setUnitPreference`, never directly by a view).
+    private(set) var unitPreference: WeightUnit
 
     private var elapsedTimerTask: Task<Void, Never>?
     private var restTimerTask: Task<Void, Never>?
@@ -88,6 +92,7 @@ final class ActiveWorkoutViewModel {
         userId: String,
         workoutRepository: WorkoutRepository,
         exerciseLibraryRepository: ExerciseLibraryRepository,
+        profileRepository: ProfileRepository,
         draftStore: WorkoutDraftStore,
         title: String = "Workout",
         startAt: Date = Date(),
@@ -96,6 +101,7 @@ final class ActiveWorkoutViewModel {
         self.userId = userId
         self.workoutRepository = workoutRepository
         self.exerciseLibraryRepository = exerciseLibraryRepository
+        self.profileRepository = profileRepository
         self.draftStore = draftStore
         self.title = title
         self.startAt = startAt
@@ -579,6 +585,23 @@ final class ActiveWorkoutViewModel {
         guard let index = exercises.firstIndex(where: { $0.id == exerciseId }) else { return }
         exercises[index].optionalWeight = enabled
         persistDraft()
+    }
+
+    // MARK: - Unit preference
+
+    /// Updates the in-session display unit immediately (so open set rows/stats
+    /// reflect the change without waiting on the network), then persists it to
+    /// the profile in the background. A failed persist is silently swallowed --
+    /// per this milestone's design spec, a failed write shouldn't interrupt an
+    /// in-progress workout, it just means the preference reverts to its old
+    /// value next session.
+    func setUnitPreference(_ unit: WeightUnit) async {
+        unitPreference = unit
+        do {
+            _ = try await profileRepository.updateProfile(userId: userId, updates: ProfileUpdate(unitPreference: unit))
+        } catch {
+            // Intentionally swallowed -- see doc comment above.
+        }
     }
 
     // MARK: - Date editing

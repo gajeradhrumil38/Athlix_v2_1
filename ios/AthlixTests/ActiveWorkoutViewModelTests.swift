@@ -85,6 +85,12 @@ actor MockExerciseLibraryRepository: ExerciseLibraryRepository {
     }
 }
 
+// NOTE: `MockProfileRepository` is NOT redeclared here -- `ActiveWorkoutViewModelTests.swift`
+// and `DashboardViewModelTests.swift` both compile into the single `AthlixTests` module (unlike
+// separate SPM test targets), so a second file-scope declaration of the same type name is an
+// invalid redeclaration, not a legitimately separate conformance. The existing actor declared in
+// `DashboardViewModelTests.swift` is reused as-is.
+
 // MARK: - Test suite
 
 @MainActor
@@ -92,12 +98,14 @@ final class ActiveWorkoutViewModelTests: XCTestCase {
     var tempDir: URL!
     var workoutRepo: MockWorkoutRepository!
     var libraryRepo: MockExerciseLibraryRepository!
+    var profileRepo: MockProfileRepository!
 
     override func setUp() {
         super.setUp()
         tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         workoutRepo = MockWorkoutRepository()
         libraryRepo = MockExerciseLibraryRepository()
+        profileRepo = MockProfileRepository()
         UserDefaults.standard.removeObject(forKey: "athlix_default_rest_secs")
     }
 
@@ -116,6 +124,7 @@ final class ActiveWorkoutViewModelTests: XCTestCase {
             userId: "user-1",
             workoutRepository: workoutRepo,
             exerciseLibraryRepository: libraryRepo,
+            profileRepository: profileRepo,
             draftStore: WorkoutDraftStore(directory: tempDir),
             title: title,
             startAt: startAt
@@ -583,6 +592,43 @@ final class ActiveWorkoutViewModelTests: XCTestCase {
         XCTAssertEqual(sut.exercises.first(where: { $0.id == exerciseId })?.optionalWeight, true)
     }
 
+    // MARK: - setUnitPreference
+
+    func testSetUnitPreferenceUpdatesLocalStateAndPersistsViaProfileRepository() async {
+        let sut = makeSUT()
+        await profileRepo.setStubbedProfile(
+            Profile(
+                id: "user-1", fullName: nil, unitPreference: .kg, themePreference: "dark",
+                bodyWeight: nil, bodyWeightUnit: .kg, heightFeet: nil, heightInches: nil
+            )
+        )
+
+        await sut.setUnitPreference(.kg)
+
+        XCTAssertEqual(sut.unitPreference, .kg, "local display unit should update immediately")
+        let lastUpdate = await profileRepo.lastUpdate
+        XCTAssertEqual(lastUpdate?.unitPreference, .kg)
+        let fetchCount = await profileRepo.fetchCount
+        XCTAssertEqual(fetchCount, 0, "setUnitPreference should only write, never re-fetch")
+    }
+
+    /// Per this milestone's established error-handling pattern (see
+    /// `testSaveFailureDoesNotClearDraft`-adjacent design intent for the save
+    /// path, and `setUnitPreference`'s own doc comment): a failed background
+    /// persist must not roll back the in-session value the user just picked --
+    /// it should only fail to survive to the NEXT session, not interrupt the
+    /// current one.
+    func testSetUnitPreferenceKeepsLocalChangeEvenIfPersistFails() async {
+        let sut = makeSUT()
+        await profileRepo.setShouldThrow(true)
+
+        await sut.setUnitPreference(.kg)
+
+        XCTAssertEqual(sut.unitPreference, .kg, "local state must still update even though the persist call throws")
+        let lastUpdate = await profileRepo.lastUpdate
+        XCTAssertEqual(lastUpdate?.unitPreference, .kg, "the repository should still have been called with the new value before throwing")
+    }
+
     // MARK: - changeDate
 
     func testChangeDateRejectsFutureDates() {
@@ -618,7 +664,7 @@ final class ActiveWorkoutViewModelTests: XCTestCase {
         let store = WorkoutDraftStore(directory: tempDir)
         let sut = ActiveWorkoutViewModel(
             userId: "user-1", workoutRepository: workoutRepo, exerciseLibraryRepository: libraryRepo,
-            draftStore: store, title: "Push Day", startAt: Date()
+            profileRepository: profileRepo, draftStore: store, title: "Push Day", startAt: Date()
         )
         sut.addExercise(name: "Bench Press", muscleGroup: "Chest", exerciseDbId: nil)
         let exerciseId = sut.exercises[0].id
@@ -674,7 +720,7 @@ final class ActiveWorkoutViewModelTests: XCTestCase {
         let store = WorkoutDraftStore(directory: tempDir)
         let sut = ActiveWorkoutViewModel(
             userId: "user-1", workoutRepository: workoutRepo, exerciseLibraryRepository: libraryRepo,
-            draftStore: store, title: "Push Day", startAt: Date()
+            profileRepository: profileRepo, draftStore: store, title: "Push Day", startAt: Date()
         )
         sut.addExercise(name: "Bench Press", muscleGroup: "Chest", exerciseDbId: nil)
         let exerciseId = sut.exercises[0].id
@@ -814,7 +860,7 @@ final class ActiveWorkoutViewModelTests: XCTestCase {
         let store = WorkoutDraftStore(directory: tempDir)
         let sut = ActiveWorkoutViewModel(
             userId: "user-1", workoutRepository: workoutRepo, exerciseLibraryRepository: libraryRepo,
-            draftStore: store, title: "Push Day", startAt: Date()
+            profileRepository: profileRepo, draftStore: store, title: "Push Day", startAt: Date()
         )
         sut.addExercise(name: "Bench Press", muscleGroup: "Chest", exerciseDbId: nil)
         let exerciseId = sut.exercises[0].id
@@ -851,7 +897,7 @@ final class ActiveWorkoutViewModelTests: XCTestCase {
         let store = WorkoutDraftStore(directory: tempDir)
         let sut = ActiveWorkoutViewModel(
             userId: "user-1", workoutRepository: workoutRepo, exerciseLibraryRepository: libraryRepo,
-            draftStore: store, title: "Autosave Test", startAt: Date()
+            profileRepository: profileRepo, draftStore: store, title: "Autosave Test", startAt: Date()
         )
         // No exercises added, so the exercises-count-changed autosave path
         // never fires -- isolates this test to the periodic tick-driven path.
