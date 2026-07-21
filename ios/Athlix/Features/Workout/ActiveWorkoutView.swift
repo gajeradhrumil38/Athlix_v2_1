@@ -109,6 +109,12 @@ struct ActiveWorkoutView: View {
                 onStartPlan: { template, entries in
                     viewModel.loadExercises(entries)
                     viewModel.setLoadedPlan(id: template.id, title: template.title)
+                    // This PlanEditorViewModel is a SEPARATE instance from the transient one
+                    // ExercisePickerView.startPlan already built and discarded (that one only
+                    // needed to derive `entries` above). This one is the long-lived editor that
+                    // owns `pendingDecision` state for the rest of the session -- not redundant
+                    // with the picker's, since both are just pure re-derivations of the same
+                    // immutable `template`.
                     planEditorViewModel = PlanEditorViewModel(userId: userId, templateRepository: templateRepository, existing: template)
                 }
             )
@@ -140,6 +146,12 @@ struct ActiveWorkoutView: View {
             }
             Button("Cancel", role: .cancel) {}
         }
+        // Relies on SwiftUI's implicit ordering guarantee: when a button below is tapped, its
+        // `action` runs (resolving `pendingDecision` to `.none`) BEFORE the framework calls this
+        // binding's `set(false)` as part of its own dismiss. By the time `set` runs, `pendingDecision`
+        // is already `.none`, so `resolvePendingDecision(.cancel)` there is a harmless no-op --
+        // it never double-resolves a decision a button already made. Only a genuine swipe-down/
+        // tap-outside dismiss (no button tapped) reaches `set` with a still-pending decision.
         .confirmationDialog(
             planDialogTitle,
             isPresented: Binding(
@@ -151,6 +163,13 @@ struct ActiveWorkoutView: View {
             Button("Update Plan") {
                 planEditorViewModel?.resolvePendingDecision(.updatePlan)
                 pendingDecisionExerciseId = nil
+                // Discarding via `try?` (unlike PlanEditorView, which surfaces
+                // `nameCollisionDetected` in its own UI) is safe here specifically: this editor's
+                // `title` is never edited mid-session (no UI path does so), and
+                // checkNameCollisionAndSave's collision check excludes this editor's own
+                // `templateId`, so a collision against itself can't happen. A collision against
+                // some OTHER differently-titled plan is unreachable too, since the title in play
+                // is always the one the session was already loaded with.
                 Task {
                     try? await planEditorViewModel?.checkNameCollisionAndSave()
                 }

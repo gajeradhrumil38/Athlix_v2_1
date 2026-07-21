@@ -431,6 +431,12 @@ struct ExercisePickerView: View {
     }
 
     private func startPlan(_ template: Template) {
+        // This PlanEditorViewModel is intentionally transient/throwaway -- it exists only to
+        // derive the starting [ExerciseEntry] list via startSession(), then it's discarded.
+        // ActiveWorkoutView.onStartPlan constructs a SEPARATE, long-lived PlanEditorViewModel
+        // from this same `template` that actually owns `pendingDecision` state for the rest of
+        // the session. Both are pure re-derivations of the same immutable Template, so having
+        // two instances is harmless -- not a duplication to "simplify" into one shared instance.
         let editor = PlanEditorViewModel(userId: userId, templateRepository: templateRepository, existing: template)
         let entries = editor.startSession()
         onStartPlan(template, entries)
