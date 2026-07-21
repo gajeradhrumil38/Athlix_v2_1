@@ -263,7 +263,7 @@ struct SetRowView: View {
         HStack(spacing: 0) {
             stepperButton(systemName: "minus", kind: kind, isSecondary: isSecondary, delta: -stepSize(for: kind), tint: ColorTokens.textMuted)
 
-            Rectangle().fill(Color.white.opacity(0.05)).frame(width: 1)
+            Rectangle().fill(ColorTokens.borderSubtle).frame(width: 1)
 
             Button {
                 editTarget = EditTarget(isSecondary: isSecondary)
@@ -282,7 +282,7 @@ struct SetRowView: View {
             }
             .buttonStyle(.plain)
 
-            Rectangle().fill(Color.white.opacity(0.05)).frame(width: 1)
+            Rectangle().fill(ColorTokens.borderSubtle).frame(width: 1)
 
             stepperButton(systemName: "plus", kind: kind, isSecondary: isSecondary, delta: stepSize(for: kind), tint: ColorTokens.accent)
         }
@@ -370,7 +370,7 @@ private struct SetSeparatorRow: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Rectangle().fill(Color.white.opacity(0.05)).frame(height: 1)
+            Rectangle().fill(ColorTokens.borderSubtle).frame(height: 1)
 
             Button(action: onCopy) {
                 HStack(spacing: 6) {
@@ -385,6 +385,11 @@ private struct SetSeparatorRow: View {
                 .background(ColorTokens.bgElevated)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
+                        // Intentionally NOT `.borderSubtle` (0.05) -- this is a
+                        // deliberate 1:1 match to web's Copy-button border,
+                        // `border: '1px solid rgba(255,255,255,0.08)'`
+                        // (`ExerciseContent.tsx`'s `SetSeparator`), a distinct,
+                        // slightly stronger value than the hairline dividers.
                         .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -410,7 +415,7 @@ private struct SetSeparatorRow: View {
             }
             .buttonStyle(.plain)
 
-            Rectangle().fill(Color.white.opacity(0.05)).frame(height: 1)
+            Rectangle().fill(ColorTokens.borderSubtle).frame(height: 1)
         }
     }
 }
