@@ -169,6 +169,12 @@ final class ActiveWorkoutViewModel {
     /// matching how `saveWorkout` originally wrote them). Matches web's
     /// `Log.tsx` `forcedWorkoutDate` path, which merges exercises via
     /// `allSaved.flatMap` rather than taking only the first workout.
+    ///
+    /// Uses per-workout `fetchWorkoutExercises` rather than the batched
+    /// `fetchExercisesForWorkouts` deliberately -- the per-workout call performs
+    /// a per-id ownership check before returning rows, while the batched method
+    /// skips that check and relies on RLS alone. Same-date workout counts here
+    /// are always small, so the per-call overhead of looping is negligible.
     private func loadPastDate(_ dateString: String) async {
         entryMode = .pastDateEdit(date: dateString)
         exercises = []
