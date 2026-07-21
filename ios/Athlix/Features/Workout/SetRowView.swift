@@ -231,6 +231,13 @@ struct SetRowView: View {
         }
     }
 
+    /// NOTE: `Int(value.rounded())` here is correct for reps, but when
+    /// `optionalWeight` has repurposed the secondary slot to represent weight
+    /// (see `fieldKinds`), this silently rounds fractional weight entries (e.g.
+    /// 22.5 -> 23), losing precision. Fixing this would require a new storage
+    /// field on `LoggedSet`, which is out of scope for the optional-weight
+    /// feature -- tracked as a known, accepted limitation, not a bug to "fix"
+    /// here.
     private func applyValue(_ value: Double, isSecondary: Bool) {
         let newWeight = isSecondary ? loggedSet.weight : value
         let newReps = isSecondary ? Int(value.rounded()) : loggedSet.reps
