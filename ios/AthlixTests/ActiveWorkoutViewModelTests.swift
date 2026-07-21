@@ -569,6 +569,20 @@ final class ActiveWorkoutViewModelTests: XCTestCase {
         XCTAssertEqual(sut.exercises[0].inputTypeOverride, .timeOnly)
     }
 
+    // MARK: - setOptionalWeight
+
+    func testSetOptionalWeightUpdatesExerciseEntryFlag() {
+        let sut = makeSUT()
+        sut.addExercise(name: "Push-ups", muscleGroup: "Chest", exerciseDbId: nil)
+        let exerciseId = sut.exercises[0].id
+        sut.cycleInputType(exerciseId: exerciseId, forced: .repsOnly)
+        XCTAssertNil(sut.exercises.first(where: { $0.id == exerciseId })?.optionalWeight)
+
+        sut.setOptionalWeight(exerciseId: exerciseId, enabled: true)
+
+        XCTAssertEqual(sut.exercises.first(where: { $0.id == exerciseId })?.optionalWeight, true)
+    }
+
     // MARK: - changeDate
 
     func testChangeDateRejectsFutureDates() {

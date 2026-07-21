@@ -76,7 +76,8 @@ struct ExerciseDetailView: View {
                                 index: index,
                                 inputType: inputType,
                                 weightUnit: weightUnit,
-                                distanceUnit: distanceUnit
+                                distanceUnit: distanceUnit,
+                                optionalWeight: exercise.optionalWeight ?? false
                             )
                         }
                     }
@@ -114,6 +115,16 @@ struct ExerciseDetailView: View {
                 .frame(width: 110)
                 .disabled(true)
                 .opacity(0.5)
+            }
+
+            if inputType == .repsOnly {
+                Toggle("Track weight", isOn: Binding(
+                    get: { exercise?.optionalWeight ?? false },
+                    set: { viewModel.setOptionalWeight(exerciseId: exerciseId, enabled: $0) }
+                ))
+                .font(.caption)
+                .foregroundStyle(ColorTokens.textSecondary)
+                .tint(ColorTokens.accent)
             }
 
             HStack(spacing: 14) {

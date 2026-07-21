@@ -568,6 +568,17 @@ final class ActiveWorkoutViewModel {
         persistDraft()
     }
 
+    /// Toggles whether a reps-only exercise opts into tracking added weight
+    /// alongside its reps (e.g. weighted push-ups). Only ever writes
+    /// `true`/`false`, never resets to `nil` -- per `ExerciseEntry.optionalWeight`'s
+    /// existing tri-state doc comment, `nil` means "never explicitly set,"
+    /// which this method (an explicit user toggle) never produces.
+    func setOptionalWeight(exerciseId: String, enabled: Bool) {
+        guard let index = exercises.firstIndex(where: { $0.id == exerciseId }) else { return }
+        exercises[index].optionalWeight = enabled
+        persistDraft()
+    }
+
     // MARK: - Date editing
 
     /// Rejects future dates (no-op, `isFutureDateBlocked = true`), compared

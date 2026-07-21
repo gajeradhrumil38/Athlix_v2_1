@@ -19,6 +19,12 @@ struct SetRowView: View {
     let inputType: ExerciseInputType
     let weightUnit: WeightUnit
     let distanceUnit: String
+    /// From `ExerciseEntry.optionalWeight` -- when `true` on a `.repsOnly`
+    /// exercise, this row gains a second value box for tracking added weight
+    /// (e.g. weighted push-ups), reusing the otherwise-unused secondary
+    /// storage slot. See `fieldKinds` for how this reshapes the effective
+    /// field layout.
+    let optionalWeight: Bool
 
     /// Identifies exactly one field-edit (a specific set's specific field) so
     /// `.sheet(item:)` always sees a fresh identity when the user opens the
@@ -33,12 +39,32 @@ struct SetRowView: View {
 
     @State private var editTarget: EditTarget?
 
+    /// Overrides the resolved `(.reps, nil)` layout to `(.reps, .weight)` when
+    /// this `.repsOnly` exercise has opted into weight tracking -- the
+    /// secondary box (which stores into `loggedSet.reps`, per this file's
+    /// fixed primary->weight/secondary->reps mapping) is otherwise unused for
+    /// `.repsOnly`, so it's repurposed here rather than adding a third
+    /// storage slot to `LoggedSet`.
     private var fieldKinds: (primary: DialFieldKind, secondary: DialFieldKind?) {
-        inputType.fieldKinds
+        if inputType == .repsOnly && optionalWeight {
+            return (.reps, .weight)
+        }
+        return inputType.fieldKinds
     }
 
+    /// `ExerciseTypeLabels.inputLabels` is driven purely by `inputType`, so
+    /// for a plain `.repsOnly` exercise it correctly returns a `nil` secondary
+    /// label. It has no notion of this view's `optionalWeight` override,
+    /// though, so when that override is active it would otherwise leave the
+    /// synthetic weight box with an empty label. Special-cased here rather
+    /// than teaching `ExerciseTypeLabels` about a Swift-only, per-exercise
+    /// opt-in that doesn't exist as an `ExerciseInputType` case.
     private var labels: (primary: String, secondary: String?) {
-        ExerciseTypeLabels.inputLabels(for: inputType, weightUnit: weightUnit, distanceUnit: distanceUnit)
+        let base = ExerciseTypeLabels.inputLabels(for: inputType, weightUnit: weightUnit, distanceUnit: distanceUnit)
+        if inputType == .repsOnly && optionalWeight {
+            return (base.primary, weightUnit.rawValue.uppercased())
+        }
+        return base
     }
 
     /// `LoggedSet` only has two numeric slots (`weight`, `reps`) that get
