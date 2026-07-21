@@ -61,6 +61,8 @@ actor MockDashboardPersonalRecordRepository: PersonalRecordRepository {
     func countNewPRs(userId: String, exerciseNames: [String], achievedOn date: String) async throws -> Int { 0 }
 }
 
+/// Also consumed by ActiveWorkoutViewModelTests.swift (same AthlixTests module) --
+/// check both files before renaming or changing this mock's shape.
 actor MockProfileRepository: ProfileRepository {
     var stubbedProfile: Profile?
     var shouldThrow = false

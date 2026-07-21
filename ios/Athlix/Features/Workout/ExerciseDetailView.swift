@@ -110,6 +110,8 @@ struct ExerciseDetailView: View {
 
                 Spacer()
 
+                // No unit picker shown at all for reps-only/time-only/calories-time types --
+                // intentional; those types have no weight or distance unit to toggle.
                 if inputType.isWeightExerciseType {
                     weightUnitPicker
                 } else if inputType.isDistanceExerciseType {
